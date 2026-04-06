@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CommandoHMS — Command Term Analyser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  /* ── COMMANDOHSC DESIGN TOKENS ── */
+  :root {
+    --cream: #f2ede0;
+    --cream2: #e8e0cc;
+    --ink: #1e2614;
+    --ink2: #2e3a1c;
+    --surface: #eae3d0;
+    --border: rgba(61,92,46,.15);
+    --border2: rgba(61,92,46,.25);
+    --text: #1e2614;
+    --muted: #6b7358;
+
+    /* Army palette */
+    --olive: #3d5c2e;
+    --olive-dim: rgba(61,92,46,.12);
+    --olive-glow: rgba(61,92,46,.25);
+    --sage: #6b7c3e;
+    --sage-dim: rgba(107,124,62,.12);
+    --gold: #c8b87a;
+    --gold-dim: rgba(200,184,122,.15);
+    --bark: #8b6c42;
+
+    --radius: 14px;
+    --radius-lg: 20px;
+    --rule-line: rgba(61,92,46,.08);
+
+    /* Command term colours — keep originals for semantic accuracy */
+    --outline:  #52d68a;
+    --describe: #5bc8f5;
+    --explain:  #f08050;
+    --analyse:  #b57cf7;
+    --discuss:  #f76fa8;
+    --assess:   #e040fb;
+    --compare:  #42d4c8;
+    --evaluate: #e84545;
+    --examine:  #a8d848;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Ruled paper background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 31px,
+      var(--rule-line) 31px, var(--rule-line) 32px
+    );
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #1a2410;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    padding: 0 clamp(1.5rem,5vw,4rem);
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; font-weight: 700;
+    color: #f2ede0; text-decoration: none;
+    display: flex; align-items: center; gap: .65rem;
+  }
+
+  .nav-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: .58rem; color: #fff;
+    background: #8b6c42;
+    border-radius: 4px; padding: .22em .55em;
+    letter-spacing: .08em; text-transform: uppercase;
+    transform: rotate(-5deg) translateY(-3px);
+    display: inline-block; position: relative; top: -1px;
+  }
+
+  .nav-right {
+    display: flex; align-items: center; gap: .75rem;
+  }
+
+  .nav-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem; color: rgba(240,237,232,.3);
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: .35em;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem; font-weight: 600;
+    cursor: pointer; text-decoration: none;
+    white-space: nowrap; transition: all .18s; border: none;
+  }
+  .btn-primary-nav { background: #f2ede0; color: #1a2410; padding: .6em 1.4em; border-radius: 8px; }
+  .btn-primary-nav:hover { background: #fff; }
+
+  /* ── PAGE WRAPPER ── */
+  .page-wrap {
+    position: relative; z-index: 1;
+    max-width: 1160px; margin: 0 auto;
+    padding: 3rem clamp(1.5rem,5vw,2.5rem) 4rem;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .page-eyebrow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--gold);
+    background: #1a2410;
+    border: 1px solid rgba(200,184,122,.25);
+    border-radius: 999px; padding: .35em 1em; margin-bottom: 1.25rem;
+  }
+
+  .eyebrow-dot {
+    width: 5px; height: 5px;
+    background: var(--gold); border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.4; transform:scale(.65); }
+  }
+
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -.025em; color: var(--ink);
+    margin-bottom: .5rem;
+  }
+
+  .page-tagline {
+    font-family: 'Playfair Display', serif;
+    font-style: italic; font-size: 1.1rem;
+    color: var(--olive); margin-bottom: 1rem;
+  }
+
+  .page-desc {
+    color: var(--muted); font-size: .92rem;
+    line-height: 1.75; max-width: 680px; margin: 0 auto;
+  }
+
+  /* ── LEGEND ── */
+  .legend-wrap {
+    background: #fff;
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .legend-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--olive); margin-bottom: 1rem;
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 760px) {
+    .legend { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: default;
+    transition: transform 0.15s, filter 0.15s;
+    text-align: center;
+  }
+  .legend-item:hover { transform: translateY(-2px); filter: brightness(1.07); }
+  .legend-item .lbl { font-weight: 700; color: #0d0d0d !important; }
+  .legend-item .ldef { font-size: 0.7rem; font-weight: 400; color: #0d0d0d !important; opacity: 1; display: block; margin-top: 1px; }
+  .legend-item-inner { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .legend-item.li-outline  { background: var(--outline);  color: #0d0d0d; }
+  .legend-item.li-describe { background: var(--describe); color: #0d0d0d; }
+  .legend-item.li-explain  { background: var(--explain);  color: #0d0d0d; }
+  .legend-item.li-analyse  { background: var(--analyse);  color: #0d0d0d; }
+  .legend-item.li-discuss  { background: var(--discuss);  color: #0d0d0d; }
+  .legend-item.li-assess   { background: var(--assess);   color: #0d0d0d; }
+  .legend-item.li-compare  { background: var(--compare);  color: #0d0d0d; }
+  .legend-item.li-evaluate { background: var(--evaluate); color: #0d0d0d; }
+  .legend-item.li-examine  { background: var(--examine);  color: #0d0d0d; }
+  .legend-item.li-example  { background: var(--cream2); color: var(--ink); border: 1.5px solid var(--border2); }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.outline   { background: var(--outline); }
+  .dot.describe  { background: var(--describe); }
+  .dot.explain   { background: var(--explain); }
+  .dot.analyse   { background: var(--analyse); }
+  .dot.discuss   { background: var(--discuss); }
+  .dot.assess    { background: var(--assess); }
+  .dot.compare   { background: var(--compare); }
+  .dot.evaluate  { background: var(--evaluate); }
+  .dot.examine   { background: var(--examine); }
+
+  .lbl { font-weight: 600; color: var(--ink); }
+  .ldef { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+
+  /* ── PANELS ── */
+  .panel {
+    background: #fff;
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: box-shadow .2s;
+  }
+
+  .panel-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--olive);
+    display: flex; align-items: center; gap: .4rem;
+  }
+
+  /* ── QUESTION AREA ── */
+  .question-wrap {
+    margin-bottom: 1.25rem;
+  }
+
+  textarea, .question-input {
+    width: 100%;
+    background: var(--cream);
+    border: 1.5px solid var(--border2);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.93rem;
+    line-height: 1.7;
+    padding: 13px 16px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s, box-shadow .2s;
+  }
+  textarea:focus, .question-input:focus {
+    border-color: var(--olive);
+    box-shadow: 0 0 0 3px var(--olive-dim);
+  }
+  textarea::placeholder, .question-input::placeholder { color: var(--muted); opacity: .6; }
+
+  .question-input { min-height: 72px; }
+  textarea#inputText, textarea#extractedText { min-height: 260px; }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--cream);
+    border: 1.5px solid var(--border2);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.93rem;
+    padding: 11px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]:focus { border-color: var(--olive); box-shadow: 0 0 0 3px var(--olive-dim); }
+  input[type="number"]::placeholder { color: var(--muted); opacity: .6; }
+
+  /* ── DETECTED TERM PILL ── */
+  .detected-term {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    min-height: 28px;
+  }
+
+  .term-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .term-pill .dot-sm { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* ── MAIN GRID ── */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 760px) { .main { grid-template-columns: 1fr; } }
+
+  /* ── ACTION BUTTONS ── */
+  .btn-row { display: flex; gap: 10px; }
+
+  button {
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 9px;
+    padding: 11px 22px;
+    transition: all .18s;
+  }
+  button:hover:not(:disabled) { transform: translateY(-1px); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-primary {
+    background: #1a2410;
+    color: var(--cream);
+    flex: 1;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--olive); color: #fff; }
+
+  .btn-clear {
+    background: var(--cream);
+    color: var(--muted);
+    border: 1.5px solid var(--border2);
+  }
+  .btn-clear:hover { background: var(--cream2); color: var(--ink); }
+
+  /* ── OUTPUT BOX ── */
+  .output-box {
+    min-height: 260px;
+    background: var(--cream);
+    border: 1.5px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.93rem;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--ink);
+  }
+
+  .placeholder { color: var(--muted); font-style: italic; font-size: 0.88rem; opacity: .7; }
+
+  /* ── HIGHLIGHTS ── */
+  .hl {
+    border-radius: 4px;
+    padding: 1px 3px;
+    font-weight: 600;
+    position: relative;
+    cursor: default;
+  }
+  .hl.outline   { color: #0d0d0d; background: var(--outline); }
+  .hl.example {
+    text-decoration: underline;
+    text-decoration-color: var(--bark);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    background: transparent;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .ex-ul {
+    text-decoration: underline;
+    text-decoration-color: rgba(0,0,0,0.4);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+  .hl.describe  { color: #0d0d0d; background: var(--describe); }
+  .hl.explain   { color: #0d0d0d; background: var(--explain); }
+  .hl.analyse   { color: #fff;    background: var(--analyse); }
+  .hl.discuss   { color: #fff;    background: var(--discuss); }
+  .hl.assess    { color: #fff;    background: var(--assess); }
+  .hl.compare   { color: #0d0d0d; background: var(--compare); }
+  .hl.evaluate  { color: #fff;    background: var(--evaluate); }
+  .hl.examine   { color: #0d0d0d; background: var(--examine); }
+
+  .hl .tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a2410;
+    border: 1px solid var(--border2);
+    color: var(--cream);
+    font-size: 0.74rem;
+    font-weight: 400;
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+    padding: 5px 10px;
+    border-radius: 7px;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 10;
+  }
+  .hl:hover .tooltip { visibility: visible; opacity: 1; }
+
+  /* ── STAT CHIPS ── */
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stat-chip {
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 11px;
+    border-radius: 20px;
+    opacity: 0.9;
+    letter-spacing: .03em;
+  }
+  .stat-chip.outline   { background: var(--outline);  color: #111; }
+  .stat-chip.describe  { background: var(--describe); color: #111; }
+  .stat-chip.explain   { background: var(--explain);  color: #111; }
+  .stat-chip.analyse   { background: var(--analyse);  color: #fff; }
+  .stat-chip.discuss   { background: var(--discuss);  color: #fff; }
+  .stat-chip.assess    { background: var(--assess);   color: #fff; }
+  .stat-chip.compare   { background: var(--compare);  color: #111; }
+  .stat-chip.evaluate  { background: var(--evaluate); color: #fff; }
+  .stat-chip.examine   { background: var(--examine);  color: #111; }
+
+  /* ── LOADING DOTS ── */
+  .loading-dots span {
+    display: inline-block;
+    animation: blink 1.2s infinite;
+    font-size: 1.2rem;
+    color: var(--olive);
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+  /* ── ERROR ── */
+  .error-msg {
+    color: #8b2d2d;
+    font-size: 0.85rem;
+    padding: 12px 16px;
+    background: rgba(139,45,45,.08);
+    border-radius: 8px;
+    border: 1px solid rgba(139,45,45,.2);
+  }
+
+  /* ── TABS ── */
+  .tab-row { display: flex; gap: 6px; margin-bottom: 4px; }
+  .tab-btn {
+    background: var(--cream);
+    border: 1.5px solid var(--border2);
+    color: var(--muted);
+    border-radius: 7px; padding: 6px 14px;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    font-family: 'DM Mono', monospace; transition: all 0.15s;
+  }
+  .tab-btn.active { background: #1a2410; color: var(--cream); border-color: #1a2410; }
+  .tab-btn:hover:not(.active) { border-color: var(--olive); color: var(--ink); }
+
+  /* ── UPLOAD AREA ── */
+  .upload-area {
+    border: 2px dashed var(--border2);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--cream);
+  }
+  .upload-area:hover { border-color: var(--olive); background: var(--cream2); }
+  .upload-area.dragover { border-color: var(--olive); background: var(--cream2); }
+  .upload-area p { font-size: 0.85rem; color: var(--muted); margin: 0; line-height: 1.5; }
+  .upload-area p strong { color: var(--ink); font-weight: 600; }
+  .upload-icon { font-size: 1.6rem; margin-bottom: 6px; }
+
+  /* ── FILE LIST ── */
+  .file-grid { display: flex; flex-direction: column; gap: 8px; }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--cream);
+    border: 1.5px solid var(--border2);
+    border-radius: 9px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+  .file-thumb {
+    width: 44px; height: 44px;
+    object-fit: cover;
+    border-radius: 5px;
+    flex-shrink: 0;
+    border: 1px solid var(--border2);
+  }
+  .file-thumb-pdf {
+    width: 44px; height: 44px;
+    background: rgba(139,44,44,.12);
+    border: 1px solid rgba(139,44,44,.3);
+    border-radius: 5px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: #8b2c2c; letter-spacing: 0.05em;
+  }
+  .file-info { flex: 1; overflow: hidden; }
+  .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 500; }
+  .file-size { color: var(--muted); font-size: 0.72rem; margin-top: 1px; font-family: 'DM Mono', monospace; }
+  .file-status { font-size: 0.72rem; margin-top: 2px; }
+  .file-status.ok { color: #2d7a46; }
+  .file-status.err { color: #8b2c2c; }
+  .file-status.pending { color: var(--muted); }
+
+  .btn-remove-file {
+    background: none; border: none; color: var(--muted);
+    font-size: 1rem; cursor: pointer; padding: 2px 6px;
+    border-radius: 5px; line-height: 1; flex-shrink: 0;
+  }
+  .btn-remove-file:hover { color: #8b2c2c; background: rgba(139,44,44,.1); }
+
+  .add-more-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--cream);
+    border: 1.5px dashed var(--border2);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 0.82rem; font-weight: 600;
+    color: var(--muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s, color 0.15s;
+    width: 100%; justify-content: center;
+  }
+  .add-more-btn:hover { border-color: var(--olive); color: var(--ink); }
+
+  .extract-btn {
+    background: var(--cream);
+    color: var(--muted);
+    border: 1.5px solid var(--border2);
+    border-radius: 9px; padding: 9px 16px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: color 0.15s, border-color 0.15s;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .extract-btn:hover:not(:disabled) { color: var(--ink); border-color: var(--olive); }
+  .extract-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ── COPY BUTTON ── */
+  .btn-copy {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--cream);
+    color: var(--muted);
+    border: 1.5px solid var(--border2);
+    border-radius: 7px; padding: 5px 11px;
+    font-size: 0.76rem; font-weight: 600; cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .btn-copy:hover { color: var(--ink); border-color: var(--olive); }
+  .btn-copy.copied { color: #2d7a46; border-color: #2d7a46; }
+
+  /* ── FEEDBACK / ESTIMATED MARK ── */
+  .feedback-wrap {
+    margin-top: 1rem;
+  }
+
+  .feedback-box {
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--muted);
+    min-height: 60px;
+  }
+  .feedback-box.has-tip { border-color: var(--border2); }
+  .feedback-box .tip-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--olive);
+  }
+  .feedback-box p { color: var(--ink); }
+
+  /* ── SECTION DIVIDER ── */
+  .section-divider {
+    height: 1px; background: var(--olive);
+    margin: 2rem 0; opacity: .15;
+  }
+
+  /* ── DOWNLOAD BUTTON ── */
+  .download-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #1a2410; color: var(--cream);
+    border: none; border-radius: 9px;
+    padding: 12px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all .18s;
+  }
+  .download-btn:hover { background: var(--olive); transform: translateY(-1px); }
+  .download-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+  /* ── DISCLAIMER / FOOTER ── */
+  .disclaimer-bar {
+    background: rgba(61,92,46,.06);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin-top: 2.5rem;
+  }
+  .disclaimer-bar p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem; line-height: 1.65;
+    color: var(--muted); text-align: center;
+  }
+  .disclaimer-bar strong { color: var(--ink); }
+
+  .site-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.5rem 0 2rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap; gap: .5rem;
+  }
+  .footer-copy {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem; color: var(--muted);
+  }
+  .footer-links { display: flex; gap: 1.25rem; }
+  .footer-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem; color: var(--muted);
+    text-decoration: none; transition: color .15s;
+  }
+  .footer-links a:hover { color: var(--ink); }
+
+  /* ── MARK VALUE INPUT ── */
+  .mark-col {
+    display: flex; flex-direction: column; gap: 5px;
+    flex-shrink: 0; width: 90px;
+  }
+  .mark-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem; color: var(--muted); line-height: 1.4;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    CommandoHSC
+    <span class="nav-badge">New</span>
+  </a>
+  <div class="nav-right">
+    <span class="nav-label">NSW HSC 2026</span>
+    <a href="https://commandohms.netlify.app" target="_blank" rel="noopener" class="btn btn-primary-nav">Try for free →</a>
+  </div>
+</nav>
+
+<!-- PAGE BODY -->
+<div class="page-wrap">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-eyebrow">
+      <span class="eyebrow-dot"></span>
+      HSC Health &amp; Movement Science
+    </div>
+    <h1 class="page-title">CommandoHMS</h1>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;max-width:860px;margin:1.75rem auto 0;text-align:left;">
+      <div style="background:#fff;border:1.5px solid var(--border2);border-radius:var(--radius);padding:1.1rem 1.25rem;">
+        <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;">Step 1</div>
+        <div style="font-weight:600;color:var(--ink);font-size:.88rem;margin-bottom:.3rem;">Enter your question</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.55;">Paste or type your exam question. Add the mark value for a projected score.</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid var(--border2);border-radius:var(--radius);padding:1.1rem 1.25rem;">
+        <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;">Step 2</div>
+        <div style="font-weight:600;color:var(--ink);font-size:.88rem;margin-bottom:.3rem;">Add your response</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.55;">Type or paste your answer, or upload a photo, PDF or Word doc of your handwritten response.</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid var(--border2);border-radius:var(--radius);padding:1.1rem 1.25rem;">
+        <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;">Step 3</div>
+        <div style="font-weight:600;color:var(--ink);font-size:.88rem;margin-bottom:.3rem;">Check your response</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.55;">Hit <em>Check My Response</em>. Your answer is colour-coded by command term and examples are underlined.</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid var(--border2);border-radius:var(--radius);padding:1.1rem 1.25rem;">
+        <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;">Step 4</div>
+        <div style="font-weight:600;color:var(--ink);font-size:.88rem;margin-bottom:.3rem;">Read your feedback</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.55;">Review marker feedback, estimated mark, and download a PDF report to keep.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend-wrap">
+    <div class="legend-label">Colour Key — Command Terms</div>
+    <div class="legend">
+      <div class="legend-item li-outline"><div class="legend-item-inner"><span class="lbl">Outline</span><span class="ldef">main points, no detail</span></div></div>
+      <div class="legend-item li-describe"><div class="legend-item-inner"><span class="lbl">Describe</span><span class="ldef">characteristics &amp; features</span></div></div>
+      <div class="legend-item li-explain"><div class="legend-item-inner"><span class="lbl">Explain</span><span class="ldef">cause &amp; effect</span></div></div>
+      <div class="legend-item li-analyse"><div class="legend-item-inner"><span class="lbl">Analyse</span><span class="ldef">components &amp; implications</span></div></div>
+      <div class="legend-item li-discuss"><div class="legend-item-inner"><span class="lbl">Discuss</span><span class="ldef">points for and/or against</span></div></div>
+      <div class="legend-item li-assess"><div class="legend-item-inner"><span class="lbl">Assess</span><span class="ldef">judgement of value/quality</span></div></div>
+      <div class="legend-item li-compare"><div class="legend-item-inner"><span class="lbl">Compare</span><span class="ldef">similarities &amp; differences</span></div></div>
+      <div class="legend-item li-evaluate"><div class="legend-item-inner"><span class="lbl">Evaluate</span><span class="ldef">judgement on criteria</span></div></div>
+      <div class="legend-item li-examine"><div class="legend-item-inner"><span class="lbl">Examine</span><span class="ldef">inquire closely into</span></div></div>
+      <div class="legend-item li-example"><div class="legend-item-inner"><span class="lbl" style="text-decoration:underline;text-decoration-color:var(--bark);text-decoration-thickness:2px;text-underline-offset:3px;">Example</span><span class="ldef">real-world example used</span></div></div>
+    </div>
+  </div>
+
+  <!-- EXAM QUESTION -->
+  <div class="question-wrap">
+    <div class="panel">
+      <div class="panel-label">Your Exam Question</div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <textarea class="question-input" id="questionText" style="flex:1" placeholder="Type or paste your exam question here e.g. 'Describe the acute responses of the cardiovascular system to exercise. (4 marks)'"></textarea>
+        <div class="mark-col">
+          <div class="panel-label">Mark value</div>
+          <input type="number" id="markValue" min="1" max="20" placeholder="e.g. 4">
+
+        </div>
+      </div>
+      <div class="detected-term" id="detectedTerm">
+        <span>Command term detected:</span>
+        <span id="termPill" style="color:var(--muted);font-style:italic">none yet — enter your question above</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN PANELS -->
+  <div class="main">
+
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <div class="panel-label">Your Response</div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" id="tabType" onclick="switchTab('type')">✏️ Type / Paste</button>
+        <button class="tab-btn" id="tabPhoto" onclick="switchTab('photo')">📎 Upload File</button>
+      </div>
+
+      <!-- Type tab -->
+      <div id="typeSection">
+        <textarea id="inputText" placeholder="Type or paste your response here…"></textarea>
+      </div>
+
+      <!-- Photo tab -->
+      <div id="photoSection" style="display:none">
+        <input type="file" id="fileUpload" accept="image/*,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple style="display:none" onchange="handleFileSelect(event)">
+
+        <div class="upload-area" id="uploadArea"
+          onclick="document.getElementById('fileUpload').click()"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event)">
+          <div class="upload-icon">📎</div>
+          <p><strong>Tap to upload your response</strong><br>
+          Accepts photos, PDF or Word document (.docx) — multiple photos supported</p>
+        </div>
+
+        <div id="fileList" style="display:none">
+          <div class="file-grid" id="fileGrid"></div>
+          <button class="add-more-btn" style="margin-top:8px" onclick="document.getElementById('fileUpload').click()">
+            + Add more files
+          </button>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <button class="extract-btn" id="extractBtn" onclick="extractAll()" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Read All Files
+          </button>
+          <button class="btn-remove-img" id="clearFilesBtn" onclick="removeAllFiles()" style="display:none;color:var(--muted);font-size:0.78rem;font-weight:600;padding:9px 12px;border:1.5px solid var(--border2);border-radius:9px;background:var(--cream);font-family:'DM Sans',sans-serif;cursor:pointer">✕ Clear all</button>
+        </div>
+
+        <div id="extractStatus" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);min-height:18px;margin-top:6px"></div>
+        <textarea id="extractedText" placeholder="Extracted text will appear here — you can edit it before analysing…" style="display:none;margin-top:8px"></textarea>
+      </div>
+
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-primary" id="analyseBtn" onclick="analyseText()">Check My Response</button>
+        <button class="btn-clear" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- OUTPUT PANEL -->
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div class="panel-label">Colour-Coded Output</div>
+        <button class="btn-copy" id="copyBtn" onclick="copyOutput()" title="Copy with colours" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span id="copyLabel">Copy</span>
+        </button>
+      </div>
+      <div class="output-box" id="outputBox">
+        <span class="placeholder">Your colour-coded response will appear here…</span>
+      </div>
+      <div class="stats" id="statsRow"></div>
+    </div>
+  </div>
+
+  <!-- FEEDBACK -->
+  <div class="feedback-wrap" id="feedbackWrap" style="display:none">
+    <div class="panel">
+      <div class="panel-label">Marker Feedback</div>
+      <div class="feedback-box" id="feedbackBox"></div>
+    </div>
+  </div>
+
+  <!-- ESTIMATED MARK -->
+  <div class="feedback-wrap" id="projectedMarkWrap" style="display:none">
+    <div class="panel">
+      <div class="panel-label">Estimated Mark</div>
+      <div class="feedback-box" id="projectedMarkBox"></div>
+    </div>
+  </div>
+
+  <!-- DOWNLOAD -->
+  <div class="feedback-wrap" id="downloadWrap" style="display:none">
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="download-btn" onclick="downloadPDF(event)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2v8M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download PDF Report
+      </button>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer-bar" style="margin-top:2.5rem">
+    <p><strong>AI Disclaimer:</strong> This tool uses artificial intelligence to analyse student responses. AI-generated feedback and annotations may be inaccurate, incomplete or misaligned with NESA marking guidelines. All feedback should be treated as a learning guide only and not as a definitive assessment of your response. Always consult your teacher for official marking advice.</p>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
+    <nav class="footer-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+    </nav>
+  </footer>
+
+</div><!-- /page-wrap -->
+
+<script>
+// Shared state for PDF access
+let lastAnnotations = [];
+let lastText = '';
+
+const DEFINITIONS = {
+  outline:  "Outline — main points only, not in detail",
+  describe: "Describe — characteristics and features",
+  explain:  "Explain — cause and effect; makes relationships clear",
+  analyse:  "Analyse — breaks down components and examines relationships",
+  discuss:  "Discuss — identifies issues and provides points for and/or against",
+  assess:   "Assess — makes a judgement of value, quality or outcomes",
+  compare:  "Compare — shows how things are similar or different",
+  evaluate: "Evaluate — judgement based on criteria and evidence",
+  examine:  "Examine — inquires closely into something",
+  example:  "Example — real-world example used to support the response"
+};
+
+const TERM_ORDER = ['evaluate','discuss','assess','compare','analyse','examine','explain','describe','outline'];
+
+const TERM_COLOURS = {
+  outline:   { bg: 'var(--outline)',   text: '#111' },
+  describe:  { bg: 'var(--describe)',  text: '#111' },
+  explain:   { bg: 'var(--explain)',   text: '#111' },
+  analyse:   { bg: 'var(--analyse)',   text: '#fff' },
+  discuss:   { bg: 'var(--discuss)',   text: '#fff' },
+  assess:    { bg: 'var(--assess)',    text: '#fff' },
+  compare:   { bg: 'var(--compare)',   text: '#111' },
+  evaluate:  { bg: 'var(--evaluate)', text: '#fff' },
+  examine:   { bg: 'var(--examine)',   text: '#111' },
+};
+
+function detectTermsFromQuestion(q) {
+  const lower = q.toLowerCase();
+  return TERM_ORDER.filter(t => new RegExp('\\b' + t + '(?:s|d|ing)?\\b').test(lower));
+}
+
+function updateTermPill() {
+  const q = document.getElementById('questionText').value;
+  const terms = detectTermsFromQuestion(q);
+  const pill = document.getElementById('termPill');
+  if (!terms.length) {
+    pill.innerHTML = '<span style="color:var(--muted);font-style:italic">no command term detected</span>';
+    return;
+  }
+  pill.innerHTML = terms.map(t => {
+    const c = TERM_COLOURS[t];
+    return `<span class="term-pill" style="background:${c.bg};color:${c.text}"><span class="dot-sm" style="background:${c.text === '#fff' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.25)'}"></span>${cap(t)}</span>`;
+  }).join(' ');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('questionText').addEventListener('input', updateTermPill);
+});
+
+// ── Tab switching ──
+let activeTab = 'type';
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('typeSection').style.display = tab === 'type' ? 'block' : 'none';
+  document.getElementById('photoSection').style.display = tab === 'photo' ? 'block' : 'none';
+  document.getElementById('tabType').className = 'tab-btn' + (tab === 'type' ? ' active' : '');
+  document.getElementById('tabPhoto').className = 'tab-btn' + (tab === 'photo' ? ' active' : '');
+}
+
+// ── File store ──
+// Each entry: { id, name, size, type, data, isPdf, status, text }
+let uploadedFiles = [];
+let fileIdCounter = 0;
+
+function handleFileSelect(event) {
+  const files = Array.from(event.target.files);
+  files.forEach(f => addFile(f));
+  event.target.value = ''; // reset input so same file can be re-added
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('uploadArea').classList.remove('dragover');
+  const files = Array.from(event.dataTransfer.files).filter(f =>
+    f.type.startsWith('image/') ||
+    f.type === 'application/pdf' ||
+    f.name.endsWith('.docx') ||
+    f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  );
+  files.forEach(f => addFile(f));
+}
+
+function addFile(file) {
+  const id = ++fileIdCounter;
+  const isPdf = file.type === 'application/pdf';
+  const isDocx = file.name.endsWith('.docx') ||
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const entry = { id, name: file.name, size: file.size, type: file.type, isPdf, isDocx, data: null, status: 'loading', text: '' };
+  uploadedFiles.push(entry);
+  renderFileList();
+
+  if (isDocx) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+        entry.text = result.value.trim();
+        entry.status = 'done';
+      } catch (err) {
+        entry.status = 'error';
+      }
+      renderFileList();
+      if (uploadedFiles.every(f => f.status === 'done' || f.status === 'error')) {
+        combineExtractedText();
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (isPdf) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      entry.data = e.target.result.split(',')[1];
+      entry.status = 'ready';
+      renderFileList();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        entry.data = compressed.split(',')[1];
+        entry.previewSrc = compressed;
+        entry.status = 'ready';
+        renderFileList();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeFile(id) {
+  uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+  renderFileList();
+  if (uploadedFiles.length === 0) {
+    document.getElementById('extractedText').style.display = 'none';
+    document.getElementById('extractedText').value = '';
+    document.getElementById('extractStatus').textContent = '';
+  }
+}
+
+function removeAllFiles() {
+  uploadedFiles = [];
+  renderFileList();
+  document.getElementById('extractedText').style.display = 'none';
+  document.getElementById('extractedText').value = '';
+  document.getElementById('extractStatus').textContent = '';
+}
+
+function renderFileList() {
+  const hasFiles = uploadedFiles.length > 0;
+  document.getElementById('uploadArea').style.display = hasFiles ? 'none' : 'block';
+  document.getElementById('fileList').style.display = hasFiles ? 'block' : 'none';
+  document.getElementById('extractBtn').style.display = hasFiles ? 'flex' : 'none';
+  document.getElementById('clearFilesBtn').style.display = hasFiles ? 'inline-flex' : 'none';
+
+  const grid = document.getElementById('fileGrid');
+  grid.innerHTML = uploadedFiles.map(f => {
+    const sizeKb = Math.round(f.size / 1024);
+    const thumb = f.isPdf
+      ? `<div class="file-thumb-pdf">PDF</div>`
+      : f.isDocx
+      ? `<div class="file-thumb-pdf" style="background:rgba(61,92,46,.12);border-color:rgba(61,92,46,.3);color:#3d5c2e;">DOC</div>`
+      : `<img class="file-thumb" src="${f.previewSrc || ''}" alt="">`;
+    const statusText = f.status === 'loading' ? 'Loading…'
+      : f.status === 'done' ? '✅ Text extracted'
+      : f.status === 'error' ? '⚠️ Could not read'
+      : 'Ready';
+    const statusClass = f.status === 'done' ? 'ok' : f.status === 'error' ? 'err' : 'pending';
+    return `<div class="file-item">
+      ${thumb}
+      <div class="file-info">
+        <div class="file-name">${escHtml(f.name)}</div>
+        <div class="file-size">${sizeKb} KB</div>
+        <div class="file-status ${statusClass}">${statusText}</div>
+      </div>
+      <button class="btn-remove-file" onclick="removeFile(${f.id})" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function extractAll() {
+  const ready = uploadedFiles.filter(f => f.status === 'ready' || f.status === 'error');
+  if (!ready.length && uploadedFiles.every(f => f.status === 'done')) {
+    combineExtractedText();
+    return;
+  }
+  if (!uploadedFiles.length) return;
+
+  const btn = document.getElementById('extractBtn');
+  const status = document.getElementById('extractStatus');
+  btn.disabled = true;
+  status.innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span> Reading files…';
+  status.style.color = 'var(--muted)';
+
+  for (const f of uploadedFiles) {
+    if (f.status === 'done' || f.isDocx) continue;
+    if (!f.data) continue;
+    try {
+      const content = f.isPdf
+        ? [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } },
+            { type: 'text', text: 'This is a student\'s exam response as a PDF. Please transcribe all the text exactly as written. Return only the transcribed text with no commentary.' }
+          ]
+        : [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: f.data } },
+            { type: 'text', text: 'This is a photo of a student\'s handwritten exam response. Please transcribe the handwriting exactly as written. Return only the transcribed text with no commentary, corrections or additions.' }
+          ];
+
+      const resp = await fetch('/.netlify/functions/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content }]
+        })
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(`Server error ${resp.status}: ${body.slice(0,200)}`);
+      }
+      const data = await resp.json();
+      if (data.error) throw new Error(JSON.stringify(data.error));
+      f.text = data.content.map(b => b.text || '').join('').trim();
+      f.status = 'done';
+    } catch (e) {
+      f.status = 'error';
+      f.text = '';
+      console.error('Extract error for', f.name, e);
+    }
+    renderFileList();
+  }
+
+  combineExtractedText();
+  btn.disabled = false;
+}
+
+function combineExtractedText() {
+  const status = document.getElementById('extractStatus');
+  const combined = uploadedFiles
+    .filter(f => f.text)
+    .map((f, i) => uploadedFiles.filter(x => x.text).length > 1 ? `[Page ${i+1}]\n${f.text}` : f.text)
+    .join('\n\n');
+
+  const errors = uploadedFiles.filter(f => f.status === 'error').length;
+
+  if (combined) {
+    const ta = document.getElementById('extractedText');
+    ta.value = combined;
+    ta.style.display = 'block';
+    status.textContent = errors
+      ? `⚠️ ${errors} file(s) could not be read. Check the text below and edit if needed, then click Check My Response.`
+      : '✅ All files read — check the text below and edit if needed, then click Check My Response.';
+    status.style.color = errors ? '#8b2c2c' : '#2d7a46';
+  } else {
+    status.textContent = '⚠️ Could not read any files. Try clearer photos with better lighting.';
+    status.style.color = '#8b2c2c';
+  }
+}
+
+async function analyseText() {
+  let text = '';
+  if (activeTab === 'type') {
+    text = document.getElementById('inputText').value.trim();
+  } else {
+    text = document.getElementById('extractedText').value.trim();
+    if (!text) {
+      document.getElementById('extractStatus').textContent = '⚠️ Please upload a photo and click Read Handwriting first.';
+      document.getElementById('extractStatus').style.color = '#8b2c2c';
+      return;
+    }
+  }
+
+  if (!text) return;
+  const question = document.getElementById('questionText').value.trim();
+  const markValue = parseInt(document.getElementById('markValue').value) || null;
+
+  const detectedTerms = detectTermsFromQuestion(question);
+  const primaryTerm = detectedTerms[0] || null;
+
+  const btn = document.getElementById('analyseBtn');
+  const out = document.getElementById('outputBox');
+  const stats = document.getElementById('statsRow');
+
+  btn.disabled = true;
+  stats.innerHTML = '';
+  out.innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span>';
+
+  const annotationPrompt = `You are an expert NESA NSW HSC Health and Movement Science examiner. Your only job is to read a student response and return annotations as JSON.\n\n${question ? `EXAM QUESTION: ${question}` : ''}\n${primaryTerm ? `REQUIRED COMMAND TERM: ${primaryTerm.toUpperCase()}` : ''}\n\nSTEP 1 — Read the student response carefully.\n\nSTEP 2 — Find every sentence or phrase that demonstrates any of these command terms. Tag ALL qualifying sentences generously:\n- describe: states characteristics, features or properties of something — \"X is...\", \"X involves...\", \"X consists of...\"\n- explain: provides reasons or causes — look for: because, therefore, this means, as a result, which leads to, due to, this causes, consequently\n- outline: main points only, no detail or explanation — brief direct statements\n- analyse: breaks down components AND examines the relationship between them — draws out implications\n- discuss: explores points for and/or against an issue — more than one perspective\n- assess: makes a judgement about value, quality or outcomes — weighs up factors\n- compare: explicitly shows how things are similar or different — references at least two things\n- evaluate: makes a judgement based on criteria and evidence — reaches a conclusion\n- examine: inquires closely into something — goes beyond surface description\n\nCRITICAL RULES:\n- The \"text\" field MUST be copied character-for-character from the student response. Do not change a single letter, space or punctuation mark.\n- Tag each sentence with the SINGLE highest-level command term it demonstrates.\n- Each piece of text can only appear once. No overlapping annotations.\n- Tag command term sentences in full.\n- If in doubt, include it.\n- Do NOT tag examples — examples are handled separately.\n\nReturn ONLY this JSON — no other text before or after it:\n{"annotations":[{"text":"EXACT TEXT FROM RESPONSE","term":"describe"}]}`;
+
+  const examplePrompt = `You are reading a student's HSC Health and Movement Science (HMS) exam response. Your only job is to identify every specific named example used as evidence.\n\nDEFINITION OF AN EXAMPLE IN THIS CONTEXT:\nA specific, named real-world item that the student uses to support, illustrate or evidence a point. This includes:\n- Named medical technologies or procedures (e.g. MRI, laparoscopic surgery, mRNA vaccines, CPAP therapy)\n- Named diseases, conditions or health issues (e.g. type 2 diabetes, COVID-19, cardiovascular disease, obesity)\n- Named health frameworks, charters, models or reports (e.g. Ottawa Charter, Lalonde Report, Biomedical Model, Social Model of Health)\n- Named Australian health programs or initiatives (e.g. Close the Gap, Medicare, NDIS, PBS, Get Healthy, Live Life Well)\n- Named organisations or data sources (e.g. AIHW, WHO, ABS, Cancer Council Australia)\n- Named technologies or platforms used as evidence (e.g. Fitbit, telehealth, wearables, social media, MyFitnessPal)\n- Named Australian or global events used as evidence (e.g. COVID-19 pandemic, 2000 Sydney Olympics)\n- Named athletes, coaches or people (e.g. Eliud Kipchoge, Cathy Freeman)\n- Named studies, reports or statistics cited as evidence\n- Named population groups used as specific examples (e.g. Aboriginal and Torres Strait Islander peoples, rural Australians)\n- Named energy systems, training methods or physiological concepts used as examples (e.g. ATP-PC system, interval training, HIIT)\n- Named sports, competitions or physical activities cited as examples\n- Specific statistics or data points (e.g. \"68% of Australian adults\", \"reduces mortality by 30%\")\n\nDO NOT tag:\n- General descriptive words (e.g. \"technology\", \"exercise\", \"training\", \"health\")\n- Command term language or general concepts\n- Vague references without a specific name\n\nFor each example found, return the EXACT text as it appears in the student's response — copy character-for-character.\n\nReturn ONLY a JSON array of strings. Example:\n["Ottawa Charter","mRNA vaccines","COVID-19 pandemic","Close the Gap","AIHW","Eliud Kipchoge","68% of Australians"]\n\nIf no examples found, return: []\nReturn ONLY the JSON array. No other text.`;
+
+  try {
+    out.innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span>';
+    document.getElementById('feedbackWrap').style.display = 'none';
+
+    const [resp1, respEx] = await Promise.all([
+      fetch('/.netlify/functions/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          system: annotationPrompt,
+          messages: [{ role: 'user', content: 'Student response to annotate:\n\n' + text }]
+        })
+      }),
+      fetch('/.netlify/functions/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          system: examplePrompt,
+          messages: [{ role: 'user', content: text }]
+        })
+      })
+    ]);
+
+    if (!resp1.ok) {
+      const errBody = await resp1.text();
+      throw new Error(`Server error ${resp1.status}: ${errBody}`);
+    }
+    const data1 = await resp1.json();
+    if (data1.error) throw new Error(data1.error.message || JSON.stringify(data1.error));
+
+    const raw1 = data1.content.map(b => b.text || '').join('');
+    const match1 = raw1.match(/\{[\s\S]*\}/);
+    if (!match1) throw new Error('No JSON found in annotation response.');
+    const annotations = JSON.parse(match1[0]).annotations || [];
+
+    if (respEx.ok) {
+      try {
+        const dataEx = await respEx.json();
+        const rawEx = dataEx.content.map(b => b.text || '').join('').trim();
+        const aiExamples = JSON.parse(rawEx.match(/\[[\s\S]*\]/)?.[0] || '[]');
+        const existingTexts = new Set(annotations.map(a => a.text.toLowerCase()));
+        for (const ex of aiExamples) {
+          if (!ex || ex.length < 2) continue;
+          if (existingTexts.has(ex.toLowerCase())) continue;
+          const re = new RegExp(ex.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+          const m = re.exec(text);
+          if (m) {
+            const exactText = text.slice(m.index, m.index + m[0].length);
+            annotations.push({ text: exactText, term: 'example' });
+            existingTexts.add(ex.toLowerCase());
+          }
+        }
+      } catch(e) {
+        console.warn('Example detection failed silently:', e);
+      }
+    }
+
+    renderHighlighted(text, annotations);
+    renderStats(annotations, primaryTerm);
+
+    lastAnnotations = annotations;
+    lastText = text;
+
+    const detectedTermsList = [...new Set(annotations.filter(a => a.term !== 'example').map(a => a.term))].join(', ') || 'none';
+
+    const taggedSentences = annotations
+      .filter(a => a.term !== 'example')
+      .map(a => `[${a.term.toUpperCase()}] "${a.text}"`)
+      .join('\n') || 'None detected.';
+
+    const taggedExamples = annotations
+      .filter(a => a.term === 'example')
+      .map(a => `"${a.text}"`)
+      .join(', ') || 'None.';
+
+    const termHitByAnnotations = primaryTerm
+      ? annotations.some(a => a.term === primaryTerm)
+      : null;
+
+    let projectedMarkRaw = null;
+    let projectedMarkValue = null;
+
+    if (markValue) {
+      const projWrap = document.getElementById('projectedMarkWrap');
+      const projBox  = document.getElementById('projectedMarkBox');
+      projBox.innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span>';
+      projWrap.style.display = 'block';
+
+      const projectedMarkPrompt = `You are an experienced HSC marker for Health and Movement Science (HMS) and PDHPE in NSW. Provide a estimated mark range for a student's exam response.\n\nCRITICAL MARKING RULE — READ FIRST:\nGrammar, spelling, punctuation and sentence structure are NOT assessed in HMS/PDHPE. Do NOT reduce the estimated mark for grammatical errors, spelling mistakes, awkward phrasing, run-on sentences, or poor punctuation. HSC markers are explicitly instructed to reward content knowledge and command term demonstration regardless of how it is expressed. A response with perfect knowledge but poor grammar should receive the same mark as a polished response with the same knowledge. Focus entirely on what the student knows and demonstrates, not how they write it.\n\nEXAM QUESTION: ${question || 'Not provided'}\nREQUIRED COMMAND TERM: ${primaryTerm ? primaryTerm.toUpperCase() + ' — ' + DEFINITIONS[primaryTerm] : 'Not detected'}\nMARK VALUE: ${markValue} mark${markValue !== 1 ? 's' : ''}\nCOMMAND TERM DETECTED: ${termHitByAnnotations ? 'Yes' : 'No'}\n\nTAGGED SENTENCES FROM THE RESPONSE:\n${taggedSentences}\n\nHMS MARKING FRAMEWORK — NESA Common Grade Scale applied to this question:\n\nThe NESA Common Grade Scale divides the mark range into four performance bands. For a ${markValue}-mark question:\n\n${(() => {
+  const m = markValue;
+  const bas_hi  = Math.max(1, Math.floor(m * 0.25));
+  const snd_hi  = Math.max(bas_hi + 1, Math.floor(m * 0.50));
+  const thor_hi = Math.max(snd_hi + 1, Math.floor(m * 0.75));
+  const ext_hi  = m;
+  const bas_lo  = 1;
+  const snd_lo  = bas_hi + 1;
+  const thor_lo = snd_hi + 1;
+  const ext_lo  = thor_hi + 1;
+  const fmt = (lo, hi) => { if (lo > hi) return `${hi}`; return lo === hi ? `${lo}` : `${lo}–${hi}`; };
+  const logicNote = m >= 9 ? ' Sustained, logical and cohesive response that directly engages with the question.' : m >= 8 ? ' Logical and cohesive sequencing of ideas matters at this mark value.' : m >= 5 ? ' Structure and flow will differentiate responses at the top of this range.' : '';
+  return `• EXTENSIVE (${fmt(ext_lo, ext_hi)} out of ${m}): Comprehensive and detailed knowledge and understanding. All key relationships between concepts clearly evident. Specific examples well integrated and directly linked to the question. Command term sustained throughout the response.${logicNote}\n• THOROUGH (${fmt(thor_lo, thor_hi)} out of ${m}): Detailed knowledge and understanding. Most relationships between concepts evident. Relevant specific examples provided. Command term demonstrated consistently.\n• SOUND (${fmt(snd_lo, snd_hi)} out of ${m}): Some knowledge and understanding demonstrated. Some relationships between concepts identified. Some relevant examples provided. Command term partially demonstrated.\n• BASIC (${fmt(bas_lo, bas_hi)} out of ${m}): Limited knowledge and understanding. Minimal relationships between concepts. Few or no examples. Command term rarely or not demonstrated.`;
+})()}\n\nUse ONLY these four NESA descriptors — extensive, thorough, sound, basic — when writing the rationale.\n\nBased on the tagged sentences, examples used, whether the command term was demonstrated, and the NESA Common Grade Scale above:\n1. Provide a estimated mark RANGE: X–Y out of ${markValue} (span of 1–2 marks, e.g. \"2–3 out of 4\")\n2. A rationale of 1–2 sentences using NESA Common Grade Scale language — use the exact descriptor (extensive, thorough, sound, or basic) that matches the estimated mark range, and reference what was or wasn't demonstrated\n\nIMPORTANT:\n- Grammar, spelling and punctuation errors must NOT affect the estimated mark — assess content knowledge only\n- If the command term was NOT detected, this should significantly lower the estimated mark\n- Use ONLY the four NESA descriptors in your rationale: extensive, thorough, sound, basic\n- Do NOT use \"logical and cohesive\" as a criterion for questions under 8 marks\n- Be honest and calibrated — base it strictly on what was tagged\n\nReturn ONLY this exact format with no other text:\nESTIMATED MARK: X–Y out of ${markValue}\nRATIONALE: [1–2 sentences]`;
+
+      try {
+        const resp2 = await fetch('/.netlify/functions/analyse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 200,
+            system: projectedMarkPrompt,
+            messages: [{ role: 'user', content: `Student response:\n\n${text}\n\nTagged sentences:\n${taggedSentences}` }]
+          })
+        });
+        if (resp2.ok) {
+          const data2 = await resp2.json();
+          if (!data2.error) {
+            projectedMarkRaw = data2.content.map(b => b.text || '').join('').trim();
+            const mMatch = projectedMarkRaw.match(/ESTIMATED MARK:\s*(\d+)/i);
+            if (mMatch) projectedMarkValue = parseInt(mMatch[1]);
+            renderProjectedMark(projectedMarkRaw, markValue);
+          }
+        }
+      } catch(e2) {
+        projWrap.style.display = 'none';
+      }
+    }
+
+    document.getElementById('feedbackBox').innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span>';
+    document.getElementById('feedbackWrap').style.display = 'block';
+    document.getElementById('feedbackBox').className = 'feedback-box has-tip';
+
+    const ratio = (markValue && projectedMarkValue) ? projectedMarkValue / markValue : null;
+
+    let levelGuidance;
+    if (ratio === null) {
+      const higherOrderTerms = ['evaluate','assess','discuss','analyse','examine','compare'];
+      const higherOrderCount = [...new Set(annotations.filter(a => a.term !== 'example').map(a => a.term))].filter(t => higherOrderTerms.includes(t)).length;
+      const exCount = annotations.filter(a => a.term === 'example').length;
+      if (higherOrderCount >= 1 && exCount >= 1) { levelGuidance = 'high'; }
+      else if (higherOrderCount === 0 && exCount <= 1) { levelGuidance = 'low'; }
+      else { levelGuidance = 'mid'; }
+    } else if (ratio <= 0.4) { levelGuidance = 'low'; }
+    else if (ratio <= 0.7) { levelGuidance = 'mid'; }
+    else { levelGuidance = 'high'; }
+
+    const levelInstructions = {
+      low: `STUDENT LEVEL: This student's estimated mark places them in the lower performance range (roughly Band 1–2 out of 6).\nWrite feedback using very simple, plain language:\n- Short sentences. No technical jargon — if you must use an HMS term, explain it in brackets.\n- Be warm and encouraging. Acknowledge what they got right, even if it's small.\n- Give ONE clear, specific action — not a list of things to fix.\n- Tell them WHY the improvement matters, not just what to do.\n- Avoid phrases like \"sustained engagement\", \"command term\", \"analytical depth\" — they won't understand these.\n- Example tone: \"You made a good point about [X]. To improve, try adding an example — for instance, you could mention [specific suggestion] to help the marker see what you mean.\"`,
+      mid: `STUDENT LEVEL: This student's estimated mark places them in the middle performance range (roughly Band 3–4 out of 6).\nWrite feedback in clear, accessible language:\n- Avoid complex jargon but HMS terms are OK if briefly explained.\n- Be specific about what they did well and what the next concrete step is.\n- Give two clear improvements — they have a foundation to build on.\n- Reference their actual words to show you've engaged with their response.\n- Example tone: \"You explained how [X] works well, which shows solid understanding. To move higher, connect this to a specific Australian example — for instance, [suggestion] — to show the marker you can apply your knowledge to real contexts.\"`,
+      high: `STUDENT LEVEL: This student's estimated mark places them in the higher performance range (roughly Band 5–6 out of 6).\nWrite feedback using appropriate HMS terminology — they can handle it:\n- Be precise and analytical. Point out subtle gaps or missed opportunities for depth.\n- Reference specific tagged sentences to show exactly where they're excelling and where refinement is needed.\n- Challenge them — they are close to the top and need nuanced direction, not general encouragement.\n- Example tone: \"Your discuss and evaluate annotations show strong analytical thinking. To push into the top band, ensure your judgement in the final paragraph is explicitly anchored to criteria — for example, strengthening your reference to [example] by stating what it specifically demonstrates about [concept] in an Australian context.\"`
+    };
+
+    const feedbackPromptFinal = `You are an experienced HSC marker for the new Health and Movement Science (HMS) 11–12 Syllabus (2023), first examined in the HSC in 2026. You are deeply familiar with both the PDHPE syllabus (which HMS replaces) and the new HMS syllabus and how it is assessed.\n\n${levelInstructions[levelGuidance]}\n\nKEY HMS SYLLABUS AND ASSESSMENT CONTEXT (from NESA):\n- HMS replaces PDHPE from 2026. Year 12 studies two focus areas: \"Health in an Australian and Global Context\" and \"Training for Improved Performance\"\n- The HSC exam is a 3-hour written paper worth 100 marks with three sections, giving approximately equal weighting to both focus areas\n- All questions are compulsory — no optional extended response questions\n- The syllabus emphasises application of health and movement concepts to real-world contexts, issues, groups and local contexts\n- Skills (collaboration, analysis, communication, creative thinking, problem-solving, research) are weighted at 60%; knowledge and understanding at 40%\n- HMS explicitly requires students to apply scientific concepts to health and movement, with a focus on practical application and deep knowledge\n- The syllabus places a greater focus on: the health of young people, Aboriginal and Torres Strait Islander Peoples, and depth studies\n- Strong responses in HMS demonstrate: deep knowledge AND skill application, connection to real-world contexts, use of HMS-specific terminology, critical inquiry, and sustained engagement with the command term throughout\n\n${question ? `Exam question: "${question}"` : ''}\n${primaryTerm ? `Required command term: ${primaryTerm.toUpperCase()} — ${DEFINITIONS[primaryTerm]}` : ''}\n${markValue ? `Mark value: ${markValue} mark${markValue !== 1 ? 's' : ''}.` : ''}\n${projectedMarkRaw ? `Estimated mark: ${projectedMarkRaw.match(/ESTIMATED MARK:\s*(.+)/i)?.[1]?.trim() || ''}` : ''}\n\nThe colour-coded annotation system identified the following from the student response:\n\nTAGGED SENTENCES:\n${taggedSentences}\n\nEXAMPLES USED:\n${taggedExamples}\n\nREQUIRED TERM "${primaryTerm}" WAS${termHitByAnnotations ? '' : ' NOT'} DETECTED.\n\nHMS-SPECIFIC MARKING CRITERIA (adapted from NESA PDHPE/HMS marking framework):\n${markValue ? (
+  'For ' + markValue + ' mark' + (markValue !== 1 ? 's' : '') + ', HMS markers look for:\n' +
+  (markValue === 1 ? '• 1 mark: One correct relevant point stated clearly' : '') +
+  (markValue === 2 ? '• 2 marks: Two correct points OR one point with a supporting example or application\n• 1 mark: One correct relevant point' : '') +
+  (markValue === 3 ? '• 3 marks: Characteristics/features clearly stated AND supported with a specific real-world example\n• 2 marks: Some understanding with limited examples\n• 1 mark: Some relevant information' : '') +
+  (markValue === 4 ? '• 4 marks: Clear understanding, relationships between ideas evident, specific examples applied to context\n• 3 marks: Sound understanding with some relationships and an example\n• 2 marks: Some understanding, limited links\n• 1 mark: Some relevant information' : '') +
+  (markValue >= 5 && markValue <= 6 ? '• ' + markValue + ' marks: Comprehensive understanding, all relationships evident, multiple specific examples, command term sustained throughout\n• ' + (markValue-1) + ' marks: Sound understanding, most relationships evident, relevant examples\n• ' + (markValue-2) + ' marks: Some understanding, limited links\n• 1 mark: Some relevant information' : '') +
+  (markValue >= 7 ? '• ' + markValue + '–' + (markValue-1) + ' marks: Sustained, logical and cohesive — comprehensive understanding, all relationships clearly evident, specific examples demonstrate relationships\n• ' + (markValue-2) + '–' + (markValue-3) + ' marks: Logical — sound understanding, most relationships evident\n• ' + (markValue-4) + '–' + Math.max(1,markValue-5) + ' marks: Coherent — some understanding, general relationships\n• 1–' + Math.max(1,markValue-6) + ' marks: Some relevant information' : '')
+) : 'Mark value not provided — assess quality and depth against HMS expectations without specifying marks.'}\n\nPDHPE/HMS MARKER FEEDBACK PATTERNS (2022–2024, applicable to HMS):\nRewarded: providing characteristics and features with specific examples; making relationships between concepts and outcomes evident; demonstrating understanding AND applying it to a specific HMS context; integrating examples directly linked to the key idea; sustaining the command term throughout.\nFlagged: generic statements without specific examples; listing features without linking them; not addressing all parts of the question; only demonstrating the command term at the start.\n\nUsing ONLY the tagged sentences above as evidence, write feedback using EXACTLY these four headings. No text before the first heading.\n\nWhat Went Well\n• [reference specific tagged sentences — what would earn marks against HMS criteria above]\n• [another strength, anchored to their actual words]\n\nAreas for Improvement\n• [identify gaps relative to HMS criteria, written at the STUDENT LEVEL above]\n• [another gap, written at the STUDENT LEVEL above]\n\nCommand Term Focus\n• [assess how consistently the tagged sentences demonstrate "${primaryTerm || 'the required term'}" — ${termHitByAnnotations ? 'it WAS detected: is it sustained throughout or only in places?' : `it was NOT detected: what specifically is missing?`} Written at the STUDENT LEVEL above.]\n\nNext Steps\n• [one concrete action grounded in their actual response, written at the STUDENT LEVEL above]\n• [another specific next step, written at the STUDENT LEVEL above]\n\nRULES:\n- Exact headings only — no colons, bold, or extra characters before the heading\n- Each bullet starts with •\n- Second person ("you"), written strictly at the STUDENT LEVEL specified above\n- Every point references the tagged sentences — no generic advice\n- Do NOT reference mark bands or say "to access full marks"\n- Maximum 220 words total\n\nReturn ONLY the four sections. No preamble, no JSON.`;
+
+    const resp3 = await fetch('/.netlify/functions/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        system: feedbackPromptFinal,
+        messages: [{ role: 'user', content: `Student response:\n\n${text}\n\nAnnotated sentences:\n${taggedSentences}` }]
+      })
+    });
+
+    if (!resp3.ok) {
+      const errBody = await resp3.text();
+      throw new Error(`Server error ${resp3.status}: ${errBody}`);
+    }
+    const data3 = await resp3.json();
+    if (data3.error) throw new Error(data3.error.message || JSON.stringify(data3.error));
+
+    const feedback = data3.content.map(b => b.text || '').join('').trim();
+    renderFeedback(feedback, primaryTerm, annotations);
+
+    document.getElementById('downloadWrap').style.display = 'block';
+
+  } catch (e) {
+    out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — ${escHtml(e.message)}<br><small>Check your connection and try again.</small></div>`;
+    document.getElementById('feedbackWrap').style.display = 'none';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderFeedback(feedback, primaryTerm, annotations) {
+  const wrap = document.getElementById('feedbackWrap');
+  const box  = document.getElementById('feedbackBox');
+
+  if (!feedback) { wrap.style.display = 'none'; return; }
+
+  const termHit = primaryTerm && annotations && annotations.some(a => a.term === primaryTerm);
+  const c = primaryTerm ? TERM_COLOURS[primaryTerm] : null;
+
+  const label = primaryTerm
+    ? `<div class="tip-label" style="color:${termHit ? '#2d7a46' : '#8b6c42'}">${termHit ? '✅' : '⚠️'} Marker Feedback — ${cap(primaryTerm)} ${termHit ? 'demonstrated' : 'not yet demonstrated'}</div>`
+    : `<div class="tip-label">💡 Marker Feedback</div>`;
+
+  box.className = 'feedback-box has-tip';
+
+  const QUADRANTS = [
+    { key: 'What Went Well',        patterns: ['what went well'] },
+    { key: 'Areas for Improvement', patterns: ['areas for improvement'] },
+    { key: 'Command Term Focus',    patterns: ['command term focus'] },
+    { key: 'Next Steps',            patterns: ['next steps'] },
+  ];
+
+  const sections = {};
+  let currentKey = null;
+  feedback.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    const lower = trimmed.toLowerCase().replace(/[:\-\*#]/g, '').trim();
+    const match = QUADRANTS.find(h => h.patterns.some(p => lower === p || lower.startsWith(p)));
+    if (match) { currentKey = match.key; if (!sections[currentKey]) sections[currentKey] = []; }
+    else if (currentKey && trimmed) {
+      const clean = trimmed.replace(/^[•\-\*\d\.]?\s*/, '').trim();
+      if (clean) sections[currentKey].push(clean);
+    }
+  });
+
+  const quadrantHTML = QUADRANTS.map(q => {
+    const points = sections[q.key] || [];
+    const pointsHTML = points.length
+      ? points.map(p =>
+          `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;">
+            <span style="flex-shrink:0;color:var(--muted)">•</span>
+            <span style="color:var(--ink)">${escHtml(p)}</span>
+          </div>`
+        ).join('')
+      : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">—</div>`;
+
+    return `<div style="background:var(--cream);border:1.5px solid var(--border2);border-radius:9px;padding:12px 13px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--olive);margin-bottom:8px;">${q.key}</div>
+      ${pointsHTML}
+    </div>`;
+  }).join('');
+
+  box.innerHTML = label +
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">${quadrantHTML}</div>`;
+  wrap.style.display = 'block';
+}
+
+function renderHighlighted(text, annotations) {
+  function normalise(s) { return s.replace(/\s+/g, ' ').trim(); }
+
+  function findIdx(needle) {
+    let idx = text.indexOf(needle);
+    if (idx !== -1) return idx;
+    const normNeedle = normalise(needle);
+    const normText   = normalise(text);
+    const normIdx    = normText.indexOf(normNeedle);
+    if (normIdx === -1) return -1;
+    let origPos = 0, normPos = 0;
+    while (normPos < normIdx && origPos < text.length) {
+      if (text[origPos].match(/\s/)) {
+        while (origPos < text.length && text[origPos].match(/\s/)) origPos++;
+        normPos++;
+      } else { origPos++; normPos++; }
+    }
+    return origPos;
+  }
+
+  const cmdRanges = [];
+  const exRanges  = [];
+
+  for (const ann of annotations) {
+    if (!ann.text || ann.text.length < 2) continue;
+    const idx = findIdx(ann.text);
+    if (idx === -1) continue;
+    const end = idx + ann.text.length;
+    if (end > text.length) continue;
+
+    if (ann.term === 'example') {
+      exRanges.push({ start: idx, end });
+    } else {
+      const overlaps = cmdRanges.some(r => !(end <= r.start || idx >= r.end));
+      if (!overlaps) cmdRanges.push({ start: idx, end, term: ann.term });
+    }
+  }
+
+  cmdRanges.sort((a, b) => a.start - b.start);
+
+  let html = '';
+  let cursor = 0;
+  for (const r of cmdRanges) {
+    if (r.start > cursor) html += escHtml(text.slice(cursor, r.start));
+    html += `<span class="hl ${r.term}">${escHtml(text.slice(r.start, r.end))}<span class="tooltip">${DEFINITIONS[r.term] || r.term}</span></span>`;
+    cursor = r.end;
+  }
+  if (cursor < text.length) html += escHtml(text.slice(cursor));
+
+  const box = document.getElementById('outputBox');
+  box.innerHTML = html || '<span class="placeholder">No command term demonstrations detected.</span>';
+
+  if (exRanges.length === 0) { document.getElementById('copyBtn').style.display = 'inline-flex'; return; }
+
+  function applyExampleUnderlines(rootNode, exRanges) {
+    const textNodes = [];
+    let charPos = 0;
+
+    function walk(node) {
+      if (node.classList && node.classList.contains('tooltip')) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNodes.push({ node, start: charPos, end: charPos + node.textContent.length });
+        charPos += node.textContent.length;
+      } else {
+        node.childNodes.forEach(walk);
+      }
+    }
+    walk(rootNode);
+
+    exRanges.forEach(ex => {
+      textNodes.forEach(tn => {
+        const overlapStart = Math.max(ex.start, tn.start);
+        const overlapEnd   = Math.min(ex.end,   tn.end);
+        if (overlapStart >= overlapEnd) return;
+
+        const localStart = overlapStart - tn.start;
+        const localEnd   = overlapEnd   - tn.start;
+        const nodeText   = tn.node.textContent;
+        const before     = nodeText.slice(0, localStart);
+        const middle     = nodeText.slice(localStart, localEnd);
+        const after      = nodeText.slice(localEnd);
+
+        const frag = document.createDocumentFragment();
+        if (before) frag.appendChild(document.createTextNode(before));
+        const u = document.createElement('span');
+        u.className = 'hl example';
+        u.textContent = middle;
+        frag.appendChild(u);
+        if (after) frag.appendChild(document.createTextNode(after));
+
+        tn.node.parentNode.replaceChild(frag, tn.node);
+        tn.node = u;
+      });
+    });
+  }
+
+  applyExampleUnderlines(box, exRanges);
+  document.getElementById('copyBtn').style.display = 'inline-flex';
+}
+
+function renderStats(annotations, primaryTerm) {
+  const terms = [...new Set(annotations.filter(a => a.term !== 'example').map(a => a.term))];
+  const hasExamples = annotations.some(a => a.term === 'example');
+
+  let html = terms.map(term => {
+    const req = term === primaryTerm ? ' <span style="font-size:.62rem;opacity:.75">★ required</span>' : '';
+    return `<span class="stat-chip ${term}">${cap(term)}${req}</span>`;
+  }).join('');
+
+  if (hasExamples) html += `<span class="stat-chip" style="background:rgba(139,108,66,.15);color:var(--bark);border:1px solid rgba(139,108,66,.25);text-decoration:underline;text-decoration-color:var(--bark);text-decoration-thickness:2px;text-underline-offset:2px;">Examples</span>`;
+  document.getElementById('statsRow').innerHTML = html;
+}
+
+function copyOutput() {
+  const box = document.getElementById('outputBox');
+
+  const COLOURS = {
+    outline:  { bg: '#52d68a', text: '#0d0d0d' },
+    describe: { bg: '#5bc8f5', text: '#0d0d0d' },
+    explain:  { bg: '#f08050', text: '#0d0d0d' },
+    analyse:  { bg: '#b57cf7', text: '#ffffff' },
+    discuss:  { bg: '#f76fa8', text: '#ffffff' },
+    assess:   { bg: '#e040fb', text: '#ffffff' },
+    compare:  { bg: '#42d4c8', text: '#0d0d0d' },
+    evaluate: { bg: '#e84545', text: '#ffffff' },
+    examine:  { bg: '#a8d848', text: '#0d0d0d' },
+  };
+
+  const clone = box.cloneNode(true);
+  clone.querySelectorAll('.tooltip').forEach(t => t.remove());
+  clone.querySelectorAll('.hl').forEach(span => {
+    const term = [...span.classList].find(c => COLOURS[c] || c === 'example');
+    if (term === 'example') {
+      span.removeAttribute('class');
+      span.setAttribute('style', 'text-decoration:underline;text-decoration-color:#8b6c42;text-underline-offset:3px;font-weight:500;');
+    } else if (term && COLOURS[term]) {
+      const c = COLOURS[term];
+      span.removeAttribute('class');
+      span.setAttribute('style', `background-color:${c.bg};color:${c.text};padding:1px 4px;border-radius:3px;font-weight:bold;-webkit-print-color-adjust:exact;print-color-adjust:exact;`);
+    }
+  });
+
+  const htmlForClipboard = `<html><body><p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;">${clone.innerHTML}</p></body></html>`;
+  const plainText = box.innerText || box.textContent || '';
+
+  if (navigator.clipboard && window.ClipboardItem) {
+    const htmlBlob = new Blob([htmlForClipboard], { type: 'text/html' });
+    const textBlob = new Blob([plainText], { type: 'text/plain' });
+    navigator.clipboard.write([
+      new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+    ]).then(() => {
+      flashCopied();
+    }).catch(() => {
+      execCommandCopy(clone, plainText);
+    });
+  } else {
+    execCommandCopy(clone, plainText);
+  }
+}
+
+function execCommandCopy(clone, plainText) {
+  const wrapper = document.createElement('div');
+  wrapper.contentEditable = 'true';
+  wrapper.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:600px;font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;white-space:pre-wrap;opacity:0.01;';
+  wrapper.innerHTML = clone.innerHTML;
+  document.body.appendChild(wrapper);
+
+  const range = document.createRange();
+  range.selectNodeContents(wrapper);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+
+  sel.removeAllRanges();
+  document.body.removeChild(wrapper);
+
+  if (ok) {
+    flashCopied();
+  } else {
+    navigator.clipboard.writeText(plainText).then(flashCopied).catch(() => {
+      alert('Copy failed. Try selecting the text manually and pressing Ctrl+C / Cmd+C.');
+    });
+  }
+}
+
+function flashCopied() {
+  const btn = document.getElementById('copyBtn');
+  const lbl = document.getElementById('copyLabel');
+  btn.classList.add('copied');
+  lbl.textContent = 'Copied!';
+  setTimeout(() => { btn.classList.remove('copied'); lbl.textContent = 'Copy'; }, 2000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function cap(s) { return s[0].toUpperCase() + s.slice(1); }
+
+function clearAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('questionText').value = '';
+  document.getElementById('markValue').value = '';
+  document.getElementById('outputBox').innerHTML = '<span class="placeholder">Your colour-coded response will appear here…</span>';
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('copyLabel').textContent = 'Copy';
+  document.getElementById('statsRow').innerHTML = '';
+  document.getElementById('termPill').innerHTML = '<span style="color:var(--muted);font-style:italic">none yet — type the question above</span>';
+  document.getElementById('feedbackWrap').style.display = 'none';
+  document.getElementById('feedbackBox').className = 'feedback-box';
+  document.getElementById('projectedMarkWrap').style.display = 'none';
+  document.getElementById('projectedMarkBox').innerHTML = '';
+  document.getElementById('downloadWrap').style.display = 'none';
+  lastAnnotations = [];
+  lastText = '';
+  removeAllFiles();
+  switchTab('type');
+}
+
+function renderProjectedMark(raw, markValue) {
+  const wrap = document.getElementById('projectedMarkWrap');
+  const box  = document.getElementById('projectedMarkBox');
+  const markMatch      = raw.match(/ESTIMATED MARK:\s*(.+)/i);
+  const rationaleMatch = raw.match(/RATIONALE:\s*(.+)/i);
+  const mark      = markMatch      ? markMatch[1].trim()      : raw.split('\n')[0].trim();
+  const rationale = rationaleMatch ? rationaleMatch[1].trim() : '';
+  box.className = 'feedback-box has-tip';
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:var(--ink);letter-spacing:-0.03em;line-height:1;">${escHtml(mark)}</div>
+    </div>
+    ${rationale ? `<p style="margin-top:10px;font-size:0.85rem;line-height:1.65;color:var(--muted)">${escHtml(rationale)}</p>` : ''}
+    <p style="margin-top:8px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);font-style:italic">AI-estimated projection based on annotated response. Not a guaranteed HSC mark.</p>`;
+  wrap.style.display = 'block';
+}
+
+async function downloadPDF(event) {
+  const btn = event.currentTarget;
+  const origHTML = btn.innerHTML;
+  btn.innerHTML = '<span style="opacity:0.7">Generating…</span>';
+  btn.disabled = true;
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const COLOURS = {
+      outline:  { bg: [82,214,138],  fg: [13,13,13] },
+      describe: { bg: [91,200,245],  fg: [13,13,13] },
+      explain:  { bg: [240,128,80],  fg: [13,13,13] },
+      analyse:  { bg: [181,124,247], fg: [255,255,255] },
+      discuss:  { bg: [247,111,168], fg: [255,255,255] },
+      assess:   { bg: [224,64,251],  fg: [255,255,255] },
+      compare:  { bg: [66,212,200],  fg: [13,13,13] },
+      evaluate: { bg: [232,69,69],   fg: [255,255,255] },
+      examine:  { bg: [168,216,72],  fg: [13,13,13] },
+    };
+
+    const PW = 210, PH = 297, ML = 14, MR = 14, MB = 10;
+    const CW = PW - ML - MR;
+    let page = 1, y = 0;
+
+    function newPage() { if (page > 1) doc.addPage(); page++; y = 0; drawHeader(); }
+    function checkY(need) { if (y + need > PH - MB) newPage(); }
+
+    function drawHeader() {
+      doc.setFillColor(26, 36, 16);
+      doc.rect(0, 0, PW, 18, 'F');
+      doc.setTextColor(242, 237, 224);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      doc.text('CommandoHMS', ML, 7.5);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+      doc.setTextColor(107, 115, 88);
+      doc.text('HSC Health and Movement Science — Response Analysis Report', ML, 12);
+      doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}), PW - MR, 12, { align: 'right' });
+      doc.setTextColor(30, 38, 20);
+      y = 22;
+    }
+
+    function sectionLabel(text) {
+      checkY(8);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      doc.setTextColor(107, 115, 88);
+      doc.text(text.toUpperCase(), ML, y);
+      y += 5; doc.setTextColor(30, 38, 20);
+    }
+
+    function drawDivider() {
+      checkY(6);
+      doc.setDrawColor(200, 184, 122); doc.setLineWidth(0.3);
+      doc.line(ML, y, PW - MR, y); y += 5;
+    }
+
+    function drawParagraph(text, fontSize, colour, indent) {
+      const x = ML + (indent || 0), w = CW - (indent || 0);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(fontSize);
+      doc.setTextColor(...colour);
+      const lines = doc.splitTextToSize(text, w);
+      checkY(lines.length * fontSize * 0.4 + 2);
+      doc.text(lines, x, y);
+      y += lines.length * fontSize * 0.4 + 2;
+    }
+
+    const question = document.getElementById('questionText').value.trim();
+    const markVal  = document.getElementById('markValue').value.trim();
+    const feedbackBox = document.getElementById('feedbackBox');
+    const projBox = document.getElementById('projectedMarkBox');
+
+    function getFeedback() {
+      if (!feedbackBox) return [];
+      const grid = feedbackBox.querySelector('div[style*="grid-template-columns"]');
+      if (!grid) return [];
+      return Array.from(grid.children).map(card => {
+        const h = card.querySelector('div[style*="text-transform"]');
+        const bullets = Array.from(card.querySelectorAll('div[style*="display:flex"]')).map(b => {
+          const spans = b.querySelectorAll('span');
+          return spans.length > 1 ? spans[spans.length-1].innerText.trim() : b.innerText.trim();
+        }).filter(Boolean);
+        return { heading: h ? h.innerText.trim() : '', bullets };
+      });
+    }
+
+    function getProjected() {
+      if (!projBox || !projBox.innerHTML) return null;
+      const m = projBox.querySelector('div[style*="font-size:2.2rem"]');
+      const r = projBox.querySelector('p[style*="0.85rem"]');
+      return { mark: m ? m.innerText.trim() : '', rationale: r ? r.innerText.trim() : '' };
+    }
+
+    function buildSegments(fullText, annotations) {
+      const cmdAnns  = annotations.filter(a => a.term !== 'example');
+      const exAnns   = annotations.filter(a => a.term === 'example');
+
+      const cmdRanges = [];
+      for (const ann of cmdAnns) {
+        const idx = fullText.indexOf(ann.text);
+        if (idx === -1) continue;
+        const end = idx + ann.text.length;
+        const overlaps = cmdRanges.some(r => !(end <= r.start || idx >= r.end));
+        if (!overlaps) cmdRanges.push({ start: idx, end, term: ann.term });
+      }
+      cmdRanges.sort((a, b) => a.start - b.start);
+
+      const exRanges = [];
+      for (const ann of exAnns) {
+        const re = new RegExp(ann.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        const m  = re.exec(fullText);
+        if (m) exRanges.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+      }
+
+      const segs = [];
+      let cursor = 0;
+
+      const rawSegs = [];
+      for (const r of cmdRanges) {
+        if (r.start > cursor) rawSegs.push({ text: fullText.slice(cursor, r.start), term: null });
+        rawSegs.push({ text: fullText.slice(r.start, r.end), term: r.term });
+        cursor = r.end;
+      }
+      if (cursor < fullText.length) rawSegs.push({ text: fullText.slice(cursor), term: null });
+
+      for (const seg of rawSegs) {
+        const segStart = fullText.indexOf(seg.text, 0);
+        const localEx = exRanges.filter(e =>
+          e.start < segStart + seg.text.length && e.end > segStart
+        );
+        if (localEx.length === 0) {
+          segs.push({ text: seg.text, term: seg.term, isEx: false });
+        } else {
+          let pos = 0;
+          for (const ex of localEx) {
+            const localStart = Math.max(0, ex.start - segStart);
+            const localEnd   = Math.min(seg.text.length, ex.end - segStart);
+            if (localStart > pos) segs.push({ text: seg.text.slice(pos, localStart), term: seg.term, isEx: false });
+            if (localEnd > localStart) segs.push({ text: seg.text.slice(localStart, localEnd), term: seg.term, isEx: true });
+            pos = localEnd;
+          }
+          if (pos < seg.text.length) segs.push({ text: seg.text.slice(pos), term: seg.term, isEx: false });
+        }
+      }
+
+      return segs.filter(s => s.text);
+    }
+
+    const rawText   = lastText || '';
+    const segments  = buildSegments(rawText, lastAnnotations);
+    const feedback  = getFeedback();
+    const projected = getProjected();
+
+    newPage();
+
+    if (question) {
+      sectionLabel('Exam Question');
+      drawParagraph(question, 10, [30, 38, 20], 0);
+      if (markVal) {
+        checkY(7);
+        const label = `Mark value: ${markVal} mark${markVal !== '1' ? 's' : ''}`;
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+        const lw = doc.getTextWidth(label) + 6;
+        doc.setFillColor(234, 227, 208);
+        doc.roundedRect(ML, y - 3.5, lw, 5.5, 1.5, 1.5, 'F');
+        doc.setTextColor(61, 92, 46);
+        doc.text(label, ML + 3, y);
+        y += 5; doc.setTextColor(30, 38, 20);
+      }
+      drawDivider();
+    }
+
+    sectionLabel('Colour Key');
+    checkY(8);
+    let kx = ML;
+    Object.entries(COLOURS).forEach(([term, c]) => {
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+      const tw = doc.getTextWidth(cap(term)) + 5;
+      if (kx + tw > PW - MR) { kx = ML; y += 6; }
+      doc.setFillColor(...c.bg);
+      doc.roundedRect(kx, y - 3.5, tw, 5.5, 1.5, 1.5, 'F');
+      doc.setTextColor(...c.fg);
+      doc.text(cap(term), kx + 2.5, y);
+      kx += tw + 2;
+    });
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+    doc.setTextColor(107, 115, 88);
+    const exw = doc.getTextWidth('Example') + 5;
+    if (kx + exw > PW - MR) { kx = ML; y += 6; }
+    doc.text('Example', kx + 2.5, y);
+    doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.5);
+    doc.line(kx + 2.5, y + 0.8, kx + 2.5 + doc.getTextWidth('Example'), y + 0.8);
+    y += 7; doc.setTextColor(30, 38, 20);
+    drawDivider();
+
+    sectionLabel('Colour-Coded Response');
+    const FS = 9.5;
+    const LINE_H = 5.2;
+    const H_PAD = 1.5;
+
+    function getW(text, bold) {
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(FS);
+      return doc.getTextWidth(text);
+    }
+
+    function drawResponseLine(lineItems) {
+      checkY(LINE_H + 1);
+      let dx = ML;
+      lineItems.forEach(item => {
+        if (!item.text) return;
+        const isHL  = item.term && COLOURS[item.term];
+        const w = getW(item.text, !!isHL);
+
+        if (isHL) {
+          const c = COLOURS[item.term];
+          doc.setFillColor(...c.bg);
+          doc.roundedRect(dx, y - LINE_H + 1.2, w + H_PAD * 2, LINE_H, 1, 1, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
+          doc.setTextColor(...c.fg);
+          doc.text(item.text, dx + H_PAD, y);
+          if (item.isEx) {
+            doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
+            doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + w, y + 0.9);
+          }
+          dx += w + H_PAD * 2;
+        } else if (item.isEx) {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+          doc.setTextColor(107, 80, 50);
+          doc.text(item.text, dx, y);
+          doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
+          doc.line(dx, y + 0.9, dx + w, y + 0.9);
+          dx += w;
+        } else {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+          doc.setTextColor(30, 38, 20);
+          doc.text(item.text, dx, y);
+          dx += w;
+        }
+      });
+      y += LINE_H + 0.6;
+    }
+
+    let lineItems = [];
+    let lineW = 0;
+
+    function pushLine() {
+      if (lineItems.length) drawResponseLine(lineItems);
+      lineItems = [];
+      lineW = 0;
+    }
+
+    segments.forEach(seg => {
+      if (!seg.text) return;
+      const isHL = seg.term && COLOURS[seg.term];
+      const bold = !!isHL;
+
+      const chunks = seg.text.match(/\S+\s*/g) || [];
+
+      chunks.forEach(chunk => {
+        const cw = getW(chunk, bold) + (isHL ? H_PAD * 2 : 0);
+
+        if (lineW + cw > CW && lineItems.length > 0) {
+          pushLine();
+        }
+
+        lineItems.push({ text: chunk, term: seg.term || null, isEx: seg.isEx || false });
+        lineW += cw;
+      });
+    });
+
+    pushLine();
+
+    doc.setTextColor(30, 38, 20);
+    doc.setFont('helvetica', 'normal');
+    y += 2;
+
+    newPage();
+
+    if (feedback.length) {
+      sectionLabel('Marker Feedback');
+      const qW = (CW - 5) / 2;
+      feedback.forEach((q, i) => {
+        const col = i % 2;
+        if (col === 0 && i > 0) y += 3;
+        const qX = ML + col * (qW + 5);
+        let qH = 14;
+        q.bullets.forEach(b => { const lines = doc.splitTextToSize(b, qW - 8); qH += lines.length * 8.5 * 0.38 + 3; });
+        checkY(qH);
+        doc.setFillColor(242, 237, 224); doc.setDrawColor(200, 184, 122); doc.setLineWidth(0.3);
+        doc.roundedRect(qX, y, qW, qH, 2, 2, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(61, 92, 46);
+        doc.text(q.heading.toUpperCase(), qX + 4, y + 5.5);
+        let qy = y + 10;
+        q.bullets.forEach(b => {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(46, 58, 28);
+          const lines = doc.splitTextToSize(b, qW - 10);
+          doc.text('•', qX + 3, qy);
+          doc.text(lines, qX + 6.5, qy);
+          qy += lines.length * 8.5 * 0.38 + 3;
+        });
+        if (col === 1 || i === feedback.length - 1) y += qH + 3;
+      });
+      doc.setTextColor(30, 38, 20);
+      drawDivider();
+    }
+
+    if (projected && projected.mark) {
+      sectionLabel('Estimated Mark');
+      checkY(14);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(30, 38, 20);
+      doc.text(projected.mark, ML, y); y += 8;
+      if (projected.rationale) drawParagraph(projected.rationale, 9, [107, 115, 88], 0);
+      drawDivider();
+    }
+
+    checkY(16);
+    doc.setFillColor(242, 237, 224); doc.setDrawColor(200, 184, 122); doc.setLineWidth(0.3);
+    const dText = 'AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
+    const dLines = doc.splitTextToSize(dText, CW - 8);
+    const dH = dLines.length * 7.5 * 0.4 + 8;
+    doc.roundedRect(ML, y, CW, dH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(107, 115, 88);
+    doc.text(dLines, ML + 4, y + 5);
+
+    doc.save('CommandoHMS-' + new Date().toISOString().slice(0,10) + '.pdf');
+
+  } catch(e) {
+    alert('PDF generation failed: ' + e.message);
+    console.error(e);
+  } finally {
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
