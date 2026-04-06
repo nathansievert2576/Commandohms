@@ -36,16 +36,21 @@
     --radius-lg: 20px;
     --rule-line: rgba(61,92,46,.08);
 
-    /* Command term colours — keep originals for semantic accuracy */
-    --outline:  #52d68a;
-    --describe: #5bc8f5;
-    --explain:  #f08050;
-    --analyse:  #b57cf7;
-    --discuss:  #f76fa8;
-    --assess:   #e040fb;
-    --compare:  #42d4c8;
-    --evaluate: #e84545;
-    --examine:  #a8d848;
+    /* Command term colours — easiest to hardest */
+    --identify:     #ffd166;
+    --outline:      #52d68a;
+    --describe:     #5bc8f5;
+    --explain:      #f08050;
+    --apply:        #84a98c;
+    --compare:      #42d4c8;
+    --contrast:     #06d6a0;
+    --examine:      #a8d848;
+    --analyse:      #b57cf7;
+    --investigate:  #9b5de5;
+    --justify:      #ff9a3c;
+    --discuss:      #f76fa8;
+    --assess:       #e040fb;
+    --evaluate:     #e84545;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -215,27 +220,37 @@
   .legend-item .lbl { font-weight: 700; color: #0d0d0d !important; }
   .legend-item .ldef { font-size: 0.7rem; font-weight: 400; color: #0d0d0d !important; opacity: 1; display: block; margin-top: 1px; }
   .legend-item-inner { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-  .legend-item.li-outline  { background: var(--outline);  color: #0d0d0d; }
-  .legend-item.li-describe { background: var(--describe); color: #0d0d0d; }
-  .legend-item.li-explain  { background: var(--explain);  color: #0d0d0d; }
-  .legend-item.li-analyse  { background: var(--analyse);  color: #0d0d0d; }
-  .legend-item.li-discuss  { background: var(--discuss);  color: #0d0d0d; }
-  .legend-item.li-assess   { background: var(--assess);   color: #0d0d0d; }
-  .legend-item.li-compare  { background: var(--compare);  color: #0d0d0d; }
-  .legend-item.li-evaluate { background: var(--evaluate); color: #0d0d0d; }
-  .legend-item.li-examine  { background: var(--examine);  color: #0d0d0d; }
-  .legend-item.li-example  { background: var(--cream2); color: var(--ink); border: 1.5px solid var(--border2); }
+  .legend-item.li-identify   { background: var(--identify);    color: #0d0d0d; }
+  .legend-item.li-outline    { background: var(--outline);     color: #0d0d0d; }
+  .legend-item.li-describe   { background: var(--describe);    color: #0d0d0d; }
+  .legend-item.li-explain    { background: var(--explain);     color: #0d0d0d; }
+  .legend-item.li-apply      { background: var(--apply);       color: #0d0d0d; }
+  .legend-item.li-compare    { background: var(--compare);     color: #0d0d0d; }
+  .legend-item.li-contrast   { background: var(--contrast);    color: #0d0d0d; }
+  .legend-item.li-examine    { background: var(--examine);     color: #0d0d0d; }
+  .legend-item.li-analyse    { background: var(--analyse);     color: #0d0d0d; }
+  .legend-item.li-investigate { background: var(--investigate); color: #fff; }
+  .legend-item.li-justify    { background: var(--justify);     color: #0d0d0d; }
+  .legend-item.li-discuss    { background: var(--discuss);     color: #0d0d0d; }
+  .legend-item.li-assess     { background: var(--assess);      color: #0d0d0d; }
+  .legend-item.li-evaluate   { background: var(--evaluate);    color: #0d0d0d; }
+  .legend-item.li-example    { background: var(--cream2); color: var(--ink); border: 1.5px solid var(--border2); }
 
   .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.identify  { background: var(--identify); }
   .dot.outline   { background: var(--outline); }
   .dot.describe  { background: var(--describe); }
   .dot.explain   { background: var(--explain); }
+  .dot.apply     { background: var(--apply); }
+  .dot.compare   { background: var(--compare); }
+  .dot.contrast  { background: var(--contrast); }
+  .dot.examine   { background: var(--examine); }
   .dot.analyse   { background: var(--analyse); }
+  .dot.investigate { background: var(--investigate); }
+  .dot.justify   { background: var(--justify); }
   .dot.discuss   { background: var(--discuss); }
   .dot.assess    { background: var(--assess); }
-  .dot.compare   { background: var(--compare); }
   .dot.evaluate  { background: var(--evaluate); }
-  .dot.examine   { background: var(--examine); }
 
   .lbl { font-weight: 600; color: var(--ink); }
   .ldef { font-size: 0.72rem; color: var(--muted); font-weight: 400; }
@@ -408,14 +423,20 @@
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
   }
+  .hl.identify  { color: #0d0d0d; background: var(--identify); }
+  .hl.outline   { color: #0d0d0d; background: var(--outline); }
   .hl.describe  { color: #0d0d0d; background: var(--describe); }
   .hl.explain   { color: #0d0d0d; background: var(--explain); }
+  .hl.apply     { color: #0d0d0d; background: var(--apply); }
+  .hl.compare   { color: #0d0d0d; background: var(--compare); }
+  .hl.contrast  { color: #0d0d0d; background: var(--contrast); }
+  .hl.examine   { color: #0d0d0d; background: var(--examine); }
   .hl.analyse   { color: #fff;    background: var(--analyse); }
+  .hl.investigate { color: #fff;  background: var(--investigate); }
+  .hl.justify   { color: #0d0d0d; background: var(--justify); }
   .hl.discuss   { color: #fff;    background: var(--discuss); }
   .hl.assess    { color: #fff;    background: var(--assess); }
-  .hl.compare   { color: #0d0d0d; background: var(--compare); }
   .hl.evaluate  { color: #fff;    background: var(--evaluate); }
-  .hl.examine   { color: #0d0d0d; background: var(--examine); }
 
   .hl .tooltip {
     visibility: hidden;
@@ -450,15 +471,20 @@
     opacity: 0.9;
     letter-spacing: .03em;
   }
+  .stat-chip.identify  { background: var(--identify); color: #111; }
   .stat-chip.outline   { background: var(--outline);  color: #111; }
   .stat-chip.describe  { background: var(--describe); color: #111; }
   .stat-chip.explain   { background: var(--explain);  color: #111; }
+  .stat-chip.apply     { background: var(--apply);    color: #111; }
+  .stat-chip.compare   { background: var(--compare);  color: #111; }
+  .stat-chip.contrast  { background: var(--contrast); color: #111; }
+  .stat-chip.examine   { background: var(--examine);  color: #111; }
   .stat-chip.analyse   { background: var(--analyse);  color: #fff; }
+  .stat-chip.investigate { background: var(--investigate); color: #fff; }
+  .stat-chip.justify   { background: var(--justify);  color: #111; }
   .stat-chip.discuss   { background: var(--discuss);  color: #fff; }
   .stat-chip.assess    { background: var(--assess);   color: #fff; }
-  .stat-chip.compare   { background: var(--compare);  color: #111; }
   .stat-chip.evaluate  { background: var(--evaluate); color: #fff; }
-  .stat-chip.examine   { background: var(--examine);  color: #111; }
 
   /* ── LOADING DOTS ── */
   .loading-dots span {
@@ -738,19 +764,23 @@
     </div>
   </div>
 
-  <!-- LEGEND -->
   <div class="legend-wrap">
-    <div class="legend-label">Colour Key — Command Terms</div>
+    <div class="legend-label">Colour Key — Command Terms (easiest → hardest)</div>
     <div class="legend">
+      <div class="legend-item li-identify"><div class="legend-item-inner"><span class="lbl">Identify</span><span class="ldef">recognise &amp; name</span></div></div>
       <div class="legend-item li-outline"><div class="legend-item-inner"><span class="lbl">Outline</span><span class="ldef">main points, no detail</span></div></div>
       <div class="legend-item li-describe"><div class="legend-item-inner"><span class="lbl">Describe</span><span class="ldef">characteristics &amp; features</span></div></div>
-      <div class="legend-item li-explain"><div class="legend-item-inner"><span class="lbl">Explain</span><span class="ldef">cause &amp; effect</span></div></div>
+      <div class="legend-item li-explain"><div class="legend-item-inner"><span class="lbl">Explain</span><span class="ldef">cause &amp; effect / how &amp; why</span></div></div>
+      <div class="legend-item li-apply"><div class="legend-item-inner"><span class="lbl">Apply</span><span class="ldef">use in a new situation</span></div></div>
+      <div class="legend-item li-compare"><div class="legend-item-inner"><span class="lbl">Compare</span><span class="ldef">similarities &amp; differences</span></div></div>
+      <div class="legend-item li-contrast"><div class="legend-item-inner"><span class="lbl">Contrast</span><span class="ldef">differences &amp; opposites</span></div></div>
+      <div class="legend-item li-examine"><div class="legend-item-inner"><span class="lbl">Examine</span><span class="ldef">inquire closely into</span></div></div>
       <div class="legend-item li-analyse"><div class="legend-item-inner"><span class="lbl">Analyse</span><span class="ldef">components &amp; implications</span></div></div>
+      <div class="legend-item li-investigate"><div class="legend-item-inner"><span class="lbl">Investigate</span><span class="ldef">inquire &amp; draw conclusions</span></div></div>
+      <div class="legend-item li-justify"><div class="legend-item-inner"><span class="lbl">Justify</span><span class="ldef">support an argument</span></div></div>
       <div class="legend-item li-discuss"><div class="legend-item-inner"><span class="lbl">Discuss</span><span class="ldef">points for and/or against</span></div></div>
       <div class="legend-item li-assess"><div class="legend-item-inner"><span class="lbl">Assess</span><span class="ldef">judgement of value/quality</span></div></div>
-      <div class="legend-item li-compare"><div class="legend-item-inner"><span class="lbl">Compare</span><span class="ldef">similarities &amp; differences</span></div></div>
       <div class="legend-item li-evaluate"><div class="legend-item-inner"><span class="lbl">Evaluate</span><span class="ldef">judgement on criteria</span></div></div>
-      <div class="legend-item li-examine"><div class="legend-item-inner"><span class="lbl">Examine</span><span class="ldef">inquire closely into</span></div></div>
       <div class="legend-item li-example"><div class="legend-item-inner"><span class="lbl" style="text-decoration:underline;text-decoration-color:var(--bark);text-decoration-thickness:2px;text-underline-offset:3px;">Example</span><span class="ldef">real-world example used</span></div></div>
     </div>
   </div>
@@ -894,35 +924,61 @@ let lastAnnotations = [];
 let lastText = '';
 
 const DEFINITIONS = {
-  outline:  "Outline — main points only, not in detail",
-  describe: "Describe — characteristics and features",
-  explain:  "Explain — cause and effect; makes relationships clear",
-  analyse:  "Analyse — breaks down components and examines relationships",
-  discuss:  "Discuss — identifies issues and provides points for and/or against",
-  assess:   "Assess — makes a judgement of value, quality or outcomes",
-  compare:  "Compare — shows how things are similar or different",
-  evaluate: "Evaluate — judgement based on criteria and evidence",
-  examine:  "Examine — inquires closely into something",
-  example:  "Example — real-world example used to support the response"
+  identify:    "Identify — recognise and name",
+  outline:     "Outline — sketch in general terms; indicate the main features only",
+  describe:    "Describe — provide characteristics and features with detail",
+  explain:     "Explain — relate cause and effect; provide why and/or how",
+  apply:       "Apply — use knowledge in a different, new or unfamiliar situation",
+  compare:     "Compare — show how things are similar or different",
+  contrast:    "Contrast — show how things are different or opposite",
+  examine:     "Examine — inquire closely into; probe significance or limitations",
+  analyse:     "Analyse — identify components and the relationships between them; draw out implications",
+  investigate: "Investigate — plan, inquire into and draw conclusions about",
+  justify:     "Justify — support an argument or conclusion",
+  discuss:     "Discuss — identify issues and provide points for and/or against",
+  assess:      "Assess — make a judgement of value, quality, outcomes or size",
+  evaluate:    "Evaluate — make a judgement based on criteria; determine the value of",
+  example:     "Example — real-world example used to support the response"
 };
 
-const TERM_ORDER = ['evaluate','discuss','assess','compare','analyse','examine','explain','describe','outline'];
+const TERM_ORDER = ['evaluate','assess','discuss','justify','investigate','analyse','examine','contrast','compare','apply','explain','describe','outline','identify'];
 
 const TERM_COLOURS = {
-  outline:   { bg: 'var(--outline)',   text: '#111' },
-  describe:  { bg: 'var(--describe)',  text: '#111' },
-  explain:   { bg: 'var(--explain)',   text: '#111' },
-  analyse:   { bg: 'var(--analyse)',   text: '#fff' },
-  discuss:   { bg: 'var(--discuss)',   text: '#fff' },
-  assess:    { bg: 'var(--assess)',    text: '#fff' },
-  compare:   { bg: 'var(--compare)',   text: '#111' },
-  evaluate:  { bg: 'var(--evaluate)', text: '#fff' },
-  examine:   { bg: 'var(--examine)',   text: '#111' },
+  identify:    { bg: 'var(--identify)',    text: '#111' },
+  outline:     { bg: 'var(--outline)',     text: '#111' },
+  describe:    { bg: 'var(--describe)',    text: '#111' },
+  explain:     { bg: 'var(--explain)',     text: '#111' },
+  apply:       { bg: 'var(--apply)',       text: '#111' },
+  compare:     { bg: 'var(--compare)',     text: '#111' },
+  contrast:    { bg: 'var(--contrast)',    text: '#111' },
+  examine:     { bg: 'var(--examine)',     text: '#111' },
+  analyse:     { bg: 'var(--analyse)',     text: '#fff' },
+  investigate: { bg: 'var(--investigate)', text: '#fff' },
+  justify:     { bg: 'var(--justify)',     text: '#111' },
+  discuss:     { bg: 'var(--discuss)',     text: '#fff' },
+  assess:      { bg: 'var(--assess)',      text: '#fff' },
+  evaluate:    { bg: 'var(--evaluate)',    text: '#fff' },
 };
 
 function detectTermsFromQuestion(q) {
   const lower = q.toLowerCase();
-  return TERM_ORDER.filter(t => new RegExp('\\b' + t + '(?:s|d|ing)?\\b').test(lower));
+  const patterns = {
+    evaluate:    /\bevaluat(?:e|es|ed|ing)?\b/,
+    assess:      /\bassess(?:es|ed|ing)?\b/,
+    discuss:     /\bdiscuss(?:es|ed|ing)?\b/,
+    justify:     /\bjustif(?:y|ies|ied|ying)?\b/,
+    investigate: /\binvestigat(?:e|es|ed|ing)?\b/,
+    analyse:     /\banalys(?:e|es|ed|ing)?|analyz(?:e|es|ed|ing)?\b/,
+    examine:     /\bexamin(?:e|es|ed|ing)?\b/,
+    contrast:    /\bcontrast(?:s|ed|ing)?\b/,
+    compare:     /\bcompar(?:e|es|ed|ing)?\b/,
+    apply:       /\bappl(?:y|ies|ied|ying)?\b/,
+    explain:     /\bexplain(?:s|ed|ing)?\b/,
+    describe:    /\bdescrib(?:e|es|ed|ing)?\b/,
+    outline:     /\boutlin(?:e|es|ed|ing)?\b/,
+    identify:    /\bidentif(?:y|ies|ied|ying)?\b/,
+  };
+  return TERM_ORDER.filter(t => patterns[t] && patterns[t].test(lower));
 }
 
 function updateTermPill() {
@@ -1194,7 +1250,7 @@ async function analyseText() {
   stats.innerHTML = '';
   out.innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span>';
 
-  const annotationPrompt = `You are an expert NESA NSW HSC Health and Movement Science examiner. Your only job is to read a student response and return annotations as JSON.\n\n${question ? `EXAM QUESTION: ${question}` : ''}\n${primaryTerm ? `REQUIRED COMMAND TERM: ${primaryTerm.toUpperCase()}` : ''}\n\nSTEP 1 — Read the student response carefully.\n\nSTEP 2 — Find every sentence that clearly demonstrates one of these command terms. Only tag a sentence if it meaningfully and specifically demonstrates that term — do not tag vague or borderline cases.\n\nCOMMAND TERM HIERARCHY (highest to lowest):\nevaluate > discuss > assess > compare > analyse > examine > explain > describe > outline\n\nWhen a sentence qualifies for multiple terms, ALWAYS pick the highest on this list.\n\nDEFINITIONS:\n- outline: a bare, brief statement of a main point with NO elaboration, explanation or detail. A single short factual claim. e.g. "Blood is red." or "The heart pumps blood." If there is any elaboration at all, it is NOT outline.\n- describe: elaborates on characteristics, features or properties with some detail beyond a bare fact. Must go further than just stating something exists or has a quality — it adds what it is like, what it involves, or what it consists of in a meaningful way. e.g. "Red blood cells are biconcave discs that carry haemoglobin, allowing them to transport oxygen efficiently." A bare "X is Y." with nothing further is outline, not describe.\n- explain: provides a reason, mechanism, cause or function — explains WHY or HOW something happens. Does NOT require explicit connective words like "because" or "therefore"; a sentence that describes a mechanism or function (e.g. "Red blood cells transport oxygen around the body via haemoglobin binding") counts as explain if it conveys how or why.\n- examine: goes beyond stating what something is or why it happens — probes the limitations, tensions, complexity or significance of a single concept, process or issue. Must do more than explain; it must interrogate. e.g. questioning why something may not work in all contexts, or unpacking the significance of a relationship. A sentence that only explains how something works is NOT examine.\n- analyse: names at least two identifiable components or factors AND explicitly connects them to each other or to an outcome. Both decomposition AND connection must be present in the same sentence. e.g. "The increase in heart rate and stroke volume during exercise both contribute to a higher cardiac output, meeting the muscles' increased oxygen demand." A sentence that states a single mechanism or implication — even a sophisticated one — is explain or examine, not analyse.\n- compare: explicitly identifies how two or more distinct things are similar or different. Must name at least two things and draw a direct similarity or contrast between them. If the comparison also reaches a verdict or conclusion about which is better or more effective, it is evaluate not compare.\n- assess: makes a judgement about the value, merit, effectiveness or significance of something — weighs up evidence or factors to reach a considered position, but without anchoring that judgement to explicit named criteria. e.g. "Overall, the biomedical model is limited in addressing social determinants of health." If the judgement is explicitly tied to named criteria or evidence, it is evaluate not assess.\n- discuss: presents at least two genuinely distinct or contrasting perspectives, considerations or arguments about an issue. The perspectives must be meaningfully different — not just two points on the same side. Additive points that all support the same position do NOT qualify as discuss.\n- evaluate: makes a clear verdict or conclusion that is explicitly anchored to named criteria, evidence or a standard. Must contain both (1) a judgement AND (2) the specific basis for that judgement. e.g. "Using the Ottawa Charter's principle of building healthy public policy, the NDIS is highly effective because it addresses structural barriers to participation." A judgement without an explicit criterion or evidential anchor is assess, not evaluate.\n\nDISAMBIGUATION RULES:\n- outline vs describe: If the sentence is a single bare fact with no elaboration (e.g. "Blood is red." "Carries oxygen."), tag it as OUTLINE regardless of the question's command term. DESCRIBE requires elaboration of a characteristic beyond the bare statement.\n- describe vs explain: DESCRIBE focuses on what something is like (features, characteristics). EXPLAIN focuses on why or how something happens (mechanism, cause, function). A sentence stating a function or process is EXPLAIN, not describe.\n- explain vs examine: EXPLAIN states a reason, cause or mechanism. EXAMINE goes further by probing limitations, tensions or significance — it questions or interrogates rather than just accounting for something. If the sentence only explains how or why, it is EXPLAIN not EXAMINE.\n- examine vs analyse: EXAMINE investigates one thing closely. ANALYSE names at least two components AND connects them. If the sentence does not explicitly name and connect at least two parts, it is EXAMINE not ANALYSE.\n- assess vs evaluate: ASSESS makes a judgement without explicit criteria. EVALUATE anchors its judgement to named criteria or evidence. If there is no explicit criterion or evidential standard stated, it is ASSESS not EVALUATE.\n- compare vs evaluate: If a comparison reaches a verdict about which is better or more effective, it is EVALUATE not COMPARE.\n- discuss vs evaluate: If multiple perspectives are presented but a final conclusion or verdict is also reached, it is EVALUATE not DISCUSS.\n- If genuinely ambiguous between two terms, pick the LOWER one on the hierarchy.\n\nCRITICAL RULES:\n- The "text" field MUST be copied character-for-character from the student response. Do not change a single letter, space or punctuation mark.\n- Tag each sentence with the SINGLE highest-level command term it demonstrates (use the hierarchy above).\n- Each piece of text can only appear once. No overlapping annotations.\n- A tag must cover exactly one grammatical sentence (ending at a full stop, exclamation mark or question mark). Never tag across multiple sentences in one annotation. Never tag a sub-clause in isolation if the full sentence is more appropriate.\n- Only tag a sentence if it clearly demonstrates the term. If in doubt between tagging or not, do NOT tag it.\n- Do NOT tag examples — examples are handled separately.\n\nReturn ONLY this JSON — no other text before or after it:\n{"annotations":[{"text":"EXACT TEXT FROM RESPONSE","term":"describe"}]}`;
+  const annotationPrompt = `You are an expert NESA NSW HSC examiner. Your only job is to read a student response and return annotations as JSON.\n\n${question ? `EXAM QUESTION: ${question}` : ''}\n${primaryTerm ? `REQUIRED COMMAND TERM: ${primaryTerm.toUpperCase()}` : ''}\n\nSTEP 1 — Read the student response carefully.\n\nSTEP 2 — Find every sentence that clearly demonstrates one of these command terms. Only tag a sentence if it meaningfully and specifically demonstrates that term — do not tag vague or borderline cases.\n\nCOMMAND TERM HIERARCHY (lowest to highest cognitive load):\nidentify > outline > describe > explain > apply > compare > contrast > examine > analyse > investigate > justify > discuss > assess > evaluate\n\nWhen a sentence qualifies for multiple terms, ALWAYS pick the HIGHEST on this list.\n\nDEFINITIONS:\n- identify: simply recognises and names something without further elaboration. e.g. \"The three components of blood are red blood cells, white blood cells and platelets.\" No explanation required.\n- outline: a bare, brief statement of a main point with NO elaboration, explanation or detail. A single short factual claim. e.g. \"Blood is red.\" or \"The heart pumps blood.\" If there is any elaboration at all, it is NOT outline.\n- describe: elaborates on characteristics, features or properties with some detail beyond a bare fact. Must add what something is like, what it involves, or what it consists of. e.g. \"Red blood cells are biconcave discs that carry haemoglobin, allowing them to transport oxygen efficiently.\" A bare \"X is Y.\" with nothing further is outline, not describe.\n- explain: provides a reason, mechanism, cause or function — explains WHY or HOW something happens. Does NOT require explicit connective words; a sentence describing a mechanism or function counts as explain if it conveys how or why.\n- apply: uses knowledge in a new, different or unfamiliar situation — takes a concept and demonstrates how it works in a specific context. e.g. \"Applying the social model of health to rural Australians, reduced access to services creates structural barriers that explain lower health outcomes in these communities.\"\n- compare: explicitly identifies how two or more distinct things are similar OR different. Must name at least two things and draw a direct similarity or contrast. If only differences are discussed, prefer CONTRAST. If a verdict is reached, it is evaluate not compare.\n- contrast: explicitly shows how two or more things are DIFFERENT or opposite. Must name at least two things and draw a direct contrast. Differs from compare in that contrast focuses on differences only — not similarities.\n- examine: goes beyond stating what something is or why it happens — probes the limitations, tensions, complexity or significance of a single concept, process or issue. Must interrogate rather than just explain. A sentence that only explains how something works is NOT examine.\n- analyse: names at least two identifiable components or factors AND explicitly connects them to each other or to an outcome. Both decomposition AND connection must be present. e.g. \"The increase in heart rate and stroke volume during exercise both contribute to a higher cardiac output, meeting the muscles' increased oxygen demand.\" A sentence that states a single mechanism — even a sophisticated one — is explain or examine, not analyse.\n- investigate: plans, inquires into, and draws conclusions — implies a systematic process of inquiry into facts, evidence or a problem, often across multiple angles.\n- justify: supports an argument or conclusion with reasoning or evidence. Must provide the basis or rationale for a claim, not just make the claim. e.g. \"The Ottawa Charter is the most effective framework because its focus on structural determinants targets root causes rather than symptoms.\"\n- discuss: presents at least two genuinely distinct or contrasting perspectives, considerations or arguments about an issue. The perspectives must be meaningfully different — not just two points on the same side. Additive points that all support the same position do NOT qualify as discuss.\n- assess: makes a judgement about the value, merit, effectiveness or significance of something — weighs up evidence or factors to reach a considered position, but WITHOUT anchoring that judgement to explicit named criteria. e.g. \"Overall, the biomedical model is limited in addressing social determinants of health.\" If the judgement is explicitly tied to named criteria or evidence, it is evaluate not assess.\n- evaluate: makes a clear verdict or conclusion that is explicitly anchored to named criteria, evidence or a standard. Must contain both (1) a judgement AND (2) the specific basis for that judgement. e.g. \"Using the Ottawa Charter's principle of building healthy public policy, the NDIS is highly effective because it addresses structural barriers to participation.\" A judgement without an explicit criterion or evidential anchor is assess, not evaluate.\n\nDISAMBIGUATION RULES:\n- identify vs outline vs describe: IDENTIFY = names something. OUTLINE = bare main point, no elaboration. DESCRIBE = elaborates on characteristics with meaningful detail.\n- outline vs describe: If the sentence is a single bare fact with no elaboration, tag it as OUTLINE. DESCRIBE requires elaboration beyond the bare statement.\n- describe vs explain: DESCRIBE focuses on what something is like (features, characteristics). EXPLAIN focuses on why or how something happens (mechanism, cause, function).\n- explain vs apply: EXPLAIN accounts for how or why something works in general. APPLY takes a concept and demonstrates it working in a specific, new or unfamiliar context.\n- explain vs examine: EXPLAIN states a reason or mechanism. EXAMINE probes limitations, tensions or significance — it interrogates rather than just accounts for something. If the sentence only explains how or why, it is EXPLAIN not EXAMINE.\n- compare vs contrast: COMPARE covers similarities OR differences. CONTRAST covers differences only. If only differences are discussed, prefer CONTRAST.\n- examine vs analyse: EXAMINE investigates one thing closely. ANALYSE names at least two components AND connects them. If the sentence does not explicitly name and connect at least two parts, it is EXAMINE not ANALYSE.\n- analyse vs investigate: ANALYSE breaks down and connects components in a response. INVESTIGATE implies a systematic process of inquiry across multiple sources or angles.\n- justify vs assess: JUSTIFY provides reasons to support a specific claim. ASSESS weighs up factors to reach a broader judgement about value or merit.\n- assess vs evaluate: ASSESS makes a judgement without explicit criteria. EVALUATE anchors its judgement to named criteria or evidence. If there is no explicit criterion stated, it is ASSESS not EVALUATE.\n- compare/contrast vs evaluate: If a comparison or contrast reaches a verdict about which is better or more effective, it is EVALUATE not COMPARE or CONTRAST.\n- justify vs evaluate: JUSTIFY supports a conclusion already reached. EVALUATE makes the judgement itself based on explicit criteria.\n- discuss vs evaluate: If multiple perspectives are presented AND a final verdict is reached with explicit criteria, it is EVALUATE not DISCUSS.\n- If genuinely ambiguous between two terms, pick the LOWER one on the hierarchy.\n\nCRITICAL RULES:\n- The "text" field MUST be copied character-for-character from the student response. Do not change a single letter, space or punctuation mark.\n- Tag each sentence with the SINGLE highest-level command term it demonstrates (use the hierarchy above).\n- Each piece of text can only appear once. No overlapping annotations.\n- A tag must cover exactly one grammatical sentence (ending at a full stop, exclamation mark or question mark). Never tag across multiple sentences in one annotation. Never tag a sub-clause in isolation if the full sentence is more appropriate.\n- Only tag a sentence if it clearly demonstrates the term. If in doubt between tagging or not, do NOT tag it.\n- Do NOT tag examples — examples are handled separately.\n\nReturn ONLY this JSON — no other text before or after it:\n{"annotations":[{"text":"EXACT TEXT FROM RESPONSE","term":"describe"}]}`;
 
   const examplePrompt = `You are reading a student's HSC Health and Movement Science (HMS) exam response. Your only job is to identify every specific named example used as evidence.\n\nDEFINITION OF AN EXAMPLE IN THIS CONTEXT:\nA specific, named real-world item that the student uses to support, illustrate or evidence a point. This includes:\n- Named medical technologies or procedures (e.g. MRI, laparoscopic surgery, mRNA vaccines, CPAP therapy)\n- Named diseases, conditions or health issues (e.g. type 2 diabetes, COVID-19, cardiovascular disease, obesity)\n- Named health frameworks, charters, models or reports (e.g. Ottawa Charter, Lalonde Report, Biomedical Model, Social Model of Health)\n- Named Australian health programs or initiatives (e.g. Close the Gap, Medicare, NDIS, PBS, Get Healthy, Live Life Well)\n- Named organisations or data sources (e.g. AIHW, WHO, ABS, Cancer Council Australia)\n- Named technologies or platforms used as evidence (e.g. Fitbit, telehealth, wearables, social media, MyFitnessPal)\n- Named Australian or global events used as evidence (e.g. COVID-19 pandemic, 2000 Sydney Olympics)\n- Named athletes, coaches or people (e.g. Eliud Kipchoge, Cathy Freeman)\n- Named studies, reports or statistics cited as evidence\n- Named population groups used as specific examples (e.g. Aboriginal and Torres Strait Islander peoples, rural Australians)\n- Named energy systems, training methods or physiological concepts used as examples (e.g. ATP-PC system, interval training, HIIT)\n- Named sports, competitions or physical activities cited as examples\n- Specific statistics or data points (e.g. \"68% of Australian adults\", \"reduces mortality by 30%\")\n\nDO NOT tag:\n- General descriptive words (e.g. \"technology\", \"exercise\", \"training\", \"health\")\n- Command term language or general concepts\n- Vague references without a specific name\n\nFor each example found, return the EXACT text as it appears in the student's response — copy character-for-character.\n\nReturn ONLY a JSON array of strings. Example:\n["Ottawa Charter","mRNA vaccines","COVID-19 pandemic","Close the Gap","AIHW","Eliud Kipchoge","68% of Australians"]\n\nIf no examples found, return: []\nReturn ONLY the JSON array. No other text.`;
 
@@ -1569,15 +1625,20 @@ function copyOutput() {
   const box = document.getElementById('outputBox');
 
   const COLOURS = {
-    outline:  { bg: '#52d68a', text: '#0d0d0d' },
-    describe: { bg: '#5bc8f5', text: '#0d0d0d' },
-    explain:  { bg: '#f08050', text: '#0d0d0d' },
-    analyse:  { bg: '#b57cf7', text: '#ffffff' },
-    discuss:  { bg: '#f76fa8', text: '#ffffff' },
-    assess:   { bg: '#e040fb', text: '#ffffff' },
-    compare:  { bg: '#42d4c8', text: '#0d0d0d' },
-    evaluate: { bg: '#e84545', text: '#ffffff' },
-    examine:  { bg: '#a8d848', text: '#0d0d0d' },
+    identify:    { bg: '#ffd166', text: '#0d0d0d' },
+    outline:     { bg: '#52d68a', text: '#0d0d0d' },
+    describe:    { bg: '#5bc8f5', text: '#0d0d0d' },
+    explain:     { bg: '#f08050', text: '#0d0d0d' },
+    apply:       { bg: '#84a98c', text: '#0d0d0d' },
+    compare:     { bg: '#42d4c8', text: '#0d0d0d' },
+    contrast:    { bg: '#06d6a0', text: '#0d0d0d' },
+    examine:     { bg: '#a8d848', text: '#0d0d0d' },
+    analyse:     { bg: '#b57cf7', text: '#ffffff' },
+    investigate: { bg: '#9b5de5', text: '#ffffff' },
+    justify:     { bg: '#ff9a3c', text: '#0d0d0d' },
+    discuss:     { bg: '#f76fa8', text: '#ffffff' },
+    assess:      { bg: '#e040fb', text: '#ffffff' },
+    evaluate:    { bg: '#e84545', text: '#ffffff' },
   };
 
   const clone = box.cloneNode(true);
@@ -1701,15 +1762,20 @@ async function downloadPDF(event) {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const COLOURS = {
-      outline:  { bg: [82,214,138],  fg: [13,13,13] },
-      describe: { bg: [91,200,245],  fg: [13,13,13] },
-      explain:  { bg: [240,128,80],  fg: [13,13,13] },
-      analyse:  { bg: [181,124,247], fg: [255,255,255] },
-      discuss:  { bg: [247,111,168], fg: [255,255,255] },
-      assess:   { bg: [224,64,251],  fg: [255,255,255] },
-      compare:  { bg: [66,212,200],  fg: [13,13,13] },
-      evaluate: { bg: [232,69,69],   fg: [255,255,255] },
-      examine:  { bg: [168,216,72],  fg: [13,13,13] },
+      identify:    { bg: [255,209,102],  fg: [13,13,13] },
+      outline:     { bg: [82,214,138],   fg: [13,13,13] },
+      describe:    { bg: [91,200,245],   fg: [13,13,13] },
+      explain:     { bg: [240,128,80],   fg: [13,13,13] },
+      apply:       { bg: [132,169,140],  fg: [13,13,13] },
+      compare:     { bg: [66,212,200],   fg: [13,13,13] },
+      contrast:    { bg: [6,214,160],    fg: [13,13,13] },
+      examine:     { bg: [168,216,72],   fg: [13,13,13] },
+      analyse:     { bg: [181,124,247],  fg: [255,255,255] },
+      investigate: { bg: [155,93,229],   fg: [255,255,255] },
+      justify:     { bg: [255,154,60],   fg: [13,13,13] },
+      discuss:     { bg: [247,111,168],  fg: [255,255,255] },
+      assess:      { bg: [224,64,251],   fg: [255,255,255] },
+      evaluate:    { bg: [232,69,69],    fg: [255,255,255] },
     };
 
     const PW = 210, PH = 297, ML = 14, MR = 14, MB = 10;
