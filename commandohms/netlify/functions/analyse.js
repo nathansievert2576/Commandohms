@@ -1,67 +1,52 @@
-const https = require('https');
-
-exports.handler = async function(event, context) {
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
+exports.handler = async function (event) {
+  // Only allow POST
+  if (event.httpMethod !== 'POST') {
     return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-      body: '',
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method Not Allowed' }),
     };
   }
 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
-
-  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-  if (!ANTHROPIC_API_KEY) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY environment variable not set' } }),
+      body: JSON.stringify({ error: 'ANTHROPIC_API_KEY environment variable is not set.' }),
+    };
+  }
+
+  let body;
+  try {
+    body = JSON.parse(event.body);
+  } catch {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid JSON in request body.' }),
     };
   }
 
   try {
-    // Decode body (handles both plain and base64-encoded by Netlify)
-    const rawBody = event.isBase64Encoded
-      ? Buffer.from(event.body, 'base64').toString('utf-8')
-      : event.body;
-
-    const payload = JSON.parse(rawBody);
-
-    // Call Anthropic API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
-    const responseText = await response.text();
+    const data = await response.json();
 
     return {
       statusCode: response.status,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: responseText,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     };
-
   } catch (err) {
     return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: { message: err.message } }),
+      statusCode: 502,
+      body: JSON.stringify({ error: 'Failed to reach Anthropic API: ' + err.message }),
     };
   }
 };
