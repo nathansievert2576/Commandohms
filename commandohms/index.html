@@ -703,7 +703,68 @@
   }
   .footer-links a:hover { color: var(--ink); }
 
-  /* ── MARK VALUE INPUT ── */
+  /* ── STIMULUS UPLOAD ── */
+  .stimulus-wrap {
+    margin-bottom: 1.25rem;
+  }
+  .stimulus-upload-area {
+    border: 2px dashed var(--border2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  .stimulus-upload-area:hover { border-color: var(--olive); background: var(--cream2); }
+  .stimulus-upload-area.dragover { border-color: var(--olive); background: var(--cream2); }
+  .stimulus-upload-area p { font-size: 0.82rem; color: var(--muted); margin: 0; line-height: 1.4; text-align: left; }
+  .stimulus-upload-area p strong { color: var(--ink); font-weight: 600; }
+  .stimulus-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--cream);
+    border: 1.5px solid var(--border2);
+    border-radius: 9px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    margin-top: 8px;
+  }
+  .stimulus-thumb {
+    width: 44px; height: 44px;
+    object-fit: cover;
+    border-radius: 5px;
+    flex-shrink: 0;
+    border: 1px solid var(--border2);
+  }
+  .stimulus-thumb-pdf {
+    width: 44px; height: 44px;
+    background: rgba(139,44,44,.12);
+    border: 1px solid rgba(139,44,44,.3);
+    border-radius: 5px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: #8b2c2c; letter-spacing: 0.05em;
+  }
+  .stimulus-info { flex: 1; overflow: hidden; }
+  .stimulus-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 500; }
+  .stimulus-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold); background: #1a2410;
+    border-radius: 4px; padding: 0.2em 0.5em;
+    margin-top: 2px;
+  }
+
+
   .mark-col {
     display: flex; flex-direction: column; gap: 5px;
     flex-shrink: 0; width: 90px;
@@ -800,6 +861,36 @@
       <div class="detected-term" id="detectedTerm">
         <span>Command term detected:</span>
         <span id="termPill" style="color:var(--muted);font-style:italic">none yet — enter your question above</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STIMULUS UPLOAD -->
+  <div class="stimulus-wrap">
+    <div class="panel">
+      <div class="panel-label">Stimulus Material <span style="font-weight:400;color:var(--muted);font-family:'DM Sans',sans-serif;text-transform:none;letter-spacing:0;font-size:0.75rem;">— optional</span></div>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.55;margin-bottom:10px;">If your question included a stimulus (graph, image, table, source, data set or extract), upload it here. The AI will use it to better understand the context of the question — the student response does not need to refer to it directly.</div>
+
+      <input type="file" id="stimulusUpload" accept="image/*,.pdf" style="display:none" onchange="handleStimulusSelect(event)">
+
+      <div class="stimulus-upload-area" id="stimulusUploadArea"
+        onclick="document.getElementById('stimulusUpload').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleStimulusDrop(event)">
+        <span style="font-size:1.3rem;">🖼️</span>
+        <p><strong>Tap to upload or take a photo</strong><br>Accepts image or PDF — one file only</p>
+      </div>
+
+      <div id="stimulusPreview" style="display:none;margin-top:8px">
+        <div class="stimulus-preview">
+          <div id="stimulusThumb"></div>
+          <div class="stimulus-info">
+            <div class="stimulus-name" id="stimulusName"></div>
+            <div class="stimulus-tag">📎 Stimulus attached</div>
+          </div>
+          <button onclick="clearStimulus()" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:5px;line-height:1;flex-shrink:0;" title="Remove stimulus">✕</button>
+        </div>
       </div>
     </div>
   </div>
@@ -922,6 +1013,62 @@
 // Shared state for PDF access
 let lastAnnotations = [];
 let lastText = '';
+
+// Stimulus state
+let stimulusFile = null; // { data: base64string, mediaType: string, isPdf: bool, name: string }
+
+function handleStimulusSelect(event) {
+  const file = event.target.files[0];
+  if (file) loadStimulusFile(file);
+  event.target.value = '';
+}
+
+function handleStimulusDrop(event) {
+  event.preventDefault();
+  document.getElementById('stimulusUploadArea').classList.remove('dragover');
+  const file = Array.from(event.dataTransfer.files).find(f =>
+    f.type.startsWith('image/') || f.type === 'application/pdf'
+  );
+  if (file) loadStimulusFile(file);
+}
+
+function loadStimulusFile(file) {
+  const isPdf = file.type === 'application/pdf';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const base64 = dataUrl.split(',')[1];
+    const mediaType = isPdf ? 'application/pdf' : file.type || 'image/jpeg';
+    stimulusFile = { data: base64, mediaType, isPdf, name: file.name, previewSrc: isPdf ? null : dataUrl };
+    renderStimulusPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderStimulusPreview() {
+  const area = document.getElementById('stimulusUploadArea');
+  const preview = document.getElementById('stimulusPreview');
+  const thumb = document.getElementById('stimulusThumb');
+  const name = document.getElementById('stimulusName');
+  if (!stimulusFile) {
+    area.style.display = 'flex';
+    preview.style.display = 'none';
+    return;
+  }
+  area.style.display = 'none';
+  preview.style.display = 'block';
+  name.textContent = stimulusFile.name;
+  if (stimulusFile.isPdf) {
+    thumb.innerHTML = '<div class="stimulus-thumb-pdf">PDF</div>';
+  } else {
+    thumb.innerHTML = `<img class="stimulus-thumb" src="${stimulusFile.previewSrc}" alt="Stimulus preview">`;
+  }
+}
+
+function clearStimulus() {
+  stimulusFile = null;
+  renderStimulusPreview();
+}
 
 const DEFINITIONS = {
   identify:    "Identify — recognise and name",
@@ -1242,6 +1389,17 @@ async function analyseText() {
   const detectedTerms = detectTermsFromQuestion(question);
   const primaryTerm = detectedTerms[0] || null;
 
+  // Build stimulus content block if one is attached
+  const stimulusBlock = stimulusFile
+    ? (stimulusFile.isPdf
+        ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: stimulusFile.data } }]
+        : [{ type: 'image', source: { type: 'base64', media_type: stimulusFile.mediaType, data: stimulusFile.data } }])
+    : [];
+
+  const stimulusNote = stimulusFile
+    ? '\n\nSTIMULUS MATERIAL: A stimulus (image, graph, table or source) has been provided as part of the exam question and is included above. Use it to better understand the question context. The student response may or may not refer to it directly.'
+    : '';
+
   const btn = document.getElementById('analyseBtn');
   const out = document.getElementById('outputBox');
   const stats = document.getElementById('statsRow');
@@ -1265,8 +1423,11 @@ async function analyseText() {
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 2000,
-          system: annotationPrompt,
-          messages: [{ role: 'user', content: 'Student response to annotate:\n\n' + text }]
+          system: annotationPrompt + stimulusNote,
+          messages: [{ role: 'user', content: [
+            ...stimulusBlock,
+            { type: 'text', text: 'Student response to annotate:\n\n' + text }
+          ]}]
         })
       }),
       fetch('/.netlify/functions/analyse', {
@@ -1276,7 +1437,10 @@ async function analyseText() {
           model: 'claude-sonnet-4-20250514',
           max_tokens: 500,
           system: examplePrompt,
-          messages: [{ role: 'user', content: text }]
+          messages: [{ role: 'user', content: [
+            ...stimulusBlock,
+            { type: 'text', text: text }
+          ]}]
         })
       })
     ]);
@@ -1426,8 +1590,11 @@ async function analyseText() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 800,
-        system: feedbackPromptFinal,
-        messages: [{ role: 'user', content: `Student response:\n\n${text}\n\nAnnotated sentences:\n${taggedSentences}` }]
+        system: feedbackPromptFinal + (stimulusFile ? '\n\nA stimulus material (image, graph, table or source) was provided as part of the exam question — it is included in the user message. Use it to better contextualise your feedback.' : ''),
+        messages: [{ role: 'user', content: [
+          ...stimulusBlock,
+          { type: 'text', text: `Student response:\n\n${text}\n\nAnnotated sentences:\n${taggedSentences}` }
+        ]}]
       })
     });
 
@@ -1730,6 +1897,7 @@ function clearAll() {
   document.getElementById('downloadWrap').style.display = 'none';
   lastAnnotations = [];
   lastText = '';
+  clearStimulus();
   removeAllFiles();
   switchTab('type');
 }
