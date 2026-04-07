@@ -1415,40 +1415,26 @@ async function analyseText() {
 
   const annotationPrompt = `You are an expert NESA NSW HSC examiner. Your only job is to read a student response and return annotations as JSON.\n\n${question ? `EXAM QUESTION: ${question}` : ''}\n${primaryTerm ? `REQUIRED COMMAND TERM: ${primaryTerm.toUpperCase()}` : ''}\n\nSTEP 1 — Read the student response carefully.\n\nSTEP 2 — Find every sentence that clearly demonstrates one of these command terms. Only tag a sentence if it meaningfully and specifically demonstrates that term — do not tag vague or borderline cases.\n\nCOMMAND TERM HIERARCHY (lowest to highest cognitive load):\nidentify > outline > describe > explain > apply > compare > contrast > examine > analyse > investigate > justify > discuss > assess > evaluate\n\nWhen a sentence qualifies for multiple terms, ALWAYS pick the HIGHEST on this list.\n\nDEFINITIONS:\n- identify: simply recognises and names something without further elaboration. e.g. \"The three components of blood are red blood cells, white blood cells and platelets.\" No explanation required.\n- outline: a bare, brief statement of a main point with NO elaboration, explanation or detail. A single short factual claim. e.g. \"Blood is red.\" or \"The heart pumps blood.\" If there is any elaboration at all, it is NOT outline.\n- describe: elaborates on characteristics, features or properties with some detail beyond a bare fact. Must add what something is like, what it involves, or what it consists of. e.g. \"Red blood cells are biconcave discs that carry haemoglobin, allowing them to transport oxygen efficiently.\" A bare \"X is Y.\" with nothing further is outline, not describe.\n- explain: provides a reason, mechanism, cause or function — explains WHY or HOW something happens. Does NOT require explicit connective words; a sentence describing a mechanism or function counts as explain if it conveys how or why.\n- apply: uses knowledge in a new, different or unfamiliar situation — takes a concept and demonstrates how it works in a specific context. e.g. \"Applying the social model of health to rural Australians, reduced access to services creates structural barriers that explain lower health outcomes in these communities.\"\n- compare: explicitly identifies how two or more distinct things are similar OR different. Must name at least two things and draw a direct similarity or contrast. If only differences are discussed, prefer CONTRAST. If a verdict is reached, it is evaluate not compare.\n- contrast: explicitly shows how two or more things are DIFFERENT or opposite. Must name at least two things and draw a direct contrast. Differs from compare in that contrast focuses on differences only — not similarities.\n- examine: goes beyond stating what something is or why it happens — probes the limitations, tensions, complexity or significance of a single concept, process or issue. Must interrogate rather than just explain. A sentence that only explains how something works is NOT examine.\n- analyse: names at least two identifiable components or factors AND explicitly connects them to each other or to an outcome. Both decomposition AND connection must be present. e.g. \"The increase in heart rate and stroke volume during exercise both contribute to a higher cardiac output, meeting the muscles' increased oxygen demand.\" A sentence that states a single mechanism — even a sophisticated one — is explain or examine, not analyse.\n- investigate: plans, inquires into, and draws conclusions — implies a systematic process of inquiry into facts, evidence or a problem, often across multiple angles.\n- justify: supports an argument or conclusion with reasoning or evidence. Must provide the basis or rationale for a claim, not just make the claim. e.g. \"The Ottawa Charter is the most effective framework because its focus on structural determinants targets root causes rather than symptoms.\"\n- discuss: presents at least two genuinely distinct or contrasting perspectives, considerations or arguments about an issue. The perspectives must be meaningfully different — not just two points on the same side. Additive points that all support the same position do NOT qualify as discuss.\n- assess: makes a judgement about the value, merit, effectiveness or significance of something — weighs up evidence or factors to reach a considered position, but WITHOUT anchoring that judgement to explicit named criteria. e.g. \"Overall, the biomedical model is limited in addressing social determinants of health.\" If the judgement is explicitly tied to named criteria or evidence, it is evaluate not assess.\n- evaluate: makes a clear verdict or conclusion that is explicitly anchored to named criteria, evidence or a standard. Must contain both (1) a judgement AND (2) the specific basis for that judgement. e.g. \"Using the Ottawa Charter's principle of building healthy public policy, the NDIS is highly effective because it addresses structural barriers to participation.\" A judgement without an explicit criterion or evidential anchor is assess, not evaluate.\n\nDISAMBIGUATION RULES:\n- identify vs outline vs describe: IDENTIFY = names something. OUTLINE = bare main point, no elaboration. DESCRIBE = elaborates on characteristics with meaningful detail.\n- outline vs describe: If the sentence is a single bare fact with no elaboration, tag it as OUTLINE. DESCRIBE requires elaboration beyond the bare statement.\n- describe vs explain: DESCRIBE focuses on what something is like (features, characteristics). EXPLAIN focuses on why or how something happens (mechanism, cause, function).\n- explain vs apply: EXPLAIN accounts for how or why something works in general. APPLY takes a concept and demonstrates it working in a specific, new or unfamiliar context.\n- explain vs examine: EXPLAIN states a reason or mechanism. EXAMINE probes limitations, tensions or significance — it interrogates rather than just accounts for something. If the sentence only explains how or why, it is EXPLAIN not EXAMINE.\n- compare vs contrast: COMPARE covers similarities OR differences. CONTRAST covers differences only. If only differences are discussed, prefer CONTRAST.\n- examine vs analyse: EXAMINE investigates one thing closely. ANALYSE names at least two components AND connects them. If the sentence does not explicitly name and connect at least two parts, it is EXAMINE not ANALYSE.\n- analyse vs investigate: ANALYSE breaks down and connects components in a response. INVESTIGATE implies a systematic process of inquiry across multiple sources or angles.\n- justify vs assess: JUSTIFY provides reasons to support a specific claim. ASSESS weighs up factors to reach a broader judgement about value or merit.\n- assess vs evaluate: ASSESS makes a judgement without explicit criteria. EVALUATE anchors its judgement to named criteria or evidence. If there is no explicit criterion stated, it is ASSESS not EVALUATE.\n- compare/contrast vs evaluate: If a comparison or contrast reaches a verdict about which is better or more effective, it is EVALUATE not COMPARE or CONTRAST.\n- justify vs evaluate: JUSTIFY supports a conclusion already reached. EVALUATE makes the judgement itself based on explicit criteria.\n- discuss vs evaluate: If multiple perspectives are presented AND a final verdict is reached with explicit criteria, it is EVALUATE not DISCUSS.\n- If genuinely ambiguous between two terms, pick the LOWER one on the hierarchy.\n\nCRITICAL RULES:\n- The "text" field MUST be copied character-for-character from the student response. Do not change a single letter, space or punctuation mark.\n- Tag each sentence with the SINGLE highest-level command term it demonstrates (use the hierarchy above).\n- Each piece of text can only appear once. No overlapping annotations.\n- A tag must cover exactly one grammatical sentence (ending at a full stop, exclamation mark or question mark). Never tag across multiple sentences in one annotation. Never tag a sub-clause in isolation if the full sentence is more appropriate.\n- Only tag a sentence if it clearly demonstrates the term. If in doubt between tagging or not, do NOT tag it.\n- Do NOT tag examples — examples are handled separately.\n\nReturn ONLY this JSON — no other text before or after it:\n{"annotations":[{"text":"EXACT TEXT FROM RESPONSE","term":"describe"}]}`;
 
-  const examplePrompt = `You are reading a student's HSC Health and Movement Science (HMS) exam response. Your only job is to identify every specific named example used as evidence.\n\nDEFINITION OF AN EXAMPLE IN THIS CONTEXT:\nA specific, named real-world item that the student uses to support, illustrate or evidence a point. This includes:\n- Named medical technologies or procedures (e.g. MRI, laparoscopic surgery, mRNA vaccines, CPAP therapy)\n- Named diseases, conditions or health issues (e.g. type 2 diabetes, COVID-19, cardiovascular disease, obesity)\n- Named health frameworks, charters, models or reports (e.g. Ottawa Charter, Lalonde Report, Biomedical Model, Social Model of Health)\n- Named Australian health programs or initiatives (e.g. Close the Gap, Medicare, NDIS, PBS, Get Healthy, Live Life Well)\n- Named organisations or data sources (e.g. AIHW, WHO, ABS, Cancer Council Australia)\n- Named technologies or platforms used as evidence (e.g. Fitbit, telehealth, wearables, social media, MyFitnessPal)\n- Named Australian or global events used as evidence (e.g. COVID-19 pandemic, 2000 Sydney Olympics)\n- Named athletes, coaches or people (e.g. Eliud Kipchoge, Cathy Freeman)\n- Named studies, reports or statistics cited as evidence\n- Named population groups used as specific examples (e.g. Aboriginal and Torres Strait Islander peoples, rural Australians)\n- Named energy systems, training methods or physiological concepts used as examples (e.g. ATP-PC system, interval training, HIIT)\n- Named sports, competitions or physical activities cited as examples\n- Specific statistics or data points (e.g. \"68% of Australian adults\", \"reduces mortality by 30%\")\n\nDO NOT tag:\n- General descriptive words (e.g. \"technology\", \"exercise\", \"training\", \"health\")\n- Command term language or general concepts\n- Vague references without a specific name\n\nFor each example found, return the EXACT text as it appears in the student's response — copy character-for-character.\n\nReturn ONLY a JSON array of strings. Example:\n["Ottawa Charter","mRNA vaccines","COVID-19 pandemic","Close the Gap","AIHW","Eliud Kipchoge","68% of Australians"]\n\nIf no examples found, return: []\nReturn ONLY the JSON array. No other text.`;
+  const buildExamplePrompt = (taggedSentencesForExamples) => `You are an expert NESA NSW HSC examiner. Your only job is to identify specific named examples that a student has intentionally used as evidence in their exam response.\n\n${question ? `EXAM QUESTION: ${question}` : ''}\n\nCRITICAL DISTINCTION — INTENTIONAL USE vs INCIDENTAL MENTION:\nOnly tag something as an example if the student is deliberately using it as evidence, illustration or support for a point. A named item that is merely mentioned in passing, used as part of general description, or forms part of an explanation without being cited as evidence does NOT qualify.\n\nAsk yourself: Is the student saying "this named thing proves, illustrates or supports my point"? If yes, tag it. If they are just describing something that happens to have a name, do NOT tag it.\n\nSTRONG EXAMPLES — always tag if intentionally used as evidence:\n- Named health frameworks, charters, models or reports (e.g. Ottawa Charter, Lalonde Report, Biomedical Model, Social Model of Health, Dahlgren and Whitehead model)\n- Named Australian health programs or initiatives (e.g. Close the Gap, Medicare, NDIS, PBS, Get Healthy, Live Life Well, MBS)\n- Named organisations or data sources cited as authority (e.g. AIHW, WHO, ABS, Cancer Council Australia, NESA)\n- Named Australian or global events used as evidence (e.g. COVID-19 pandemic, 2000 Sydney Olympics)\n- Named athletes, coaches or people cited as evidence (e.g. Eliud Kipchoge, Cathy Freeman)\n- Named studies, reports or inquiries cited as evidence\n- Specific statistics or data points (e.g. "68% of Australian adults", "reduces mortality by 30%") — only if presented as evidence, not as a hypothetical\n- Named energy systems when cited as specific evidence (e.g. ATP-PC system, lactic acid system)\n- Named training methods or physiological concepts used as a specific cited example (e.g. HIIT, interval training, VO2 max)\n\nWEAK or BORDERLINE — only tag if the student is clearly using it as a specific named piece of evidence:\n- Named medical technologies or procedures (e.g. MRI, mRNA vaccines, CPAP therapy) — only tag if cited as a specific example, not just mentioned\n- Named diseases or conditions (e.g. type 2 diabetes, COVID-19, cardiovascular disease) — only tag if the student is using the named condition as a specific example to support a point, not just as a general topic reference\n- Named population groups (e.g. Aboriginal and Torres Strait Islander peoples, rural Australians) — only tag if cited as a specific evidential example, not just as the subject of the question\n- Named technologies or platforms (e.g. Fitbit, telehealth, MyFitnessPal) — only tag if cited as a specific named example\n- Named sports or competitions — only tag if used as specific evidence, not just as context\n\nDO NOT tag under any circumstances:\n- General descriptive words (e.g. "technology", "exercise", "training", "health", "disease")\n- Command term language or general HMS concepts\n- Vague references without a specific proper name\n- Things that are the subject of the question itself rather than an example used to answer it\n- Named items from the EXAM QUESTION or STIMULUS that the student has not independently cited — only tag what the student themselves has brought in as evidence\n- Countries, cities or places used as general geographic references unless they are a specific named example (e.g. "Australia" alone is not an example)\n\nALSO: The following tagged sentences have already been identified as command term demonstrations. Pay attention to examples that appear within these sentences — they are especially likely to be intentional evidence:\n${taggedSentencesForExamples}\n\nFor each example found, return the EXACT text as it appears in the student's response — copy character-for-character. Return the shortest meaningful form of the example (e.g. "Ottawa Charter" not the whole sentence containing it).\n\nReturn ONLY a JSON array of strings.\nIf no examples found, return: []\nReturn ONLY the JSON array. No other text.`;
 
   try {
     out.innerHTML = '<span class="loading-dots"><span>●</span><span>●</span><span>●</span></span>';
     document.getElementById('feedbackWrap').style.display = 'none';
 
-    const [resp1, respEx] = await Promise.all([
-      fetch('/.netlify/functions/analyse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          system: annotationPrompt + stimulusNote,
-          messages: [{ role: 'user', content: [
-            ...stimulusBlock,
-            { type: 'text', text: 'Student response to annotate:\n\n' + text }
-          ]}]
-        })
-      }),
-      fetch('/.netlify/functions/analyse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 500,
-          system: examplePrompt,
-          messages: [{ role: 'user', content: [
-            ...stimulusBlock,
-            { type: 'text', text: text }
-          ]}]
-        })
+    // ── Step 1: Annotation ──
+    const resp1 = await fetch('/.netlify/functions/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: annotationPrompt + stimulusNote,
+        messages: [{ role: 'user', content: [
+          ...stimulusBlock,
+          { type: 'text', text: 'Student response to annotate:\n\n' + text }
+        ]}]
       })
-    ]);
+    });
 
     if (!resp1.ok) {
       const errBody = await resp1.text();
@@ -1462,26 +1448,51 @@ async function analyseText() {
     if (!match1) throw new Error('No JSON found in annotation response.');
     const annotations = JSON.parse(match1[0]).annotations || [];
 
-    if (respEx.ok) {
-      try {
+    // Build tagged sentences string to pass into example prompt for context
+    const taggedSentencesForExamples = annotations
+      .filter(a => a.term !== 'example')
+      .map(a => `[${a.term.toUpperCase()}] "${a.text}"`)
+      .join('\n') || 'None identified.';
+
+    // ── Step 2: Example detection (sequential — uses annotation results as context) ──
+    try {
+      const respEx = await fetch('/.netlify/functions/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          system: buildExamplePrompt(taggedSentencesForExamples),
+          messages: [{ role: 'user', content: [
+            ...stimulusBlock,
+            { type: 'text', text: text }
+          ]}]
+        })
+      });
+
+      if (respEx.ok) {
         const dataEx = await respEx.json();
         const rawEx = dataEx.content.map(b => b.text || '').join('').trim();
         const aiExamples = JSON.parse(rawEx.match(/\[[\s\S]*\]/)?.[0] || '[]');
         const existingTexts = new Set(annotations.map(a => a.text.toLowerCase()));
         for (const ex of aiExamples) {
-          if (!ex || ex.length < 2) continue;
+          if (!ex || ex.trim().length < 3) continue;
           if (existingTexts.has(ex.toLowerCase())) continue;
-          const re = new RegExp(ex.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-          const m = re.exec(text);
+          // For short acronyms (≤4 chars), use word-boundary matching to avoid false positives
+          const escaped = ex.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const pattern = ex.length <= 4
+            ? new RegExp('\\b' + escaped + '\\b', 'i')
+            : new RegExp(escaped, 'i');
+          const m = pattern.exec(text);
           if (m) {
             const exactText = text.slice(m.index, m.index + m[0].length);
             annotations.push({ text: exactText, term: 'example' });
             existingTexts.add(ex.toLowerCase());
           }
         }
-      } catch(e) {
-        console.warn('Example detection failed silently:', e);
       }
+    } catch(e) {
+      console.warn('Example detection failed silently:', e);
     }
 
     renderHighlighted(text, annotations);
