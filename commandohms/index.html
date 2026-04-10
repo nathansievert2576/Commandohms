@@ -2075,7 +2075,7 @@ async function downloadPDF(event) {
     function checkY(need) { if (y + need > PH - MB) newPage(); }
 
     function drawHeader() {
-      doc.setFillColor(26, 36, 16);
+      doc.setFillColor(0, 0, 0);
       doc.rect(0, 0, PW, 18, 'F');
       // Add CommandoHSC logo to PDF header
       const navLogoEl = document.querySelector('.nav-logo img');
@@ -2085,11 +2085,9 @@ async function downloadPDF(event) {
         const logoW = Math.min(logoH * logoAR, 60);
         try { doc.addImage(navLogoEl.src, 'JPEG', ML, 4, logoW, logoH); } catch(e) {}
       }
-      doc.setTextColor(242, 237, 224);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
       doc.setTextColor(107, 115, 88);
-      doc.text('HSC Health and Movement Science — Response Analysis Report', ML, 12);
+      doc.text('Health and Movement Science — Response Analysis Report', PW / 2, 12, { align: 'center' });
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}), PW - MR, 12, { align: 'right' });
       doc.setTextColor(30, 38, 20);
       y = 22;
