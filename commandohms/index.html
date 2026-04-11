@@ -1402,7 +1402,7 @@ async function extractAll() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 2000,
           messages: [{ role: 'user', content }]
         })
@@ -1503,7 +1503,7 @@ async function analyseText() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2000,
         system: annotationPrompt + stimulusNote,
         messages: [{ role: 'user', content: [
@@ -1537,7 +1537,7 @@ async function analyseText() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 500,
           system: buildExamplePrompt(taggedSentencesForExamples),
           messages: [{ role: 'user', content: [
@@ -1623,7 +1623,7 @@ async function analyseText() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: 200,
             system: projectedMarkPrompt,
             messages: [{ role: 'user', content: `Student response:\n\n${text}\n\nTagged sentences:\n${taggedSentences}` }]
@@ -1709,7 +1709,7 @@ Write feedback in clear, direct language — specific and honest, but still easy
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         system: feedbackPromptFinal + (stimulusFile ? '\n\nA stimulus material (image, graph, table or source) was provided as part of the exam question — it is included in the user message. Use it to better contextualise your feedback.' : ''),
         messages: [{ role: 'user', content: [
