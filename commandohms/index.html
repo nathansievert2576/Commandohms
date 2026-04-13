@@ -9,7 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   /* ── COMMANDOHSC DESIGN TOKENS — DARK THEME ── */
   :root {
@@ -2315,56 +2314,95 @@ async function downloadPDF(event) {
     drawDivider();
 
     sectionLabel('Colour-Coded Response');
+    const FS = 9.5;
+    const LINE_H = 5.2;
+    const H_PAD = 0.8;
 
-    // Capture the on-screen colour-coded output as an image
-    // This avoids all jsPDF text-rendering and letter-spacing issues
-    const outputBox = document.getElementById('outputBox');
-    let captureSuccess = false;
-    try {
-      const canvas = await html2canvas(outputBox, {
-        scale: 2,
-        backgroundColor: '#f2ede0',
-        useCORS: true,
-        logging: false,
-        removeContainer: true
-      });
+    function getW(text, bold) {
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(FS);
+      return doc.getTextWidth(text);
+    }
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      const imgW = CW;
-      const imgH = (canvas.height / canvas.width) * imgW;
+    function drawResponseLine(lineItems) {
+      checkY(LINE_H + 1);
+      let dx = ML;
 
-      // Check if it fits on current page, if not start a new one
-      if (y + imgH > PH - MB) {
-        doc.addPage();
-        page++;
-        y = 0;
-        drawHeader();
+      // Group consecutive words of the same term into runs
+      // so each highlighted phrase gets ONE rectangle, not one per word
+      const runs = [];
+      for (const item of lineItems) {
+        if (!item.text) continue;
+        const last = runs[runs.length - 1];
+        if (last && last.term === item.term && last.isEx === item.isEx) {
+          last.text += item.text;
+        } else {
+          runs.push({ text: item.text, term: item.term || null, isEx: item.isEx || false });
+        }
       }
 
-      doc.addImage(imgData, 'JPEG', ML, y, imgW, imgH);
-      y += imgH + 4;
-      captureSuccess = true;
-    } catch(captureErr) {
-      console.warn('html2canvas capture failed, falling back to text:', captureErr);
+      runs.forEach(item => {
+        if (!item.text) return;
+        const isHL = item.term && COLOURS[item.term];
+        const w = getW(item.text, !!isHL);
+
+        if (isHL) {
+          const c = COLOURS[item.term];
+          doc.setFillColor(...c.bg);
+          doc.roundedRect(dx, y - LINE_H + 1.2, w + H_PAD * 2, LINE_H, 1, 1, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
+          doc.setTextColor(...c.fg);
+          doc.text(item.text, dx + H_PAD, y);
+          if (item.isEx) {
+            doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
+            doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + w, y + 0.9);
+          }
+          dx += w + H_PAD * 2;
+        } else if (item.isEx) {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+          doc.setTextColor(107, 80, 50);
+          doc.text(item.text, dx, y);
+          doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
+          doc.line(dx, y + 0.9, dx + w, y + 0.9);
+          dx += w;
+        } else {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+          doc.setTextColor(30, 38, 20);
+          doc.text(item.text, dx, y);
+          dx += w;
+        }
+      });
+      y += LINE_H + 0.6;
     }
 
-    // Fallback: plain text if capture fails
-    if (!captureSuccess) {
-      const plainWords = (lastText || '').match(/\S+\s*/g) || [];
-      const FS = 9; const LINE_H = 5.4;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
-      doc.setTextColor(30, 38, 20);
-      let lineStr = '';
-      plainWords.forEach(w => {
-        const candidate = lineStr + w;
-        if (doc.getTextWidth(candidate) > CW && lineStr) {
-          checkY(LINE_H); doc.text(lineStr.trimEnd(), ML, y); y += LINE_H;
-          lineStr = w;
-        } else { lineStr = candidate; }
-      });
-      if (lineStr) { checkY(LINE_H); doc.text(lineStr.trimEnd(), ML, y); y += LINE_H; }
-      y += 2;
+    let lineItems = [];
+    let lineW = 0;
+
+    function pushLine() {
+      if (lineItems.length) drawResponseLine(lineItems);
+      lineItems = [];
+      lineW = 0;
     }
+
+    segments.forEach(seg => {
+      if (!seg.text) return;
+      const isHL = seg.term && COLOURS[seg.term];
+      const bold = !!isHL;
+      const chunks = seg.text.match(/\S+\s*/g) || [];
+
+      chunks.forEach(chunk => {
+        const cw = getW(chunk, bold) + (isHL ? H_PAD * 2 : 0);
+        if (lineW + cw > CW && lineItems.length > 0) pushLine();
+        lineItems.push({ text: chunk, term: seg.term || null, isEx: seg.isEx || false });
+        lineW += cw;
+      });
+    });
+
+    pushLine();
+
+    doc.setTextColor(30, 38, 20);
+    doc.setFont('helvetica', 'normal');
+    y += 2;
     newPage();
 
     if (feedback.length) {
