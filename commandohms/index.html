@@ -2387,7 +2387,10 @@ async function downloadPDF(event) {
       const isHL = !!(seg.term && COLOURS[seg.term]);
       const chunks = seg.text.match(/\S+\s*/g) || [];
 
-      chunks.forEach(chunk => {
+      chunks.forEach(rawChunk => {
+        // Replace regular hyphens with non-breaking hyphens so jsPDF
+        // never splits hyphenated words mid-render and letter-spaces them
+        const chunk = rawChunk.replace(/-/g, '\u2011');
         // Measure with same bold state that will be used when drawing
         const cw = getW(chunk, isHL);
         if (lineW + cw > CW && lineItems.length > 0) pushLine();
