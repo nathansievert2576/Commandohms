@@ -2316,51 +2316,54 @@ async function downloadPDF(event) {
     sectionLabel('Colour-Coded Response');
     const FS = 9.5;
     const LINE_H = 5.2;
-    const INSET = 0.6;   // small text inset from rect edge (left only)
+    const INSET = 0.5;
 
+    // Always set font+size before measuring — measurement must match draw state
     function getW(text, bold) {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(FS);
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
       return doc.getTextWidth(text);
     }
 
-    // Draw a line of word-tokens.
-    // For highlighted tokens the rect spans the full chunk width (word+space)
-    // so adjacent rects are seamless. Text is drawn inset by INSET from left.
     function drawResponseLine(lineItems) {
       checkY(LINE_H + 1);
       let dx = ML;
+      const rightEdge = ML + CW;
 
       lineItems.forEach(item => {
         if (!item.text) return;
-        const isHL = item.term && COLOURS[item.term];
+        const isHL = !!(item.term && COLOURS[item.term]);
+        const chunkW = getW(item.text, isHL);
 
-        // Measure the full chunk (word + trailing space) for rect width
-        // and the word-only part for text placement
-        const chunkW = getW(item.text, !!isHL);          // full chunk incl. space
-        const wordOnly = item.text.trimEnd();
-        const wordW = getW(wordOnly, !!isHL);
+        // Hard-clip: never draw past right margin
+        if (dx + chunkW > rightEdge + 0.5) return;
 
         if (isHL) {
           const c = COLOURS[item.term];
-          // Rect covers full chunk width — seamless with next word
+          const wordOnly = item.text.trimEnd();
           doc.setFillColor(...c.bg);
           doc.rect(dx, y - LINE_H + 1.2, chunkW, LINE_H, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
+          doc.setFontSize(FS);
+          doc.setFont('helvetica', 'bold');
           doc.setTextColor(...c.fg);
           doc.text(wordOnly, dx + INSET, y);
           if (item.isEx) {
+            const ww = getW(wordOnly, true);
             doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
-            doc.line(dx + INSET, y + 0.9, dx + INSET + wordW, y + 0.9);
+            doc.line(dx + INSET, y + 0.9, dx + INSET + ww, y + 0.9);
           }
         } else if (item.isEx) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+          const wordOnly = item.text.trimEnd();
+          const ww = getW(wordOnly, false);
+          doc.setFontSize(FS);
+          doc.setFont('helvetica', 'normal');
           doc.setTextColor(107, 80, 50);
           doc.text(item.text, dx, y);
           doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
-          doc.line(dx, y + 0.9, dx + wordW, y + 0.9);
+          doc.line(dx, y + 0.9, dx + ww, y + 0.9);
         } else {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+          doc.setFontSize(FS);
+          doc.setFont('helvetica', 'normal');
           doc.setTextColor(30, 38, 20);
           doc.text(item.text, dx, y);
         }
@@ -2378,14 +2381,15 @@ async function downloadPDF(event) {
       lineW = 0;
     }
 
+    // Build lines — measure each word with the correct bold/normal state
     segments.forEach(seg => {
       if (!seg.text) return;
-      const isHL = seg.term && COLOURS[seg.term];
-      const bold = !!isHL;
+      const isHL = !!(seg.term && COLOURS[seg.term]);
       const chunks = seg.text.match(/\S+\s*/g) || [];
 
       chunks.forEach(chunk => {
-        const cw = getW(chunk, bold);
+        // Measure with same bold state that will be used when drawing
+        const cw = getW(chunk, isHL);
         if (lineW + cw > CW && lineItems.length > 0) pushLine();
         lineItems.push({ text: chunk, term: seg.term || null, isEx: seg.isEx || false });
         lineW += cw;
