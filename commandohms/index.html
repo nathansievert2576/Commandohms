@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   /* ── COMMANDOHSC DESIGN TOKENS — DARK THEME ── */
   :root {
@@ -2314,123 +2315,56 @@ async function downloadPDF(event) {
     drawDivider();
 
     sectionLabel('Colour-Coded Response');
-    const FS = 9;
-    const LINE_H = 5.4;
-    const H_PAD = 1.2;
 
-    function getW(txt, bold) {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      doc.setFontSize(FS);
-      return doc.getTextWidth(txt);
+    // Capture the on-screen colour-coded output as an image
+    // This avoids all jsPDF text-rendering and letter-spacing issues
+    const outputBox = document.getElementById('outputBox');
+    let captureSuccess = false;
+    try {
+      const canvas = await html2canvas(outputBox, {
+        scale: 2,
+        backgroundColor: '#f2ede0',
+        useCORS: true,
+        logging: false,
+        removeContainer: true
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const imgW = CW;
+      const imgH = (canvas.height / canvas.width) * imgW;
+
+      // Check if it fits on current page, if not start a new one
+      if (y + imgH > PH - MB) {
+        doc.addPage();
+        page++;
+        y = 0;
+        drawHeader();
+      }
+
+      doc.addImage(imgData, 'JPEG', ML, y, imgW, imgH);
+      y += imgH + 4;
+      captureSuccess = true;
+    } catch(captureErr) {
+      console.warn('html2canvas capture failed, falling back to text:', captureErr);
     }
 
-    // Split all segments into word tokens
-    // Each token: { word, term, isEx }
-    const tokens = [];
-    segments.forEach(seg => {
-      if (!seg.text) return;
-      const words = seg.text.match(/\S+\s*/g) || [];
-      words.forEach(w => tokens.push({ word: w, term: seg.term || null, isEx: seg.isEx || false }));
-    });
-
-    // Build lines: pack tokens until line is full
-    // For width budget: plain words cost getW(word). Highlighted words cost getW(word)
-    // plus H_PAD*2 ONCE per run (not per word). Track run changes to add pad correctly.
-    const lines = [];
-    let curLine = [];
-    let curW = 0;
-    let prevTerm = null;
-
-    tokens.forEach(tok => {
-      const isHL = !!(tok.term && COLOURS[tok.term]);
-      const bold = isHL;
-      const ww = getW(tok.word, bold);
-      // Extra pad if this token starts a new highlighted run
-      const newRun = isHL && tok.term !== prevTerm;
-      const pad = newRun ? H_PAD * 2 : 0;
-      const cost = ww + pad;
-
-      if (curLine.length > 0 && curW + cost > CW - 0.5) {
-        lines.push(curLine);
-        curLine = [];
-        curW = 0;
-        prevTerm = null;
-        // Recalc pad for new line
-        const newRunOnNewLine = isHL;
-        const padNew = newRunOnNewLine ? H_PAD * 2 : 0;
-        curLine.push(tok);
-        curW = ww + padNew;
-      } else {
-        curLine.push(tok);
-        curW += cost;
-      }
-      prevTerm = tok.term;
-    });
-    if (curLine.length) lines.push(curLine);
-
-    // Draw each line
-    lines.forEach(line => {
-      checkY(LINE_H + 1);
-      let dx = ML;
-      let i = 0;
-
-      while (i < line.length) {
-        const tok = line[i];
-        const isHL = !!(tok.term && COLOURS[tok.term]);
-
-        if (isHL) {
-          // Collect consecutive tokens of the same term into one run
-          const runTerm = tok.term;
-          const runIsEx = tok.isEx;
-          let runText = '';
-          let j = i;
-          while (j < line.length && line[j].term === runTerm && line[j].isEx === runIsEx) {
-            runText += line[j].word;
-            j++;
-          }
-          const c = COLOURS[runTerm];
-          const rw = getW(runText, true);
-          doc.setFillColor(...c.bg);
-          doc.roundedRect(dx, y - LINE_H + 1.2, rw + H_PAD * 2, LINE_H, 1, 1, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(FS);
-          doc.setTextColor(...c.fg);
-          doc.text(runText, dx + H_PAD, y);
-          if (runIsEx) {
-            doc.setDrawColor(139, 108, 66);
-            doc.setLineWidth(0.4);
-            doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + rw, y + 0.9);
-          }
-          dx += rw + H_PAD * 2;
-          i = j;
-        } else if (tok.isEx) {
-          const ww = getW(tok.word, false);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(FS);
-          doc.setTextColor(107, 80, 50);
-          doc.text(tok.word, dx, y);
-          doc.setDrawColor(139, 108, 66);
-          doc.setLineWidth(0.4);
-          doc.line(dx, y + 0.9, dx + ww, y + 0.9);
-          dx += ww;
-          i++;
-        } else {
-          const ww = getW(tok.word, false);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(FS);
-          doc.setTextColor(30, 38, 20);
-          doc.text(tok.word, dx, y);
-          dx += ww;
-          i++;
-        }
-      }
-      y += LINE_H + 0.5;
-    });
-
-    doc.setTextColor(30, 38, 20);
-    doc.setFont('helvetica', 'normal');
-    y += 2;
-
+    // Fallback: plain text if capture fails
+    if (!captureSuccess) {
+      const plainWords = (lastText || '').match(/\S+\s*/g) || [];
+      const FS = 9; const LINE_H = 5.4;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+      doc.setTextColor(30, 38, 20);
+      let lineStr = '';
+      plainWords.forEach(w => {
+        const candidate = lineStr + w;
+        if (doc.getTextWidth(candidate) > CW && lineStr) {
+          checkY(LINE_H); doc.text(lineStr.trimEnd(), ML, y); y += LINE_H;
+          lineStr = w;
+        } else { lineStr = candidate; }
+      });
+      if (lineStr) { checkY(LINE_H); doc.text(lineStr.trimEnd(), ML, y); y += LINE_H; }
+      y += 2;
+    }
     newPage();
 
     if (feedback.length) {
