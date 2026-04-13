@@ -2324,28 +2324,15 @@ async function downloadPDF(event) {
       return doc.getTextWidth(text);
     }
 
+    // Each lineItem is { text, term, isEx } where text is a complete run
+    // (no per-word splitting inside a highlighted segment).
     function drawResponseLine(lineItems) {
       checkY(LINE_H + 1);
       let dx = ML;
-
-      // Group consecutive items with the same term into runs so highlighted
-      // phrases get ONE background rectangle instead of one per word.
-      const runs = [];
-      for (const item of lineItems) {
-        if (!item.text) continue;
-        const last = runs[runs.length - 1];
-        if (last && last.term === item.term && last.isEx === item.isEx) {
-          last.text += item.text;
-        } else {
-          runs.push({ text: item.text, term: item.term, isEx: item.isEx });
-        }
-      }
-
-      runs.forEach(item => {
+      lineItems.forEach(item => {
         if (!item.text) return;
         const isHL = item.term && COLOURS[item.term];
         const w = getW(item.text, !!isHL);
-
         if (isHL) {
           const c = COLOURS[item.term];
           doc.setFillColor(...c.bg);
@@ -2375,6 +2362,10 @@ async function downloadPDF(event) {
       y += LINE_H + 0.6;
     }
 
+    // Build lines by treating each segment as an atomic unit where possible.
+    // Non-highlighted segments are split word-by-word for line-wrapping.
+    // Highlighted segments stay whole — only split at a word boundary if the
+    // entire segment is wider than the column (very long sentences).
     let lineItems = [];
     let lineW = 0;
 
@@ -2384,23 +2375,47 @@ async function downloadPDF(event) {
       lineW = 0;
     }
 
+    function itemWidth(text, isHL) {
+      return getW(text, !!isHL) + (isHL ? H_PAD * 2 : 0);
+    }
+
     segments.forEach(seg => {
       if (!seg.text) return;
       const isHL = seg.term && COLOURS[seg.term];
-      const bold = !!isHL;
 
-      const chunks = seg.text.match(/\S+\s*/g) || [];
-
-      chunks.forEach(chunk => {
-        const cw = getW(chunk, bold) + (isHL ? H_PAD * 2 : 0);
-
-        if (lineW + cw > CW && lineItems.length > 0) {
-          pushLine();
+      if (isHL) {
+        // Highlighted segment — try to keep as one unit per line.
+        // Split only at word boundaries when the segment is wider than CW.
+        const words = seg.text.match(/\S+\s*/g) || [];
+        let run = '';
+        words.forEach((word, wi) => {
+          const candidate = run + word;
+          const candidateW = itemWidth(candidate, true);
+          if (run && lineW + candidateW > CW) {
+            // Flush current run and current line
+            lineItems.push({ text: run, term: seg.term, isEx: seg.isEx || false });
+            pushLine();
+            run = word;
+          } else {
+            run = candidate;
+          }
+        });
+        if (run) {
+          const rw = itemWidth(run, true);
+          if (lineW + rw > CW && lineItems.length > 0) pushLine();
+          lineItems.push({ text: run, term: seg.term, isEx: seg.isEx || false });
+          lineW += rw;
         }
-
-        lineItems.push({ text: chunk, term: seg.term || null, isEx: seg.isEx || false });
-        lineW += cw;
-      });
+      } else {
+        // Plain text — split word by word for wrapping
+        const chunks = seg.text.match(/\S+\s*/g) || [];
+        chunks.forEach(chunk => {
+          const cw = itemWidth(chunk, false);
+          if (lineW + cw > CW && lineItems.length > 0) pushLine();
+          lineItems.push({ text: chunk, term: null, isEx: seg.isEx || false });
+          lineW += cw;
+        });
+      }
     });
 
     pushLine();
