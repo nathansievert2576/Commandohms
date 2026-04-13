@@ -2338,7 +2338,6 @@ async function downloadPDF(event) {
       let dx = ML;
       const rightEdge = ML + CW;
       doc.setCharSpace(0);              // persistent zero char spacing for this line
-      doc.setWordSpacing(0);            // persistent zero word spacing
       const tOpts = { charSpace: 0 };  // also passed per-call as belt-and-braces
 
       lineItems.forEach(item => {
