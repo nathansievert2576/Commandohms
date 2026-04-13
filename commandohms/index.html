@@ -2329,6 +2329,8 @@ async function downloadPDF(event) {
       checkY(LINE_H + 1);
       let dx = ML;
       const rightEdge = ML + CW;
+      doc.setCharSpace(0);              // persistent zero char spacing for this line
+      const tOpts = { charSpace: 0 };  // also passed per-call as belt-and-braces
 
       lineItems.forEach(item => {
         if (!item.text) return;
@@ -2346,7 +2348,7 @@ async function downloadPDF(event) {
           doc.setFontSize(FS);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...c.fg);
-          doc.text(wordOnly, dx + INSET, y);
+          doc.text(wordOnly, dx + INSET, y, tOpts);
           if (item.isEx) {
             const ww = getW(wordOnly, true);
             doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
@@ -2358,14 +2360,14 @@ async function downloadPDF(event) {
           doc.setFontSize(FS);
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(107, 80, 50);
-          doc.text(item.text, dx, y);
+          doc.text(item.text, dx, y, tOpts);
           doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
           doc.line(dx, y + 0.9, dx + ww, y + 0.9);
         } else {
           doc.setFontSize(FS);
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(30, 38, 20);
-          doc.text(item.text, dx, y);
+          doc.text(item.text, dx, y, tOpts);
         }
         dx += chunkW;
       });
@@ -2387,11 +2389,7 @@ async function downloadPDF(event) {
       const isHL = !!(seg.term && COLOURS[seg.term]);
       const chunks = seg.text.match(/\S+\s*/g) || [];
 
-      chunks.forEach(rawChunk => {
-        // Replace regular hyphens with non-breaking hyphens so jsPDF
-        // never splits hyphenated words mid-render and letter-spaces them
-        const chunk = rawChunk.replace(/-/g, '\u2011');
-        // Measure with same bold state that will be used when drawing
+      chunks.forEach(chunk => {
         const cw = getW(chunk, isHL);
         if (lineW + cw > CW && lineItems.length > 0) pushLine();
         lineItems.push({ text: chunk, term: seg.term || null, isEx: seg.isEx || false });
