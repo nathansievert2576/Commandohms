@@ -2011,7 +2011,22 @@ function copyOutput() {
     }
   });
 
-  const htmlForClipboard = `<html><body><p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;">${clone.innerHTML}</p></body></html>`;
+  const htmlForClipboard = `<html><body><p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;">${clone.innerHTML}</p>
+<div id="debugPanel" style="display:none;margin:20px;padding:16px;background:#1a1a1a;border:1px solid #555;border-radius:8px;">
+  <div style="color:#ffd700;font-weight:bold;margin-bottom:8px;font-family:monospace;font-size:13px;">⚙ SEGMENT DEBUG — look for the spaced words</div>
+  <textarea id="debugText" style="width:100%;height:300px;background:#000;color:#0f0;font-family:monospace;font-size:11px;border:none;resize:vertical;" readonly></textarea>
+  <button onclick="document.getElementById('debugPanel').style.display='none'" style="margin-top:8px;padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">Close</button>
+</div>
+<script>
+  // Hook into generatePDF to capture segments
+  const _origGen = window.generatePDF;
+  // We'll patch after load
+  document.addEventListener('DOMContentLoaded', () => {
+    // Find the download button and add a debug intercept
+  });
+</script>
+
+</body></html>`;
   const plainText = box.innerText || box.textContent || '';
 
   if (navigator.clipboard && window.ClipboardItem) {
@@ -2266,8 +2281,23 @@ async function downloadPDF(event) {
       return segs.filter(s => s.text);
     }
 
-    const rawText   = lastText || '';
+    // Normalise raw text: collapse unusual whitespace, remove zero-width chars
+    const rawText   = (lastText || '')
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')  // zero-width chars
+      .replace(/\u00A0/g, ' ')                        // non-breaking space → space
+      .replace(/\u2011/g, '-')                        // non-breaking hyphen → regular hyphen
+      .replace(/[ \t]+/g, ' ');                       // collapse multiple spaces
     const segments  = buildSegments(rawText, lastAnnotations);
+    // Show segments in debug panel
+    const dbp = document.getElementById('debugPanel');
+    const dbt = document.getElementById('debugText');
+    if (dbp && dbt) {
+      dbp.style.display = 'block';
+      dbt.value = segments.map((s,i) =>
+        i + ' | term:' + (s.term||'null') + ' | ' + JSON.stringify(s.text)
+      ).join('\n');
+      dbp.scrollIntoView({behavior:'smooth'});
+    }
     const feedback  = getFeedback();
     const projected = getProjected();
 
@@ -2472,6 +2502,21 @@ async function downloadPDF(event) {
       <button class="subject-modal-btn" onclick="closeSubjectModal()">Got it — select a subject</button>
     </div>
   </div>
+
+
+<div id="debugPanel" style="display:none;margin:20px;padding:16px;background:#1a1a1a;border:1px solid #555;border-radius:8px;">
+  <div style="color:#ffd700;font-weight:bold;margin-bottom:8px;font-family:monospace;font-size:13px;">⚙ SEGMENT DEBUG — look for the spaced words</div>
+  <textarea id="debugText" style="width:100%;height:300px;background:#000;color:#0f0;font-family:monospace;font-size:11px;border:none;resize:vertical;" readonly></textarea>
+  <button onclick="document.getElementById('debugPanel').style.display='none'" style="margin-top:8px;padding:6px 12px;background:#333;color:#fff;border:1px solid #555;border-radius:4px;cursor:pointer;">Close</button>
+</div>
+<script>
+  // Hook into generatePDF to capture segments
+  const _origGen = window.generatePDF;
+  // We'll patch after load
+  document.addEventListener('DOMContentLoaded', () => {
+    // Find the download button and add a debug intercept
+  });
+</script>
 
 </body>
 </html>
