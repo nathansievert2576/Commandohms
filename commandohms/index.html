@@ -2314,127 +2314,118 @@ async function downloadPDF(event) {
     drawDivider();
 
     sectionLabel('Colour-Coded Response');
-    const FS = 9.5;
-    const LINE_H = 5.2;
-    const H_PAD = 1.5;
+    const FS = 9;
+    const LINE_H = 5.4;
+    const H_PAD = 1.2;
 
-    function getW(text, bold) {
+    function getW(txt, bold) {
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(FS);
-      return doc.getTextWidth(text);
+      return doc.getTextWidth(txt);
     }
 
-    // A lineItem is a single WORD token: { text, term, isEx, runStart, runEnd }
-    // runStart/runEnd track whether this word is the first/last in a highlighted run
-    // so we can draw ONE rectangle spanning the full run without per-word padding gaps.
-    //
-    // Strategy: split everything word-by-word for wrapping (avoids jsPDF
-    // letter-spacing words wider than the column). But for highlighted segments,
-    // group consecutive same-term words on the SAME LINE into a single rect.
-
-    function drawResponseLine(lineItems) {
-      checkY(LINE_H + 1);
-
-      // Group consecutive words sharing the same term into visual runs
-      const runs = [];
-      for (const item of lineItems) {
-        if (!item.text) continue;
-        const last = runs[runs.length - 1];
-        if (last && last.term === item.term && last.isEx === item.isEx) {
-          last.words.push(item.text);
-        } else {
-          runs.push({ words: [item.text], term: item.term || null, isEx: item.isEx || false });
-        }
-      }
-
-      let dx = ML;
-      runs.forEach(run => {
-        const joined = run.words.join('');
-        const isHL = run.term && COLOURS[run.term];
-        const w = getW(joined, !!isHL);
-
-        if (isHL) {
-          const c = COLOURS[run.term];
-          doc.setFillColor(...c.bg);
-          doc.roundedRect(dx, y - LINE_H + 1.2, w + H_PAD * 2, LINE_H, 1, 1, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
-          doc.setTextColor(...c.fg);
-          doc.text(joined, dx + H_PAD, y);
-          if (run.isEx) {
-            doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
-            doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + w, y + 0.9);
-          }
-          dx += w + H_PAD * 2;
-        } else if (run.isEx) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
-          doc.setTextColor(107, 80, 50);
-          doc.text(joined, dx, y);
-          doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
-          doc.line(dx, y + 0.9, dx + w, y + 0.9);
-          dx += w;
-        } else {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
-          doc.setTextColor(30, 38, 20);
-          doc.text(joined, dx, y);
-          dx += w;
-        }
-      });
-      y += LINE_H + 0.6;
-    }
-
-    // Word-level line builder.
-    // All segments are split word-by-word for wrapping.
-    // Highlighted words carry their term so drawResponseLine can group them
-    // back into single rectangles per line.
-    let lineItems = [];
-    let lineW = 0;
-
-    function pushLine() {
-      if (lineItems.length) drawResponseLine(lineItems);
-      lineItems = [];
-      lineW = 0;
-    }
-
-    // Width of a single word token (no H_PAD — padding applied once per run in draw)
-    function wordW(text, bold) {
-      return getW(text, bold);
-    }
-
-    // Extra padding budget per highlighted RUN on a line (applied once per run, not per word)
-    // We estimate this during line-building by tracking run boundaries.
-    // Simple approach: for highlighted segments, add H_PAD*2 once when a NEW run starts.
-    let lastTerm = null;
-
+    // Split all segments into word tokens
+    // Each token: { word, term, isEx }
+    const tokens = [];
     segments.forEach(seg => {
       if (!seg.text) return;
-      const isHL = !!(seg.term && COLOURS[seg.term]);
-      const bold = isHL;
       const words = seg.text.match(/\S+\s*/g) || [];
-
-      words.forEach(word => {
-        const ww = wordW(word, bold);
-        // Add H_PAD*2 padding budget if this word starts a new highlighted run on the current line
-        const startsNewRun = isHL && seg.term !== lastTerm;
-        const runPad = (isHL && startsNewRun) ? H_PAD * 2 : 0;
-        const cw = ww + runPad;
-
-        if (lineW + cw > CW && lineItems.length > 0) {
-          pushLine();
-          lastTerm = null; // reset run tracking at line break
-        }
-
-        // If this highlighted term continues from previous item on new line, no extra pad needed
-        // (already reset lastTerm above)
-        lineItems.push({ text: word, term: seg.term || null, isEx: seg.isEx || false });
-
-        // Account for run-start padding in lineW only when run actually starts
-        const actualPad = (isHL && (lineItems.length === 1 || lineItems[lineItems.length - 2]?.term !== seg.term)) ? H_PAD * 2 : 0;
-        lineW += ww + actualPad;
-        lastTerm = seg.term || null;
-      });
+      words.forEach(w => tokens.push({ word: w, term: seg.term || null, isEx: seg.isEx || false }));
     });
 
-    pushLine();
+    // Build lines: pack tokens until line is full
+    // For width budget: plain words cost getW(word). Highlighted words cost getW(word)
+    // plus H_PAD*2 ONCE per run (not per word). Track run changes to add pad correctly.
+    const lines = [];
+    let curLine = [];
+    let curW = 0;
+    let prevTerm = null;
+
+    tokens.forEach(tok => {
+      const isHL = !!(tok.term && COLOURS[tok.term]);
+      const bold = isHL;
+      const ww = getW(tok.word, bold);
+      // Extra pad if this token starts a new highlighted run
+      const newRun = isHL && tok.term !== prevTerm;
+      const pad = newRun ? H_PAD * 2 : 0;
+      const cost = ww + pad;
+
+      if (curLine.length > 0 && curW + cost > CW - 0.5) {
+        lines.push(curLine);
+        curLine = [];
+        curW = 0;
+        prevTerm = null;
+        // Recalc pad for new line
+        const newRunOnNewLine = isHL;
+        const padNew = newRunOnNewLine ? H_PAD * 2 : 0;
+        curLine.push(tok);
+        curW = ww + padNew;
+      } else {
+        curLine.push(tok);
+        curW += cost;
+      }
+      prevTerm = tok.term;
+    });
+    if (curLine.length) lines.push(curLine);
+
+    // Draw each line
+    lines.forEach(line => {
+      checkY(LINE_H + 1);
+      let dx = ML;
+      let i = 0;
+
+      while (i < line.length) {
+        const tok = line[i];
+        const isHL = !!(tok.term && COLOURS[tok.term]);
+
+        if (isHL) {
+          // Collect consecutive tokens of the same term into one run
+          const runTerm = tok.term;
+          const runIsEx = tok.isEx;
+          let runText = '';
+          let j = i;
+          while (j < line.length && line[j].term === runTerm && line[j].isEx === runIsEx) {
+            runText += line[j].word;
+            j++;
+          }
+          const c = COLOURS[runTerm];
+          const rw = getW(runText, true);
+          doc.setFillColor(...c.bg);
+          doc.roundedRect(dx, y - LINE_H + 1.2, rw + H_PAD * 2, LINE_H, 1, 1, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(FS);
+          doc.setTextColor(...c.fg);
+          doc.text(runText, dx + H_PAD, y);
+          if (runIsEx) {
+            doc.setDrawColor(139, 108, 66);
+            doc.setLineWidth(0.4);
+            doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + rw, y + 0.9);
+          }
+          dx += rw + H_PAD * 2;
+          i = j;
+        } else if (tok.isEx) {
+          const ww = getW(tok.word, false);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(FS);
+          doc.setTextColor(107, 80, 50);
+          doc.text(tok.word, dx, y);
+          doc.setDrawColor(139, 108, 66);
+          doc.setLineWidth(0.4);
+          doc.line(dx, y + 0.9, dx + ww, y + 0.9);
+          dx += ww;
+          i++;
+        } else {
+          const ww = getW(tok.word, false);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(FS);
+          doc.setTextColor(30, 38, 20);
+          doc.text(tok.word, dx, y);
+          dx += ww;
+          i++;
+        }
+      }
+      y += LINE_H + 0.5;
+    });
 
     doc.setTextColor(30, 38, 20);
     doc.setFont('helvetica', 'normal');
