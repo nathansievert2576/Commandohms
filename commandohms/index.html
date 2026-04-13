@@ -2324,48 +2324,68 @@ async function downloadPDF(event) {
       return doc.getTextWidth(text);
     }
 
-    // Each lineItem is { text, term, isEx } where text is a complete run
-    // (no per-word splitting inside a highlighted segment).
+    // A lineItem is a single WORD token: { text, term, isEx, runStart, runEnd }
+    // runStart/runEnd track whether this word is the first/last in a highlighted run
+    // so we can draw ONE rectangle spanning the full run without per-word padding gaps.
+    //
+    // Strategy: split everything word-by-word for wrapping (avoids jsPDF
+    // letter-spacing words wider than the column). But for highlighted segments,
+    // group consecutive same-term words on the SAME LINE into a single rect.
+
     function drawResponseLine(lineItems) {
       checkY(LINE_H + 1);
+
+      // Group consecutive words sharing the same term into visual runs
+      const runs = [];
+      for (const item of lineItems) {
+        if (!item.text) continue;
+        const last = runs[runs.length - 1];
+        if (last && last.term === item.term && last.isEx === item.isEx) {
+          last.words.push(item.text);
+        } else {
+          runs.push({ words: [item.text], term: item.term || null, isEx: item.isEx || false });
+        }
+      }
+
       let dx = ML;
-      lineItems.forEach(item => {
-        if (!item.text) return;
-        const isHL = item.term && COLOURS[item.term];
-        const w = getW(item.text, !!isHL);
+      runs.forEach(run => {
+        const joined = run.words.join('');
+        const isHL = run.term && COLOURS[run.term];
+        const w = getW(joined, !!isHL);
+
         if (isHL) {
-          const c = COLOURS[item.term];
+          const c = COLOURS[run.term];
           doc.setFillColor(...c.bg);
           doc.roundedRect(dx, y - LINE_H + 1.2, w + H_PAD * 2, LINE_H, 1, 1, 'F');
           doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
           doc.setTextColor(...c.fg);
-          doc.text(item.text, dx + H_PAD, y);
-          if (item.isEx) {
+          doc.text(joined, dx + H_PAD, y);
+          if (run.isEx) {
             doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
             doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + w, y + 0.9);
           }
           dx += w + H_PAD * 2;
-        } else if (item.isEx) {
+        } else if (run.isEx) {
           doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
           doc.setTextColor(107, 80, 50);
-          doc.text(item.text, dx, y);
+          doc.text(joined, dx, y);
           doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
           doc.line(dx, y + 0.9, dx + w, y + 0.9);
           dx += w;
         } else {
           doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
           doc.setTextColor(30, 38, 20);
-          doc.text(item.text, dx, y);
+          doc.text(joined, dx, y);
           dx += w;
         }
       });
       y += LINE_H + 0.6;
     }
 
-    // Build lines by treating each segment as an atomic unit where possible.
-    // Non-highlighted segments are split word-by-word for line-wrapping.
-    // Highlighted segments stay whole — only split at a word boundary if the
-    // entire segment is wider than the column (very long sentences).
+    // Word-level line builder.
+    // All segments are split word-by-word for wrapping.
+    // Highlighted words carry their term so drawResponseLine can group them
+    // back into single rectangles per line.
     let lineItems = [];
     let lineW = 0;
 
@@ -2375,47 +2395,43 @@ async function downloadPDF(event) {
       lineW = 0;
     }
 
-    function itemWidth(text, isHL) {
-      return getW(text, !!isHL) + (isHL ? H_PAD * 2 : 0);
+    // Width of a single word token (no H_PAD — padding applied once per run in draw)
+    function wordW(text, bold) {
+      return getW(text, bold);
     }
+
+    // Extra padding budget per highlighted RUN on a line (applied once per run, not per word)
+    // We estimate this during line-building by tracking run boundaries.
+    // Simple approach: for highlighted segments, add H_PAD*2 once when a NEW run starts.
+    let lastTerm = null;
 
     segments.forEach(seg => {
       if (!seg.text) return;
-      const isHL = seg.term && COLOURS[seg.term];
+      const isHL = !!(seg.term && COLOURS[seg.term]);
+      const bold = isHL;
+      const words = seg.text.match(/\S+\s*/g) || [];
 
-      if (isHL) {
-        // Highlighted segment — try to keep as one unit per line.
-        // Split only at word boundaries when the segment is wider than CW.
-        const words = seg.text.match(/\S+\s*/g) || [];
-        let run = '';
-        words.forEach((word, wi) => {
-          const candidate = run + word;
-          const candidateW = itemWidth(candidate, true);
-          if (run && lineW + candidateW > CW) {
-            // Flush current run and current line
-            lineItems.push({ text: run, term: seg.term, isEx: seg.isEx || false });
-            pushLine();
-            run = word;
-          } else {
-            run = candidate;
-          }
-        });
-        if (run) {
-          const rw = itemWidth(run, true);
-          if (lineW + rw > CW && lineItems.length > 0) pushLine();
-          lineItems.push({ text: run, term: seg.term, isEx: seg.isEx || false });
-          lineW += rw;
+      words.forEach(word => {
+        const ww = wordW(word, bold);
+        // Add H_PAD*2 padding budget if this word starts a new highlighted run on the current line
+        const startsNewRun = isHL && seg.term !== lastTerm;
+        const runPad = (isHL && startsNewRun) ? H_PAD * 2 : 0;
+        const cw = ww + runPad;
+
+        if (lineW + cw > CW && lineItems.length > 0) {
+          pushLine();
+          lastTerm = null; // reset run tracking at line break
         }
-      } else {
-        // Plain text — split word by word for wrapping
-        const chunks = seg.text.match(/\S+\s*/g) || [];
-        chunks.forEach(chunk => {
-          const cw = itemWidth(chunk, false);
-          if (lineW + cw > CW && lineItems.length > 0) pushLine();
-          lineItems.push({ text: chunk, term: null, isEx: seg.isEx || false });
-          lineW += cw;
-        });
-      }
+
+        // If this highlighted term continues from previous item on new line, no extra pad needed
+        // (already reset lastTerm above)
+        lineItems.push({ text: word, term: seg.term || null, isEx: seg.isEx || false });
+
+        // Account for run-start padding in lineW only when run actually starts
+        const actualPad = (isHL && (lineItems.length === 1 || lineItems[lineItems.length - 2]?.term !== seg.term)) ? H_PAD * 2 : 0;
+        lineW += ww + actualPad;
+        lastTerm = seg.term || null;
+      });
     });
 
     pushLine();
