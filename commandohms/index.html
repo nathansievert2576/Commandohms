@@ -1148,7 +1148,7 @@
       <input type="file" id="stimulusUpload" accept="image/*,.pdf" style="display:none" onchange="handleStimulusSelect(event)">
 
       <div class="stimulus-upload-area" id="stimulusUploadArea"
-        onclick="document.getElementById('stimulusUpload').click()"
+        onclick="gatedUploadClick('stimulusUpload')"
         ondragover="event.preventDefault();this.classList.add('dragover')"
         ondragleave="this.classList.remove('dragover')"
         ondrop="handleStimulusDrop(event)">
@@ -1191,7 +1191,7 @@
         <input type="file" id="fileUpload" accept="image/*,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple style="display:none" onchange="handleFileSelect(event)">
 
         <div class="upload-area" id="uploadArea"
-          onclick="document.getElementById('fileUpload').click()"
+          onclick="gatedUploadClick('fileUpload')"
           ondragover="event.preventDefault();this.classList.add('dragover')"
           ondragleave="this.classList.remove('dragover')"
           ondrop="handleDrop(event)">
@@ -1202,7 +1202,7 @@
 
         <div id="fileList" style="display:none">
           <div class="file-grid" id="fileGrid"></div>
-          <button class="add-more-btn" style="margin-top:8px" onclick="document.getElementById('fileUpload').click()">
+          <button class="add-more-btn" style="margin-top:8px" onclick="gatedUploadClick('fileUpload')">
             + Add more files
           </button>
         </div>
@@ -2676,6 +2676,16 @@ function showGate() {
 }
 function hideGate() {
   document.getElementById('gateOverlay').classList.add('hidden');
+}
+
+// ── Gated upload click — checks auth + credits before opening file picker ──
+async function gatedUploadClick(inputId) {
+  if (!currentUser) { showAuth(); return; }
+  const latest = await fetchCredits(currentUser.id);
+  userCredits = latest;
+  renderNav();
+  if (userCredits <= 0) { showGate(); return; }
+  document.getElementById(inputId).click();
 }
 
 // ── Sign up ──
