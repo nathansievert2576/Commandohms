@@ -2645,7 +2645,7 @@ let currentUser = null;
 let userCredits = 0;
 
 // ── Auth tab switching ──
-function switchTab(tab) {
+function switchAuthTab(tab) {
   document.getElementById('formSignin').style.display = tab === 'signin' ? '' : 'none';
   document.getElementById('formSignup').style.display = tab === 'signup' ? '' : 'none';
   document.getElementById('tabSignin').classList.toggle('active', tab === 'signin');
@@ -2877,8 +2877,8 @@ if (typeof analyseFile === 'function') {
         <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAABOCAYAAAB4kboSAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAABJRgY" alt="CommandoHSC" style="height:36px;width:auto;" onerror="this.style.display='none'">
       </div>
       <div class="auth-tabs">
-        <button class="auth-tab active" id="tabSignin" onclick="switchTab('signin')">Sign in</button>
-        <button class="auth-tab" id="tabSignup" onclick="switchTab('signup')">Create account</button>
+        <button class="auth-tab active" id="tabSignin" onclick="switchAuthTab('signin')">Sign in</button>
+        <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Create account</button>
       </div>
       <div id="authError" class="auth-error"></div>
 
