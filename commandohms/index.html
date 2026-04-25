@@ -3292,7 +3292,7 @@ analyseText = async function() {
     const spent = await spendCredit();
     if (!spent) { showGate(); return; }
     try {
-      await _origAnalyseText.apply(this, arguments);
+      await _origAnalyseText();
     } catch(e) {
       await refundCredit();
       const out = document.getElementById('outputBox');
@@ -3311,7 +3311,7 @@ if (typeof analyseFile === 'function') {
       const spent = await spendCredit();
       if (!spent) { showGate(); return; }
       try {
-        await _origAnalyseFile.apply(this, arguments);
+        await _origAnalyseFile();
       } catch(e) {
         await refundCredit();
         const out = document.getElementById('outputBox');
