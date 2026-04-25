@@ -56,6 +56,94 @@
     --evaluate:     #e84545;
   }
 
+  /* ── PRIVACY MODAL ── */
+  .privacy-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .privacy-overlay.open { display: flex; }
+  .privacy-modal {
+    background: #111;
+    border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 16px;
+    width: 100%; max-width: 680px;
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    overflow: hidden;
+  }
+  .privacy-modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem 1.1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+  }
+  .privacy-modal-title {
+    font-size: 0.85rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold);
+  }
+  .privacy-modal-meta {
+    font-size: 0.7rem; color: var(--muted);
+    margin-top: 0.15rem; letter-spacing: 0.02em;
+  }
+  .privacy-modal-close {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--muted); font-size: 1.1rem; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0;
+  }
+  .privacy-modal-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .privacy-modal-body {
+    overflow-y: auto; padding: 1.5rem;
+    scrollbar-width: thin; scrollbar-color: rgba(200,168,75,0.3) transparent;
+  }
+  .privacy-modal-body::-webkit-scrollbar { width: 4px; }
+  .privacy-modal-body::-webkit-scrollbar-track { background: transparent; }
+  .privacy-modal-body::-webkit-scrollbar-thumb { background: rgba(200,168,75,0.3); border-radius: 4px; }
+  .pm-section { margin-bottom: 2rem; }
+  .pm-section:last-child { margin-bottom: 0; }
+  .pm-section-header { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.75rem; }
+  .pm-num { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.1em; font-family: 'DM Mono', monospace; }
+  .pm-h2 { font-size: 0.92rem; font-weight: 700; color: #fff; }
+  .pm-p { font-size: 0.85rem; color: #aaa; line-height: 1.7; margin-bottom: 0.65rem; }
+  .pm-p:last-child { margin-bottom: 0; }
+  .pm-ul { list-style: none; margin: 0.5rem 0 0.65rem; }
+  .pm-ul li { font-size: 0.85rem; color: #aaa; line-height: 1.6; padding: 0.2rem 0 0.2rem 1.1rem; position: relative; }
+  .pm-ul li::before { content: '—'; position: absolute; left: 0; color: var(--gold); font-size: 0.75rem; }
+  .pm-callout {
+    background: rgba(200,168,75,0.08);
+    border: 1px solid rgba(200,168,75,0.2);
+    border-left: 3px solid var(--gold);
+    padding: 0.85rem 1rem; margin: 0.75rem 0;
+    font-size: 0.82rem; color: #bbb; line-height: 1.6; border-radius: 0 8px 8px 0;
+  }
+  .pm-link { color: var(--gold); text-decoration: none; border-bottom: 1px solid rgba(200,168,75,0.3); }
+  .pm-link:hover { border-color: var(--gold); }
+  .pm-divider { border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 1.5rem 0; }
+  .privacy-modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .pm-footer-note { font-size: 0.72rem; color: var(--muted); }
+  .pm-footer-close {
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em;
+    background: var(--gold); color: #0d0d0d; border: none;
+    padding: 0.5rem 1.1rem; border-radius: 7px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pm-footer-close:hover { background: #d4b45a; }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   html { scroll-behavior: smooth; }
@@ -1264,7 +1352,7 @@
         <span class="hamburger-line"></span>
       </button>
       <div class="hamburger-dropdown" id="hamburgerDropdown">
-        <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">Privacy Policy</a>
+        <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();showPrivacyModal();return false;">Privacy Policy</a>
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">Terms of Service</a>
         <hr>
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">FAQs</a>
@@ -3131,6 +3219,22 @@ if (typeof analyseFile === 'function') {
   };
 }
 
+// ── Privacy Policy Modal ──
+function showPrivacyModal() {
+  document.getElementById('privacyOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function hidePrivacyModal() {
+  document.getElementById('privacyOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handlePrivacyOverlayClick(e) {
+  if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') hidePrivacyModal();
+});
+
 // ── Init on page load ──
 (async function init() {
   await refreshUser();
@@ -3260,6 +3364,108 @@ if (typeof analyseFile === 'function') {
       <p>You've used all your free analyses. Top up to keep going — credits never expire.</p>
       <button class="gate-btn" onclick="hideGate(); showBuy()">Buy more credits</button>
       <button class="buy-close" onclick="hideGate()">Not now</button>
+    </div>
+  </div>
+
+  <!-- PRIVACY POLICY MODAL -->
+  <div class="privacy-overlay" id="privacyOverlay" role="dialog" aria-modal="true" aria-label="Privacy Policy" onclick="handlePrivacyOverlayClick(event)">
+    <div class="privacy-modal">
+      <div class="privacy-modal-header">
+        <div>
+          <div class="privacy-modal-title">Privacy Policy</div>
+          <div class="privacy-modal-meta">Effective 25 April 2026 &nbsp;·&nbsp; app.commandohsc.com</div>
+        </div>
+        <button class="privacy-modal-close" onclick="hidePrivacyModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="privacy-modal-body">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">01</span><span class="pm-h2">Who we are</span></div>
+          <p class="pm-p">CommandoHSC is an AI-powered HSC exam response analyser operated by an individual developer based in New South Wales, Australia. If you have questions, contact us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">Information we collect</span></div>
+          <p class="pm-p"><strong style="color:#ddd;">Account information</strong> — your email address and (if signing in via Google) your name and profile picture. Passwords are not stored in plain text.</p>
+          <p class="pm-p"><strong style="color:#ddd;">Exam responses</strong> — text you submit is sent to the AI for processing and is not stored permanently after analysis.</p>
+          <p class="pm-p"><strong style="color:#ddd;">Payment information</strong> — handled by Stripe. We never store your card details.</p>
+          <ul class="pm-ul">
+            <li>Credit balance and transaction history</li>
+            <li>Subject and question type selected per analysis</li>
+            <li>Date and time of analyses</li>
+            <li>Basic browser and device information</li>
+          </ul>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">How we use your information</span></div>
+          <ul class="pm-ul">
+            <li>Provide and improve the CommandoHSC analyser</li>
+            <li>Manage your account, credits, and purchase history</li>
+            <li>Send transactional emails (receipts, low-credit warnings, confirmation)</li>
+            <li>Monitor performance and diagnose errors</li>
+            <li>Detect and prevent fraudulent or abusive use</li>
+          </ul>
+          <p class="pm-p">We do not sell your personal information. We do not use your exam responses to train AI models.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">AI processing of your exam responses</span></div>
+          <div class="pm-callout">Your exam response text is sent to Anthropic's Claude API for analysis. Anthropic does not use API-submitted data to train their models by default. See <a class="pm-link" href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a>.</div>
+          <p class="pm-p">We recommend you do not include your full legal name, student number, or school name in the body of any response you submit.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Third-party services</span></div>
+          <ul class="pm-ul">
+            <li><strong style="color:#ddd;">Supabase</strong> — Authentication and database (Sydney region)</li>
+            <li><strong style="color:#ddd;">Anthropic</strong> — AI analysis via Claude API</li>
+            <li><strong style="color:#ddd;">Stripe</strong> — Payment processing</li>
+            <li><strong style="color:#ddd;">Netlify</strong> — Hosting and serverless functions</li>
+            <li><strong style="color:#ddd;">Plausible Analytics</strong> — Cookieless, privacy-friendly analytics</li>
+          </ul>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">Data retention</span></div>
+          <p class="pm-p">Account data is retained while your account is active. Exam response text is not stored after analysis. If you close your account, personal data is deleted within 30 days, except where retention is required by law.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">07</span><span class="pm-h2">Your rights</span></div>
+          <p class="pm-p">Under the Australian Privacy Act 1988, you may access, correct, or request deletion of your data. Email <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> — we'll respond within 14 days.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">08</span><span class="pm-h2">Children's privacy</span></div>
+          <p class="pm-p">CommandoHSC is designed for HSC students (typically aged 16–18). Users under 18 should obtain parental consent before creating an account or making a purchase. We do not knowingly collect data from children under 13.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">09</span><span class="pm-h2">Security</span></div>
+          <ul class="pm-ul">
+            <li>HTTPS on all pages and API calls</li>
+            <li>Row-level security (RLS) on our database</li>
+            <li>API keys stored server-side, never exposed to the client</li>
+            <li>No storage of payment card details</li>
+          </ul>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Changes to this policy</span></div>
+          <p class="pm-p">We may update this policy from time to time. Material changes will be reflected in the "Last updated" date and, where appropriate, notified by email.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Contact</span></div>
+          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></div>
+        </div>
+
+      </div>
+      <div class="privacy-modal-footer">
+        <span class="pm-footer-note">© 2025 CommandoHSC</span>
+        <button class="pm-footer-close" onclick="hidePrivacyModal()">Close</button>
+      </div>
     </div>
   </div>
 
