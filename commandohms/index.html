@@ -3048,11 +3048,15 @@ function hideGate() {
 // ── Gated upload click — checks auth + credits before opening file picker ──
 async function gatedUploadClick(inputId) {
   if (!currentUser) { showAuth(); return; }
+  // Use cached credits for the synchronous gate — avoids breaking the user
+  // gesture chain that browsers require for file input .click()
+  if (userCredits <= 0) { showGate(); return; }
+  // Fire the file picker immediately (must be synchronous from user gesture)
+  document.getElementById(inputId).click();
+  // Refresh credit count in the background for accuracy
   const latest = await fetchCredits(currentUser.id);
   userCredits = latest;
   renderNav();
-  if (userCredits <= 0) { showGate(); return; }
-  document.getElementById(inputId).click();
 }
 
 // ── Hamburger dropdown ──
