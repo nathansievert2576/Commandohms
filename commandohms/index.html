@@ -56,6 +56,17 @@
     --evaluate:     #e84545;
   }
 
+  .terms-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .terms-overlay.open { display: flex; }
+
   /* ── PRIVACY MODAL ── */
   .privacy-overlay {
     display: none;
@@ -1335,7 +1346,41 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     transition: opacity 0.18s; margin-bottom: 0.75rem;
   }
-  .gate-btn:hover { opacity: 0.88; }
+  /* ── CONFIRM ANALYSIS MODAL ── */
+  .confirm-overlay {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .confirm-overlay.hidden { display: none; }
+  .confirm-modal {
+    background: #181818; border: 1.5px solid rgba(200,168,75,0.35);
+    border-radius: 20px; padding: 2.25rem 2rem; width: 100%; max-width: 400px;
+    text-align: center; box-shadow: 0 0 60px rgba(200,168,75,0.12);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .confirm-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .confirm-modal h2 { font-size: 1.2rem; font-weight: 800; color: #f0ece4; margin-bottom: 0.5rem; }
+  .confirm-modal p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.35rem; }
+  .confirm-credit-line {
+    font-size: 0.82rem; color: var(--gold);
+    font-family: 'DM Mono', monospace; letter-spacing: 0.03em;
+    margin: 1rem 0 1.5rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(200,168,75,0.08);
+    border: 1px solid rgba(200,168,75,0.2);
+    border-radius: 8px;
+  }
+  .confirm-btn {
+    display: block; width: 100%; padding: 0.85rem;
+    background: linear-gradient(135deg, var(--gold), #a08830);
+    color: #0d0d0d; font-weight: 700; font-size: 0.95rem;
+    border: none; border-radius: 9px; cursor: pointer;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    transition: opacity 0.18s; margin-bottom: 0.75rem;
+  }
+  .confirm-btn:hover { opacity: 0.88; }
 
 </style>
 </head>
@@ -1353,7 +1398,7 @@
       </button>
       <div class="hamburger-dropdown" id="hamburgerDropdown">
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();showPrivacyModal();return false;">Privacy Policy</a>
-        <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">Terms of Service</a>
+        <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();showTermsModal();return false;">Terms of Service</a>
         <hr>
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">FAQs</a>
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">Contact</a>
@@ -1598,7 +1643,7 @@
     <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
     <nav class="footer-links">
       <a href="#" onclick="showPrivacyModal();return false;">Privacy Policy</a>
-      <a href="#">Terms of Service</a>
+      <a href="#" onclick="showTermsModal();return false;">Terms of Service</a>
     </nav>
   </footer>
 
@@ -2271,6 +2316,7 @@ Write feedback in clear, direct language — specific and honest, but still easy
   } catch (e) {
     out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — ${escHtml(e.message)}<br><small>Check your connection and try again.</small></div>`;
     document.getElementById('feedbackWrap').style.display = 'none';
+    throw e; // re-throw so the credit refund wrapper can catch it
   } finally {
     btn.disabled = false;
   }
@@ -3177,7 +3223,21 @@ function renderNav() {
   }
 }
 
-// ── Gate: check auth + credits before analysis ──
+// ── Refund a credit (called on API failure after spend) ──
+async function refundCredit() {
+  if (!currentUser) return;
+  const latest = await fetchCredits(currentUser.id);
+  const { error } = await sb
+    .from('user_credits')
+    .update({ credits: latest + 1, updated_at: new Date().toISOString() })
+    .eq('user_id', currentUser.id);
+  if (!error) {
+    userCredits = latest + 1;
+    renderNav();
+  }
+}
+
+
 // Returns true if analysis can proceed
 async function checkGate() {
   // Must be signed in
@@ -3196,15 +3256,45 @@ async function checkGate() {
   return true;
 }
 
+// ── Confirm Analysis Modal ──
+let _pendingAnalyse = null;
+
+function showConfirm(proceedFn) {
+  const remaining = userCredits - 1;
+  const line = document.getElementById('confirmCreditLine');
+  line.textContent = remaining === 0
+    ? 'After this analysis: 0 credits remaining — you\'ll need to top up next time'
+    : `After this analysis: ${remaining} credit${remaining !== 1 ? 's' : ''} remaining`;
+  _pendingAnalyse = proceedFn;
+  document.getElementById('confirmOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function hideConfirm() {
+  document.getElementById('confirmOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  _pendingAnalyse = null;
+}
+function confirmProceed() {
+  hideConfirm();
+  if (_pendingAnalyse) _pendingAnalyse();
+}
+
 // ── Patch the existing analyseText function to gate on credits ──
 const _origAnalyseText = analyseText;
 analyseText = async function() {
   const ok = await checkGate();
   if (!ok) return;
-  // Spend credit before running
-  const spent = await spendCredit();
-  if (!spent) { showGate(); return; }
-  return _origAnalyseText.apply(this, arguments);
+  showConfirm(async () => {
+    const spent = await spendCredit();
+    if (!spent) { showGate(); return; }
+    try {
+      await _origAnalyseText.apply(this, arguments);
+    } catch(e) {
+      await refundCredit();
+      const out = document.getElementById('outputBox');
+      if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+    }
+  });
 };
 
 // ── Also gate the image/PDF analyse path (analyseFile) ──
@@ -3213,10 +3303,31 @@ if (typeof analyseFile === 'function') {
   analyseFile = async function() {
     const ok = await checkGate();
     if (!ok) return;
-    const spent = await spendCredit();
-    if (!spent) { showGate(); return; }
-    return _origAnalyseFile.apply(this, arguments);
+    showConfirm(async () => {
+      const spent = await spendCredit();
+      if (!spent) { showGate(); return; }
+      try {
+        await _origAnalyseFile.apply(this, arguments);
+      } catch(e) {
+        await refundCredit();
+        const out = document.getElementById('outputBox');
+        if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+      }
+    });
   };
+}
+
+// ── Terms of Service Modal ──
+function showTermsModal() {
+  document.getElementById('termsOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function hideTermsModal() {
+  document.getElementById('termsOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleTermsOverlayClick(e) {
+  if (e.target === document.getElementById('termsOverlay')) hideTermsModal();
 }
 
 // ── Privacy Policy Modal ──
@@ -3232,7 +3343,7 @@ function handlePrivacyOverlayClick(e) {
   if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') hidePrivacyModal();
+  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); }
 });
 
 // ── Init on page load ──
@@ -3270,7 +3381,7 @@ document.addEventListener('keydown', function(e) {
 </script>
 
   <!-- AUTH MODAL -->
-  <div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-overlay hidden" id="authOverlay" onclick="if(event.target===this)hideAuth();">
     <div class="auth-modal">
       <div class="auth-logo">
         <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAABOCAYAAAB4kboSAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAABJRgY" alt="CommandoHSC" style="height:36px;width:auto;" onerror="this.style.display='none'">
@@ -3329,6 +3440,18 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 
+  <!-- CONFIRM ANALYSIS MODAL -->
+  <div class="confirm-overlay hidden" id="confirmOverlay">
+    <div class="confirm-modal">
+      <div class="confirm-icon">🎯</div>
+      <h2>Ready to analyse?</h2>
+      <p>This will use <strong style="color:#f0ece4;">1 credit</strong> to run your full analysis.</p>
+      <div class="confirm-credit-line" id="confirmCreditLine">After this analysis: — credits remaining</div>
+      <button class="confirm-btn" id="confirmProceedBtn" onclick="confirmProceed()">Yes — analyse my response</button>
+      <button class="buy-close" onclick="hideConfirm()">Cancel</button>
+    </div>
+  </div>
+
   <!-- BUY CREDITS MODAL -->
   <div class="buy-overlay hidden" id="buyOverlay">
     <div class="buy-modal">
@@ -3367,6 +3490,135 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 
+  <!-- TERMS OF SERVICE MODAL -->
+  <div class="terms-overlay" id="termsOverlay" role="dialog" aria-modal="true" aria-label="Terms of Service" onclick="handleTermsOverlayClick(event)">
+    <div class="privacy-modal">
+      <div class="privacy-modal-header">
+        <div>
+          <div class="privacy-modal-title">Terms of Service</div>
+          <div class="privacy-modal-meta">Effective 25 April 2026</div>
+        </div>
+        <button class="privacy-modal-close" onclick="hideTermsModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="privacy-modal-body">
+
+        <p class="pm-p">These Terms of Service ("Terms") govern your access to and use of CommandoHSC ("the Service"), operated by an individual developer based in New South Wales, Australia. By creating an account or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+
+        <hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">01</span><span class="pm-h2">The Service</span></div>
+          <p class="pm-p">CommandoHSC provides AI-powered feedback on HSC exam responses to support student study and exam preparation. The Service is available at <a class="pm-link" href="https://app.commandohsc.com" target="_blank" rel="noopener">app.commandohsc.com</a>. Access to analysis features requires a registered account and the use of credits purchased through the platform.</p>
+          <p class="pm-p">The Service is intended as a study aid only. Feedback generated by the Service is AI-produced and does not constitute official NESA assessment, guaranteed marks, or professional academic advice.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">Eligibility and accounts</span></div>
+          <p class="pm-p">You must be at least 13 years of age to use the Service. Users under 18 should obtain parental or guardian consent before registering an account or making a purchase.</p>
+          <p class="pm-p">You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must notify us immediately at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> if you suspect unauthorised access to your account.</p>
+          <p class="pm-p">You may only hold one account. We reserve the right to suspend or terminate accounts that violate these Terms.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">Credits and payments</span></div>
+          <p class="pm-p">Access to analysis features is governed by a credit system. One credit entitles you to one full analysis. Credits are purchased in advance through our payment provider, Stripe.</p>
+          <ul class="pm-ul">
+            <li>New accounts receive 3 free credits upon registration</li>
+            <li>Credits do not expire while your account is active</li>
+            <li>Credits are non-refundable once used</li>
+            <li>Unused credits are non-transferable between accounts</li>
+          </ul>
+          <p class="pm-p">All prices are displayed in Australian dollars (AUD) and are inclusive of any applicable GST. We reserve the right to change pricing at any time. Price changes will not affect credits already purchased.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">Refund policy</span></div>
+          <p class="pm-p">Credits are consumed at the point of analysis. Because the AI service is delivered immediately upon use, credits that have been spent on analyses are non-refundable.</p>
+          <p class="pm-p">If you experience a technical error that consumes a credit without returning a result, please contact us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> within 7 days of the incident. We will investigate and, where the error is confirmed to be on our end, restore the credit to your account.</p>
+          <p class="pm-p">Unused credits may be refunded at our discretion if requested within 30 days of purchase, provided no credits from that purchase have been spent.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Acceptable use</span></div>
+          <p class="pm-p">You agree to use the Service only for its intended purpose: submitting your own HSC exam responses for AI-generated feedback. You must not:</p>
+          <ul class="pm-ul">
+            <li>Submit content that is unlawful, defamatory, harmful, or offensive</li>
+            <li>Attempt to reverse-engineer, scrape, or systematically extract data from the Service</li>
+            <li>Use automated tools, bots, or scripts to interact with the Service</li>
+            <li>Share your account credentials with others or allow multiple users to access one account</li>
+            <li>Attempt to circumvent the credit system or gain unauthorised access to features</li>
+            <li>Use the Service to generate content for academic misconduct or submission as your own work in a formal assessment context</li>
+            <li>Interfere with the security, integrity, or availability of the Service</li>
+          </ul>
+          <p class="pm-p">We reserve the right to suspend or terminate your account without notice if we determine, at our sole discretion, that you have violated these Terms.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">AI-generated content and limitations</span></div>
+          <div class="pm-callout">The feedback produced by CommandoHSC is generated by an AI model (Anthropic Claude) and is not produced by a qualified teacher, NESA examiner, or registered educational professional. It is a study tool — not an official assessment.</div>
+          <p class="pm-p">AI-generated feedback may contain errors, omissions, or inaccuracies. Marks estimated by the Service are indicative only and do not predict, guarantee, or reflect actual HSC results. You should use the Service as one resource among many, and seek guidance from your teacher for official feedback on your work.</p>
+          <p class="pm-p">We make no representation that the Service's feedback aligns with any specific NESA marking centre's interpretation on a given year's exam.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">07</span><span class="pm-h2">Intellectual property</span></div>
+          <p class="pm-p">All content, design, code, branding, and materials comprising the Service are owned by or licensed to CommandoHSC and are protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works from any part of the Service without our written permission.</p>
+          <p class="pm-p">You retain ownership of the exam response text you submit. By submitting content, you grant us a limited, non-exclusive licence to process that content for the sole purpose of generating your feedback. We do not store your exam responses after analysis is complete, and we do not use your content to train AI models.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">08</span><span class="pm-h2">Privacy</span></div>
+          <p class="pm-p">Your use of the Service is also governed by our <a class="pm-link" href="#" onclick="hideTermsModal();showPrivacyModal();return false;">Privacy Policy</a>, which is incorporated into these Terms by reference. By using the Service, you consent to the collection and use of your information as described in the Privacy Policy.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">09</span><span class="pm-h2">Disclaimer of warranties</span></div>
+          <p class="pm-p">The Service is provided on an "as is" and "as available" basis without warranties of any kind, express or implied. To the maximum extent permitted by law, we disclaim all warranties including fitness for a particular purpose, accuracy, reliability, and non-infringement.</p>
+          <p class="pm-p">We do not warrant that the Service will be uninterrupted, error-free, or free of viruses or other harmful components. We are not responsible for any loss of data resulting from technical failures.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Limitation of liability</span></div>
+          <p class="pm-p">To the maximum extent permitted by Australian law, CommandoHSC and its operator shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of or inability to use the Service, including but not limited to loss of data, loss of revenue, or academic outcomes.</p>
+          <p class="pm-p">Our total liability to you for any claim arising from use of the Service shall not exceed the total amount you have paid to us in the 3 months preceding the claim.</p>
+          <p class="pm-p">Nothing in these Terms excludes liability for fraud, personal injury caused by negligence, or any other liability that cannot be excluded under Australian Consumer Law.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Service availability and modifications</span></div>
+          <p class="pm-p">We reserve the right to modify, suspend, or discontinue any part of the Service at any time, with or without notice. We will endeavour to provide reasonable advance notice of material changes that affect your credits or account access.</p>
+          <p class="pm-p">We are not liable to you or any third party for any modification, suspension, or discontinuation of the Service.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">12</span><span class="pm-h2">Termination</span></div>
+          <p class="pm-p">You may close your account at any time by contacting us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>. Upon closure, any unused credits will be forfeited unless a refund is requested in accordance with our refund policy (Section 4).</p>
+          <p class="pm-p">We may suspend or terminate your account immediately if we determine you have violated these Terms, without refund of unused credits where the termination is due to a breach on your part.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">13</span><span class="pm-h2">Changes to these Terms</span></div>
+          <p class="pm-p">We may update these Terms from time to time. When we make material changes, we will update the effective date at the top of this page and, where appropriate, notify you by email. Continued use of the Service after changes are posted constitutes your acceptance of the updated Terms.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">14</span><span class="pm-h2">Governing law</span></div>
+          <p class="pm-p">These Terms are governed by the laws of New South Wales, Australia. Any disputes arising from these Terms or your use of the Service shall be subject to the exclusive jurisdiction of the courts of New South Wales.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">15</span><span class="pm-h2">Contact</span></div>
+          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></div>
+        </div>
+
+      </div>
+      <div class="privacy-modal-footer">
+        <span class="pm-footer-note">© 2026 CommandoHSC</span>
+        <button class="pm-footer-close" onclick="hideTermsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- PRIVACY POLICY MODAL -->
   <div class="privacy-overlay" id="privacyOverlay" role="dialog" aria-modal="true" aria-label="Privacy Policy" onclick="handlePrivacyOverlayClick(event)">
     <div class="privacy-modal">
@@ -3381,84 +3633,90 @@ document.addEventListener('keydown', function(e) {
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">01</span><span class="pm-h2">Who we are</span></div>
-          <p class="pm-p">CommandoHSC is an AI-powered HSC exam response analyser operated by an individual developer based in New South Wales, Australia. If you have questions, contact us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>.</p>
+          <p class="pm-p">CommandoHSC is an AI-powered HSC exam response analyser run by an individual developer in New South Wales, Australia. This policy covers how we handle your personal information under the Privacy Act 1988 (Cth) and the Privacy and Other Legislation Amendment Act 2024 (Cth). Questions? <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">Information we collect</span></div>
-          <p class="pm-p"><strong style="color:#ddd;">Account information</strong> — your email address and (if signing in via Google) your name and profile picture. Passwords are not stored in plain text.</p>
-          <p class="pm-p"><strong style="color:#ddd;">Exam responses</strong> — text you submit is sent to the AI for processing and is not stored permanently after analysis.</p>
-          <p class="pm-p"><strong style="color:#ddd;">Payment information</strong> — handled by Stripe. We never store your card details.</p>
+          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">What we collect</span></div>
+          <p class="pm-p">We collect only what's needed to run the Service — nothing more.</p>
           <ul class="pm-ul">
-            <li>Credit balance and transaction history</li>
-            <li>Subject and question type selected per analysis</li>
-            <li>Date and time of analyses</li>
-            <li>Basic browser and device information</li>
+            <li><strong style="color:#ddd;">Account</strong> — email address, and name/profile picture if you sign in with Google. Passwords are hashed, never stored in plain text.</li>
+            <li><strong style="color:#ddd;">Exam responses</strong> — the text you submit is sent to Anthropic's Claude API and not stored on our servers after analysis.</li>
+            <li><strong style="color:#ddd;">Payments</strong> — handled entirely by Stripe. We never see or store your card details.</li>
+            <li><strong style="color:#ddd;">Usage data</strong> — credit balance, subject and question type per analysis, date/time of analyses, and basic browser/device info (via cookieless analytics).</li>
           </ul>
+          <p class="pm-p">We don't collect sensitive information (health, racial, religious, biometric data) and don't solicit it.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">How we use your information</span></div>
+          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">How we use it</span></div>
           <ul class="pm-ul">
-            <li>Provide and improve the CommandoHSC analyser</li>
-            <li>Manage your account, credits, and purchase history</li>
-            <li>Send transactional emails (receipts, low-credit warnings, confirmation)</li>
-            <li>Monitor performance and diagnose errors</li>
-            <li>Detect and prevent fraudulent or abusive use</li>
+            <li>Deliver AI feedback on your submitted responses</li>
+            <li>Manage your account, credits, and purchases</li>
+            <li>Send transactional emails (receipts, confirmations, low-credit alerts)</li>
+            <li>Monitor reliability and fix errors</li>
+            <li>Detect and prevent abuse</li>
+            <li>Meet our legal obligations</li>
           </ul>
-          <p class="pm-p">We do not sell your personal information. We do not use your exam responses to train AI models.</p>
+          <p class="pm-p">We don't sell your data, use it for marketing, or use your exam responses to train AI models.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">AI processing of your exam responses</span></div>
-          <div class="pm-callout">Your exam response text is sent to Anthropic's Claude API for analysis. Anthropic does not use API-submitted data to train their models by default. See <a class="pm-link" href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a>.</div>
-          <p class="pm-p">We recommend you do not include your full legal name, student number, or school name in the body of any response you submit.</p>
+          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">AI and automated decisions</span></div>
+          <div class="pm-callout">Your submitted text is processed by Anthropic's Claude API to generate feedback and estimated mark ranges — without human review of individual responses. This is disclosed in line with Australian automated decision-making transparency obligations (APP 1 and the forthcoming requirements under the Privacy and Other Legislation Amendment Act 2024, commencing December 2026).</div>
+          <p class="pm-p">AI feedback is a study aid only — not official NESA assessment. Estimated marks are indicative. Anthropic does not use API data to train their models by default. See <a class="pm-link" href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a>. Don't include your full name, student number, or school in submitted responses.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Third-party services</span></div>
+          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Third parties and overseas disclosure</span></div>
           <ul class="pm-ul">
-            <li><strong style="color:#ddd;">Supabase</strong> — Authentication and database (Sydney region)</li>
-            <li><strong style="color:#ddd;">Anthropic</strong> — AI analysis via Claude API</li>
-            <li><strong style="color:#ddd;">Stripe</strong> — Payment processing</li>
-            <li><strong style="color:#ddd;">Netlify</strong> — Hosting and serverless functions</li>
-            <li><strong style="color:#ddd;">Plausible Analytics</strong> — Cookieless, privacy-friendly analytics</li>
+            <li><strong style="color:#ddd;">Supabase</strong> — database and auth, AWS Sydney region</li>
+            <li><strong style="color:#ddd;">Anthropic</strong> — AI analysis, processed in the United States</li>
+            <li><strong style="color:#ddd;">Stripe</strong> — payments, United States</li>
+            <li><strong style="color:#ddd;">Netlify</strong> — hosting and serverless functions, United States</li>
+            <li><strong style="color:#ddd;">Plausible Analytics</strong> — cookieless analytics, European Union. No personal identifiers transmitted.</li>
           </ul>
+          <p class="pm-p">For overseas providers, we take reasonable steps to ensure they handle your data consistently with the Australian Privacy Principles. We may also disclose information where required by Australian law.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">Data retention</span></div>
-          <p class="pm-p">Account data is retained while your account is active. Exam response text is not stored after analysis. If you close your account, personal data is deleted within 30 days, except where retention is required by law.</p>
+          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">How long we keep it</span></div>
+          <ul class="pm-ul">
+            <li><strong style="color:#ddd;">Exam responses</strong> — deleted immediately after analysis</li>
+            <li><strong style="color:#ddd;">Account data</strong> — held while your account is active, deleted within 30 days of closure</li>
+            <li><strong style="color:#ddd;">Transaction records</strong> — 7 years (financial record-keeping obligations)</li>
+            <li><strong style="color:#ddd;">Technical logs</strong> — up to 90 days, then purged</li>
+          </ul>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">07</span><span class="pm-h2">Your rights</span></div>
-          <p class="pm-p">Under the Australian Privacy Act 1988, you may access, correct, or request deletion of your data. Email <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> — we'll respond within 14 days.</p>
+          <p class="pm-p">Under the Privacy Act 1988 (Cth), you can access, correct, or request deletion of your data at any time — email <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> and we'll respond within 14 business days at no charge. Under the Privacy and Other Legislation Amendment Act 2024 (Cth) (commenced June 2025), you may also have the right to bring a civil claim for serious invasions of privacy. If we can't resolve your concern, contact the OAIC at <a class="pm-link" href="https://www.oaic.gov.au" target="_blank" rel="noopener">oaic.gov.au</a> or 1300 363 992.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">08</span><span class="pm-h2">Children's privacy</span></div>
-          <p class="pm-p">CommandoHSC is designed for HSC students (typically aged 16–18). Users under 18 should obtain parental consent before creating an account or making a purchase. We do not knowingly collect data from children under 13.</p>
+          <p class="pm-p">CommandoHSC is designed for HSC students (typically 16–18). Users under 18 should have parental consent before registering or purchasing. We don't knowingly collect data from children under 13 — if you believe this has happened, contact us immediately and we'll delete the account. We'll update our practices when the OAIC's Children's Online Privacy Code comes into force (December 2026).</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">09</span><span class="pm-h2">Security</span></div>
-          <ul class="pm-ul">
-            <li>HTTPS on all pages and API calls</li>
-            <li>Row-level security (RLS) on our database</li>
-            <li>API keys stored server-side, never exposed to the client</li>
-            <li>No storage of payment card details</li>
-          </ul>
+          <p class="pm-p">We take reasonable technical and organisational measures to protect your data (APP 11, Privacy Act 1988): HTTPS everywhere, row-level database security, server-side API keys never exposed to the browser, and Stripe's PCI-compliant infrastructure for payments. No system is 100% secure — if we become aware of a breach likely to cause serious harm, we'll notify affected users and the OAIC under the Notifiable Data Breaches scheme.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Changes to this policy</span></div>
-          <p class="pm-p">We may update this policy from time to time. Material changes will be reflected in the "Last updated" date and, where appropriate, notified by email.</p>
+          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Data breaches</span></div>
+          <p class="pm-p">Under the Notifiable Data Breaches scheme (Part IIIC, Privacy Act 1988), if we experience a breach likely to cause serious harm we will notify the OAIC and affected individuals as soon as practicable — including what happened, what data was involved, and what steps to take. Suspect your account is compromised? Contact us immediately at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Contact</span></div>
-          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></div>
+          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Changes</span></div>
+          <p class="pm-p">We'll update this policy as our practices or the law changes — including ongoing reforms under the Privacy and Other Legislation Amendment Act 2024. Material changes will be noted in the effective date above and emailed where appropriate. Continued use means acceptance.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">12</span><span class="pm-h2">Contact</span></div>
+          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a><br><br>OAIC (escalation): <a class="pm-link" href="https://www.oaic.gov.au" target="_blank" rel="noopener">oaic.gov.au</a> · 1300 363 992</div>
         </div>
 
       </div>
