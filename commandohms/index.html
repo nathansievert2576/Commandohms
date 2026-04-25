@@ -3279,8 +3279,9 @@ function hideConfirm() {
   _pendingAnalyse = null;
 }
 function confirmProceed() {
+  const fn = _pendingAnalyse;
   hideConfirm();
-  if (_pendingAnalyse) _pendingAnalyse();
+  if (fn) fn();
 }
 
 // ── Patch the existing analyseText function to gate on credits ──
