@@ -172,7 +172,7 @@
   }
   .nav-left {
     display: flex; align-items: center; gap: 0.75rem;
-    flex: 0 0 auto;
+    flex: 1;
   }
 
   .nav-logo {
@@ -1597,7 +1597,7 @@
   <footer class="site-footer">
     <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
     <nav class="footer-links">
-      <a href="#">Privacy Policy</a>
+      <a href="#" onclick="showPrivacyModal();return false;">Privacy Policy</a>
       <a href="#">Terms of Service</a>
     </nav>
   </footer>
@@ -3373,7 +3373,7 @@ document.addEventListener('keydown', function(e) {
       <div class="privacy-modal-header">
         <div>
           <div class="privacy-modal-title">Privacy Policy</div>
-          <div class="privacy-modal-meta">Effective 25 April 2026 &nbsp;·&nbsp; app.commandohsc.com</div>
+          <div class="privacy-modal-meta">Effective 25 April 2026</div>
         </div>
         <button class="privacy-modal-close" onclick="hidePrivacyModal()" aria-label="Close">✕</button>
       </div>
@@ -3463,7 +3463,7 @@ document.addEventListener('keydown', function(e) {
 
       </div>
       <div class="privacy-modal-footer">
-        <span class="pm-footer-note">© 2025 CommandoHSC</span>
+        <span class="pm-footer-note">© 2026 CommandoHSC</span>
         <button class="pm-footer-close" onclick="hidePrivacyModal()">Close</button>
       </div>
     </div>
