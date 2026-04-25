@@ -2027,7 +2027,7 @@ function combineExtractedText() {
   }
 }
 
-async function analyseText() {
+async function _runAnalysis() {
   // Check a subject is selected
   if (!activeSubjectKey) {
     document.getElementById('subjectModal').classList.add('visible');
@@ -2316,7 +2316,7 @@ Write feedback in clear, direct language — specific and honest, but still easy
   } catch (e) {
     out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — ${escHtml(e.message)}<br><small>Check your connection and try again.</small></div>`;
     document.getElementById('feedbackWrap').style.display = 'none';
-    throw e; // re-throw so the credit refund wrapper can catch it
+    throw e; // propagate so analyseText can refund the credit
   } finally {
     btn.disabled = false;
   }
@@ -3284,42 +3284,21 @@ function confirmProceed() {
   if (fn) fn();
 }
 
-// ── Patch the existing analyseText function to gate on credits ──
-const _origAnalyseText = analyseText;
-analyseText = async function() {
+// ── analyseText — gate, confirm, spend, run, refund on error ──
+async function analyseText() {
   const ok = await checkGate();
   if (!ok) return;
   showConfirm(async () => {
     const spent = await spendCredit();
     if (!spent) { showGate(); return; }
     try {
-      await _origAnalyseText();
+      await _runAnalysis();
     } catch(e) {
       await refundCredit();
       const out = document.getElementById('outputBox');
       if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
     }
   });
-};
-
-// ── Also gate the image/PDF analyse path (analyseFile) ──
-if (typeof analyseFile === 'function') {
-  const _origAnalyseFile = analyseFile;
-  analyseFile = async function() {
-    const ok = await checkGate();
-    if (!ok) return;
-    showConfirm(async () => {
-      const spent = await spendCredit();
-      if (!spent) { showGate(); return; }
-      try {
-        await _origAnalyseFile();
-      } catch(e) {
-        await refundCredit();
-        const out = document.getElementById('outputBox');
-        if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
-      }
-    });
-  };
 }
 
 // ── Terms of Service Modal ──
