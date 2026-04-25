@@ -77,22 +77,28 @@
     position: sticky; top: 0; z-index: 100;
     background: #000000;
     border-bottom: 1px solid rgba(255,255,255,.08);
-    padding: 0 clamp(1.5rem,5vw,4rem);
+    padding: 0 clamp(1rem,3vw,2rem);
     height: 64px;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center;
+    width: 100%; box-sizing: border-box;
+  }
+  .nav-left {
+    display: flex; align-items: center; gap: 0.75rem;
+    flex: 0 0 auto;
   }
 
   .nav-logo {
     text-decoration: none;
     display: flex; align-items: center;
   }
+  .nav-logo img { max-width: 100%; height: auto; }
 
   .nav-badge { display: none; }
 
   .nav-right {
-    display: flex; align-items: center; gap: .75rem;
-    min-width: 220px; justify-content: flex-end;
-    flex: 0 0 auto; margin-left: auto;
+    display: flex; align-items: center; gap: .5rem;
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 
   /* ── USER AVATAR ── */
@@ -449,14 +455,19 @@
 
     /* Nav */
     nav {
-      padding: 0 1rem;
+      padding: 0 0.6rem;
       height: 56px;
+      gap: 0.4rem;
     }
-    .nav-logo img { height: 28px; }
-    .nav-right { min-width: unset; gap: 0.5rem; }
+    .nav-left { gap: 0.4rem; }
+    .nav-logo img { height: 24px; }
+    .nav-right { gap: 0.4rem; }
     .btn-primary-nav { padding: 0.5em 1em; font-size: 0.8rem; }
-    .credit-badge { padding: 0.25rem 0.6rem; font-size: 0.65rem; }
-    .credit-badge .credit-num { font-size: 0.78rem; }
+    .credit-badge { padding: 0.25rem 0.5rem; font-size: 0.6rem; }
+    .credit-badge .credit-num { font-size: 0.72rem; }
+    .nav-avatar { width: 30px; height: 30px; }
+    .nav-avatar svg { width: 16px; height: 16px; }
+    .hamburger-btn { width: 36px; height: 36px; }
 
     /* Page wrap */
     .page-wrap { padding: 1.5rem 1rem 3rem; }
@@ -1244,7 +1255,7 @@
 
 <!-- NAV -->
 <nav>
-  <div style="display:flex;align-items:center;gap:0.75rem;flex:0 0 auto;">
+  <div class="nav-left">
     <!-- Hamburger menu -->
     <div class="hamburger-wrap">
       <button class="hamburger-btn" onclick="toggleHamburger(event)" aria-label="Menu">
