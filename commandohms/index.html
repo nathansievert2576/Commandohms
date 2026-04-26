@@ -1348,7 +1348,7 @@
   }
   /* ── CONFIRM ANALYSIS MODAL ── */
   .confirm-overlay {
-    position: fixed; inset: 0; z-index: 999;
+    position: fixed; inset: 0; z-index: 2000;
     background: rgba(0,0,0,0.82);
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center; padding: 1rem;
@@ -3069,8 +3069,9 @@ async function downloadPDF(event) {
       if(rI<rTotal){rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;rI++;}
     }
 
-    // Main content resumes from response end
-    y=respEndY+3;
+    // Main content resumes from the bottom of ALL three columns
+    // (response text, left callouts, right callouts — whichever is lowest)
+    y = Math.max(respEndY, lColY, rColY) + 3;
 
     // Gold divider
     if(y+4>BOT) newPage();
