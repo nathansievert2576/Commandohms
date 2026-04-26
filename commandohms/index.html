@@ -56,6 +56,17 @@
     --evaluate:     #e84545;
   }
 
+  .terms-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .terms-overlay.open { display: flex; }
+
   /* ── PRIVACY MODAL ── */
   .privacy-overlay {
     display: none;
@@ -172,7 +183,7 @@
   }
   .nav-left {
     display: flex; align-items: center; gap: 0.75rem;
-    flex: 0 0 auto;
+    flex: 1;
   }
 
   .nav-logo {
@@ -1355,8 +1366,10 @@
   .confirm-credit-line {
     font-size: 0.82rem; color: var(--gold);
     font-family: 'DM Mono', monospace; letter-spacing: 0.03em;
-    margin: 1rem 0 1.5rem; padding: 0.6rem 0.85rem;
-    background: rgba(200,168,75,0.08); border: 1px solid rgba(200,168,75,0.2);
+    margin: 1rem 0 1.5rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(200,168,75,0.08);
+    border: 1px solid rgba(200,168,75,0.2);
     border-radius: 8px;
   }
   .confirm-btn {
@@ -1368,8 +1381,6 @@
     transition: opacity 0.18s; margin-bottom: 0.75rem;
   }
   .confirm-btn:hover { opacity: 0.88; }
-
-  .gate-btn:hover { opacity: 0.88; }
 
 </style>
 </head>
@@ -1387,7 +1398,7 @@
       </button>
       <div class="hamburger-dropdown" id="hamburgerDropdown">
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();showPrivacyModal();return false;">Privacy Policy</a>
-        <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">Terms of Service</a>
+        <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();showTermsModal();return false;">Terms of Service</a>
         <hr>
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">FAQs</a>
         <a href="#" class="hamburger-dropdown-item" onclick="closeHamburger();return false;">Contact</a>
@@ -1631,8 +1642,8 @@
   <footer class="site-footer">
     <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
     <nav class="footer-links">
-      <a href="#">Privacy Policy</a>
-      <a href="#">Terms of Service</a>
+      <a href="#" onclick="showPrivacyModal();return false;">Privacy Policy</a>
+      <a href="#" onclick="showTermsModal();return false;">Terms of Service</a>
     </nav>
   </footer>
 
@@ -2016,7 +2027,7 @@ function combineExtractedText() {
   }
 }
 
-async function _origAnalyseText() {
+async function _runAnalysis() {
   // Check a subject is selected
   if (!activeSubjectKey) {
     document.getElementById('subjectModal').classList.add('visible');
@@ -2305,6 +2316,7 @@ Write feedback in clear, direct language — specific and honest, but still easy
   } catch (e) {
     out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — ${escHtml(e.message)}<br><small>Check your connection and try again.</small></div>`;
     document.getElementById('feedbackWrap').style.display = 'none';
+    throw e; // propagate so analyseText can refund the credit
   } finally {
     btn.disabled = false;
   }
@@ -2614,375 +2626,507 @@ function renderProjectedMark(raw, markValue) {
 async function downloadPDF(event) {
   const btn = event.currentTarget;
   const origHTML = btn.innerHTML;
-  btn.innerHTML = '<span style="opacity:0.7">Generating…</span>';
+  btn.innerHTML = '<span style="opacity:0.7">Generating\u2026</span>';
   btn.disabled = true;
 
   try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const COLOURS = {
-      identify:    { bg: [255,209,102],  fg: [13,13,13] },
-      outline:     { bg: [82,214,138],   fg: [13,13,13] },
-      describe:    { bg: [91,200,245],   fg: [13,13,13] },
-      explain:     { bg: [240,128,80],   fg: [13,13,13] },
-      apply:       { bg: [132,169,140],  fg: [13,13,13] },
-      compare:     { bg: [66,212,200],   fg: [13,13,13] },
-      contrast:    { bg: [6,214,160],    fg: [13,13,13] },
-      examine:     { bg: [168,216,72],   fg: [13,13,13] },
-      analyse:     { bg: [181,124,247],  fg: [255,255,255] },
-      investigate: { bg: [155,93,229],   fg: [255,255,255] },
-      justify:     { bg: [255,154,60],   fg: [13,13,13] },
-      discuss:     { bg: [247,111,168],  fg: [255,255,255] },
-      assess:      { bg: [224,64,251],   fg: [255,255,255] },
-      evaluate:    { bg: [232,69,69],    fg: [255,255,255] },
+    // ─── Page geometry ────────────────────────────────────────────────────
+    var PW=210, PH=297, ML=12, MR=12, HDR=16, FTR=10;
+    var TOP=HDR+5, BOT=PH-FTR-4;
+    var CW=PW-ML-MR;         // full content width = 186mm
+
+    // Three-column layout
+    var SW=42, GAP=3;
+    var CX=ML+SW+GAP;        // centre col left  = 12+42+3 = 57mm
+    var CW_C=CW-2*(SW+GAP);  // centre col width = 186-90  = 96mm
+    var RX=CX+CW_C+GAP;      // right col left   = 57+96+3 = 156mm
+    // Sanity: RX+SW = 156+42 = 198 < 198 = PW-MR ✓
+
+    // ─── Typography (jsPDF: 1pt = 0.3528mm) ──────────────────────────────
+    var RFS=8.5, RLA=3.8;   // response font, line-advance mm
+    var CFS=7.5, CLA=3.3;   // callout body font, line-advance mm
+    var HFS=6.5, HHT=5.0;   // callout heading font, heading-row height
+    var BFS=8,   BLA=3.6;   // body font (CTF, mark rationale)
+    var HP=1.2;              // horizontal padding inside highlight rect
+    var PG=2.0;              // extra gap between paragraphs
+
+    // ─── Colours ─────────────────────────────────────────────────────────
+    var COLS={
+      identify:    {bg:[255,209,102],fg:[13,13,13]},
+      outline:     {bg:[82,214,138], fg:[13,13,13]},
+      describe:    {bg:[91,200,245], fg:[13,13,13]},
+      explain:     {bg:[240,128,80], fg:[13,13,13]},
+      apply:       {bg:[132,169,140],fg:[13,13,13]},
+      compare:     {bg:[66,212,200], fg:[13,13,13]},
+      contrast:    {bg:[6,214,160],  fg:[13,13,13]},
+      examine:     {bg:[168,216,72], fg:[13,13,13]},
+      analyse:     {bg:[181,124,247],fg:[255,255,255]},
+      investigate: {bg:[155,93,229], fg:[255,255,255]},
+      justify:     {bg:[255,154,60], fg:[13,13,13]},
+      discuss:     {bg:[247,111,168],fg:[255,255,255]},
+      assess:      {bg:[224,64,251], fg:[255,255,255]},
+      evaluate:    {bg:[232,69,69],  fg:[255,255,255]}
     };
 
-    const PW = 210, PH = 297, ML = 14, MR = 14, MB = 10;
-    const CW = PW - ML - MR;
-    let page = 1, y = 0;
+    // Callout styles
+    // LEFT:  strengths (green label) + develops (amber label)  — white bg
+    // RIGHT: next steps — gold-tinted bg
+    var ST={
+      strength:{bg:[248,248,248],bd:[200,200,200],lb:[46,125,50], ti:'STRENGTH'},
+      develop: {bg:[248,248,248],bd:[200,200,200],lb:[122,78,0],  ti:'DEVELOP'},
+      nextstep:{bg:[255,251,235],bd:[200,168,75], lb:[21,101,192],ti:'NEXT STEP'}
+    };
 
-    function newPage() { if (page > 1) doc.addPage(); page++; y = 0; drawHeader(); }
-    function checkY(need) { if (y + need > PH - MB) newPage(); }
+    // ─── Page state ───────────────────────────────────────────────────────
+    var pageNum=0, y=TOP;
 
-    function drawHeader() {
-      doc.setFillColor(0, 0, 0);
-      doc.rect(0, 0, PW, 18, 'F');
-      // Add CommandoHSC logo to PDF header
-      const navLogoEl = document.querySelector('.nav-logo img');
-      if (navLogoEl && navLogoEl.src && navLogoEl.src.startsWith('data:')) {
-        const logoH = 10;
-        const logoAR = navLogoEl.naturalWidth / navLogoEl.naturalHeight;
-        const logoW = Math.min(logoH * logoAR, 60);
-        try { doc.addImage(navLogoEl.src, 'JPEG', ML, 4, logoW, logoH); } catch(e) {}
+    function drawPageFurniture() {
+      // Header
+      doc.setFillColor(0,0,0); doc.rect(0,0,PW,HDR,'F');
+      doc.setFillColor(200,168,75); doc.rect(0,0,PW,1.2,'F');
+      var logo=document.querySelector('.nav-logo img');
+      if(logo&&logo.src&&logo.src.startsWith('data:')){
+        var lh=8,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,52);
+        try{doc.addImage(logo.src,'PNG',ML,4,lw,lh);}catch(e){}
       }
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
-      doc.setTextColor(107, 115, 88);
-      doc.text('Health and Movement Science — Response Analysis Report', PW / 2, 12, { align: 'center' });
-      doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}), PW - MR, 12, { align: 'right' });
-      doc.setTextColor(30, 38, 20);
-      y = 22;
+      doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(136,136,128);
+      var sb=document.querySelector('.subject-btn.active');
+      var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
+      doc.text(sn+' \xb7 Response Analysis',PW/2,10,{align:'center'});
+      doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,10,{align:'right'});
+      // Footer
+      doc.setFillColor(17,17,17);doc.rect(0,PH-FTR,PW,FTR,'F');
+      doc.setFont('helvetica','italic');doc.setFontSize(6);doc.setTextColor(85,85,85);
+      doc.text('AI-generated \xb7 treat as a learning guide only \xb7 consult your teacher for official marking advice',ML,PH-4,{align:'left'});
+      doc.setTextColor(200,168,75);
+      doc.text('commandohsc.netlify.app',PW-MR,PH-4,{align:'right'});
     }
 
-    function sectionLabel(text) {
-      checkY(8);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
-      doc.setTextColor(107, 115, 88);
-      doc.text(text.toUpperCase(), ML, y);
-      y += 5; doc.setTextColor(30, 38, 20);
+    function newPage(){
+      if(pageNum>0) doc.addPage();
+      pageNum++;
+      drawPageFurniture();
+      y=TOP;
     }
 
-    function drawDivider() {
-      checkY(6);
-      doc.setDrawColor(200, 184, 122); doc.setLineWidth(0.3);
-      doc.line(ML, y, PW - MR, y); y += 5;
+    // ─── Text helpers ─────────────────────────────────────────────────────
+    function clean(s){
+      if(!s) return '';
+      s=String(s);
+      s=s.replace(/\u00d7/g,'x').replace(/\u2013/g,'-').replace(/\u2014/g,'--');
+      s=s.replace(/\u2018/g,"'").replace(/\u2019/g,"'");
+      s=s.replace(/\u201c/g,'"').replace(/\u201d/g,'"');
+      s=s.replace(/[^\u0000-\u007E]/g,'');
+      return s;
     }
 
-    function drawParagraph(text, fontSize, colour, indent) {
-      const x = ML + (indent || 0), w = CW - (indent || 0);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(fontSize);
-      doc.setTextColor(...colour);
-      const lines = doc.splitTextToSize(text, w);
-      checkY(lines.length * fontSize * 0.4 + 2);
-      doc.text(lines, x, y);
-      y += lines.length * fontSize * 0.4 + 2;
+    function setFont(bold,fs){ doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(fs); }
+    function gw(text,bold,fs){ setFont(bold,fs); return doc.getTextWidth(text); }
+    function txt(text,x,yy,fs,bold,rgb){
+      setFont(bold,fs); doc.setTextColor(rgb[0],rgb[1],rgb[2]);
+      doc.text(clean(String(text)),x,yy,{align:'left'});
+    }
+    function splitW(text,fs,w){ setFont(false,fs); return doc.splitTextToSize(clean(text),w); }
+    function lh(n,la){ return n>0?(n-1)*la+la*0.85:0; }
+
+    // ─── Callout box (draws at topY, returns height) ──────────────────────
+    function calloutBox(x,topY,st,text){
+      var PAD=3;
+      var lines=splitW(text,CFS,SW-PAD*2);
+      var bodyH=lh(lines.length,CLA);
+      var totH=PAD+HHT+2+bodyH+PAD;
+      doc.setFillColor(st.bg[0],st.bg[1],st.bg[2]);
+      doc.setDrawColor(st.bd[0],st.bd[1],st.bd[2]);
+      doc.setLineWidth(0.35);
+      doc.roundedRect(x,topY,SW,totH,2,2,'FD');
+      txt(st.ti,x+PAD,topY+PAD+HFS*0.3528*0.75,HFS,true,st.lb);
+      var by=topY+PAD+HHT+2+CFS*0.3528*0.75;
+      lines.forEach(function(ln,i){ txt(ln,x+PAD,by+i*CLA,CFS,false,[40,40,40]); });
+      return totH;
+    }
+    function calloutH(text){
+      var PAD=3,lines=splitW(text,CFS,SW-PAD*2);
+      return PAD+HHT+2+lh(lines.length,CLA)+PAD;
     }
 
-    const question = document.getElementById('questionText').value.trim();
-    const markVal  = document.getElementById('markValue').value.trim();
-    const feedbackBox = document.getElementById('feedbackBox');
-    const projBox = document.getElementById('projectedMarkBox');
+    // ─── Segment builder ──────────────────────────────────────────────────
+    function buildSegs(fullText,annotations){
+      var cmdAnns=annotations.filter(function(a){return a.term!=='example';});
+      var exAnns =annotations.filter(function(a){return a.term==='example';});
+      var cmdRanges=[];
+      cmdAnns.forEach(function(a){
+        var idx=fullText.indexOf(a.text); if(idx===-1) return;
+        var end=idx+a.text.length;
+        if(cmdRanges.some(function(r){return !(end<=r.s||idx>=r.e);})) return;
+        cmdRanges.push({s:idx,e:end,term:a.term});
+      });
+      cmdRanges.sort(function(a,b){return a.s-b.s;});
+      var exRanges=[];
+      exAnns.forEach(function(a){
+        var re=new RegExp(a.text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
+        var m=re.exec(fullText); if(m) exRanges.push({s:m.index,e:m.index+m[0].length});
+      });
+      var segs=[],cur=0,raw=[];
+      cmdRanges.forEach(function(r){
+        if(r.s>cur) raw.push({t:fullText.slice(cur,r.s),term:null,ss:cur});
+        raw.push({t:fullText.slice(r.s,r.e),term:r.term,ss:r.s});
+        cur=r.e;
+      });
+      if(cur<fullText.length) raw.push({t:fullText.slice(cur),term:null,ss:cur});
+      raw.forEach(function(seg){
+        var ss=seg.ss;
+        var lEx=exRanges.filter(function(e){return e.s<ss+seg.t.length&&e.e>ss;});
+        if(!lEx.length){segs.push({t:seg.t,term:seg.term,ex:false});return;}
+        var p=0;
+        lEx.forEach(function(ex){
+          var ls=Math.max(0,ex.s-ss),le=Math.min(seg.t.length,ex.e-ss);
+          if(ls>p) segs.push({t:seg.t.slice(p,ls),term:seg.term,ex:false});
+          if(le>ls) segs.push({t:seg.t.slice(ls,le),term:seg.term,ex:true});
+          p=le;
+        });
+        if(p<seg.t.length) segs.push({t:seg.t.slice(p),term:seg.term,ex:false});
+      });
+      return segs.filter(function(s){return s.t;});
+    }
 
-    function getFeedback() {
-      if (!feedbackBox) return [];
-      const grid = feedbackBox.querySelector('div[style*="grid-template-columns"]');
-      if (!grid) return [];
-      return Array.from(grid.children).map(card => {
-        const h = card.querySelector('div[style*="text-transform"]');
-        const bullets = Array.from(card.querySelectorAll('div[style*="display:flex"]')).map(b => {
-          const spans = b.querySelectorAll('span');
-          return spans.length > 1 ? spans[spans.length-1].innerText.trim() : b.innerText.trim();
-        }).filter(Boolean);
-        return { heading: h ? h.innerText.trim() : '', bullets };
+    // ─── Line wrapper ─────────────────────────────────────────────────────
+    // Wraps segments into lines that fit within CW_C.
+    // Highlighted runs get HP*2 padding added to their width in the check.
+    // Plain text and highlighted text share the same lineW accumulator.
+    function wrapSegs(segs){
+      var W=CW_C;
+      var result=[],line=[],lineW=0;
+
+      function gW(text,bold){ return gw(text,bold,RFS); }
+
+      function flush(pb){
+        if(line.length) result.push({items:line.slice(),pb:!!pb});
+        line=[];lineW=0;
+      }
+
+      // Break text into tokens at whitespace and mid-word hyphens
+      function tokens(text){
+        var out=[];
+        (text.match(/\S+\s*/g)||[]).forEach(function(word){
+          var trail=(word.match(/\s+$/)||[''])[0];
+          var core=word.slice(0,word.length-trail.length);
+          if(core.indexOf('-')>0&&core.indexOf('-')<core.length-1){
+            core.split('-').forEach(function(p,i,arr){
+              out.push(i<arr.length-1?p+'-':p+trail);
+            });
+          } else { out.push(word); }
+        });
+        return out;
+      }
+
+      segs.forEach(function(seg){
+        if(!seg.t) return;
+        var hl=!!(seg.term&&COLS[seg.term]);
+
+        // Paragraph break
+        if(!hl&&seg.t.indexOf('\n')!==-1){
+          seg.t.split('\n').forEach(function(part,pi){
+            if(pi>0) flush(true);
+            if(!part) return;
+            tokens(part).forEach(function(tok){
+              var w=gW(tok,false);
+              if(lineW+w>W&&line.length) flush(false);
+              line.push({t:tok,term:null,ex:seg.ex}); lineW+=w;
+            });
+          });
+          return;
+        }
+
+        if(hl){
+          // Measure a highlighted run exactly as drawLine renders it:
+          // - trimmed portion in bold
+          // - trailing whitespace in normal
+          // - HP*2 added once for the rect padding
+          // This ensures wrapSegs and drawLine agree on pixel widths.
+          function runRenderedW(runText){
+            var tr=runText.trimEnd();
+            var trail=runText.slice(tr.length);
+            var wTr=gW(tr,true);
+            var wSp=trail?gW(trail,false):0;
+            return wTr+HP*2+wSp;
+          }
+
+          var toks=tokens(seg.t), run='', runW=0;
+          toks.forEach(function(tok){
+            var newRunW=runRenderedW(run+tok);
+            if(run!==''&&lineW+newRunW>W){
+              // Current run fits; adding this token would overflow — commit run
+              line.push({t:run,term:seg.term,ex:seg.ex});
+              lineW+=runW;
+              flush(false);
+              run=tok; runW=runRenderedW(tok);
+            } else {
+              run+=tok; runW=newRunW;
+            }
+          });
+          if(run!==''){
+            if(lineW+runW>W&&line.length) flush(false);
+            line.push({t:run,term:seg.term,ex:seg.ex});
+            lineW+=runW;
+          }
+        } else {
+          tokens(seg.t).forEach(function(tok){
+            var w=gW(tok,false);
+            if(lineW+w>W&&line.length) flush(false);
+            line.push({t:tok,term:null,ex:seg.ex}); lineW+=w;
+          });
+        }
+      });
+      flush(false);
+      return result;
+    }
+
+    // ─── Draw one response line ───────────────────────────────────────────
+    var HA=RFS*0.3528*0.80, HHR=RFS*0.3528*1.15;
+
+    function drawLine(items,atY){
+      var dx=CX;
+      items.forEach(function(item){
+        if(!item.t) return;
+        var hl=!!(item.term&&COLS[item.term]);
+        setFont(hl?'bold':'normal',RFS);
+        if(hl){
+          var tr=item.t.trimEnd(), trail=item.t.slice(tr.length);
+          var wTr=doc.getTextWidth(tr);
+          setFont(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
+          var c=COLS[item.term];
+          var rectW=Math.min(wTr+HP*2, CX+CW_C-dx);
+          if(rectW>0){
+            doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
+            doc.roundedRect(dx,atY-HA,rectW,HHR,0.7,0.7,'F');
+          }
+          setFont(true,RFS);
+          doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
+          doc.text(clean(tr),dx+HP,atY,{align:'left'});
+          if(item.ex){
+            doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.4);
+            doc.line(dx+HP,atY+0.6,dx+HP+wTr,atY+0.6);
+          }
+          dx+=wTr+HP*2+wSp;
+        } else if(item.ex){
+          setFont('bolditalic',RFS);
+          var w=doc.getTextWidth(item.t);
+          doc.setTextColor(0,0,0);
+          doc.text(clean(item.t),dx,atY,{align:'left'});
+          doc.setDrawColor(0,0,0);doc.setLineWidth(0.4);
+          doc.line(dx,atY+0.6,dx+w,atY+0.6);
+          dx+=w;
+        } else {
+          var w=doc.getTextWidth(item.t);
+          doc.setTextColor(0,0,0);
+          doc.text(clean(item.t),dx,atY,{align:'left'});
+          dx+=w;
+        }
       });
     }
 
-    function getProjected() {
-      if (!projBox || !projBox.innerHTML) return null;
-      const m = projBox.querySelector('div[style*="font-size:2.2rem"]');
-      const r = projBox.querySelector('p[style*="0.85rem"]');
-      return { mark: m ? m.innerText.trim() : '', rationale: r ? r.innerText.trim() : '' };
+    // ─── Parse feedback ───────────────────────────────────────────────────
+    function parseFB(){
+      var box=document.getElementById('feedbackBox'); if(!box) return {};
+      var HEADS=['What Went Well','Areas for Improvement','Command Term Focus','Next Steps'];
+      var out={},cur=null;
+      box.innerText.split('\n').forEach(function(line){
+        var t=line.trim(),lo=t.toLowerCase().replace(/[:\-\*#]/g,'').trim();
+        var h=HEADS.find(function(h){return lo===h.toLowerCase()||lo.startsWith(h.toLowerCase());});
+        if(h){cur=h;out[cur]=out[cur]||[];}
+        else if(cur&&t){var cl=t.replace(/^[•\-\*\d\.]?\s*/,'').trim();if(cl)out[cur].push(cl);}
+      });
+      return out;
     }
 
-    function buildSegments(fullText, annotations) {
-      const cmdAnns  = annotations.filter(a => a.term !== 'example');
-      const exAnns   = annotations.filter(a => a.term === 'example');
+    // ─── Read all data ────────────────────────────────────────────────────
+    var question=document.getElementById('questionText').value.trim();
+    var markVal =document.getElementById('markValue').value.trim();
+    var rawText =lastText||'';
+    var segs    =buildSegs(rawText,lastAnnotations);
+    var wlines  =wrapSegs(segs);
 
-      const cmdRanges = [];
-      for (const ann of cmdAnns) {
-        const idx = fullText.indexOf(ann.text);
-        if (idx === -1) continue;
-        const end = idx + ann.text.length;
-        const overlaps = cmdRanges.some(r => !(end <= r.start || idx >= r.end));
-        if (!overlaps) cmdRanges.push({ start: idx, end, term: ann.term });
-      }
-      cmdRanges.sort((a, b) => a.start - b.start);
+    var fb  =parseFB();
+    var www =fb['What Went Well']       ||[];
+    var aif =fb['Areas for Improvement']||[];
+    var ctf =fb['Command Term Focus']   ||[];
+    var ns  =fb['Next Steps']           ||[];
+    var ptm =(document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
 
-      const exRanges = [];
-      for (const ann of exAnns) {
-        const re = new RegExp(ann.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-        const m  = re.exec(fullText);
-        if (m) exRanges.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
-      }
+    // ─── Build fixed left/right callout lists ─────────────────────────────
+    // LEFT:  all Strengths + all Develops  (white bg, coloured label)
+    // RIGHT: all Next Steps                (gold-tinted bg)
+    var leftList=[];
+    www.forEach(function(b){leftList.push({st:ST.strength,text:b});});
+    aif.forEach(function(b){leftList.push({st:ST.develop, text:b});});
+    var rightList=[];
+    ns.forEach(function(b){rightList.push({st:ST.nextstep,text:b});});
 
-      const segs = [];
-      let cursor = 0;
+    // Projected mark
+    var proj=(function(){
+      var pb=document.getElementById('projectedMarkBox');if(!pb||!pb.innerHTML)return null;
+      var m=pb.querySelector('div[style*="font-size:2.2rem"]');
+      var r=pb.querySelector('p[style*="0.85rem"]');
+      return{mark:m?m.innerText.trim():'',rat:r?r.innerText.trim():''};
+    })();
 
-      const rawSegs = [];
-      for (const r of cmdRanges) {
-        if (r.start > cursor) rawSegs.push({ text: fullText.slice(cursor, r.start), term: null, segStart: cursor });
-        rawSegs.push({ text: fullText.slice(r.start, r.end), term: r.term, segStart: r.start });
-        cursor = r.end;
-      }
-      if (cursor < fullText.length) rawSegs.push({ text: fullText.slice(cursor), term: null, segStart: cursor });
-
-      for (const seg of rawSegs) {
-        const segStart = seg.segStart;
-        const localEx = exRanges.filter(e =>
-          e.start < segStart + seg.text.length && e.end > segStart
-        );
-        if (localEx.length === 0) {
-          segs.push({ text: seg.text, term: seg.term, isEx: false });
-        } else {
-          let pos = 0;
-          for (const ex of localEx) {
-            const localStart = Math.max(0, ex.start - segStart);
-            const localEnd   = Math.min(seg.text.length, ex.end - segStart);
-            if (localStart > pos) segs.push({ text: seg.text.slice(pos, localStart), term: seg.term, isEx: false });
-            if (localEnd > localStart) segs.push({ text: seg.text.slice(localStart, localEnd), term: seg.term, isEx: true });
-            pos = localEnd;
-          }
-          if (pos < seg.text.length) segs.push({ text: seg.text.slice(pos), term: seg.term, isEx: false });
-        }
-      }
-
-      return segs.filter(s => s.text);
-    }
-
-    const rawText   = lastText || '';
-    const segments  = buildSegments(rawText, lastAnnotations);
-    const feedback  = getFeedback();
-    const projected = getProjected();
-
+    // ─────────────────────────────────────────────────────────────────────
+    // RENDER — single pass, no lookahead, no anchor logic
+    // ─────────────────────────────────────────────────────────────────────
     newPage();
 
-    if (question) {
-      sectionLabel('Exam Question');
-      drawParagraph(question, 10, [30, 38, 20], 0);
-      if (markVal) {
-        checkY(7);
-        const label = `Mark value: ${markVal} mark${markVal !== '1' ? 's' : ''}`;
-        doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-        const lw = doc.getTextWidth(label) + 6;
-        doc.setFillColor(234, 227, 208);
-        doc.roundedRect(ML, y - 3.5, lw, 5.5, 1.5, 1.5, 'F');
-        doc.setTextColor(61, 92, 46);
-        doc.text(label, ML + 3, y);
-        y += 5; doc.setTextColor(30, 38, 20);
-      }
-      drawDivider();
+    // Question strip
+    txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),ML,y,6.5,true,[153,153,144]);
+    y+=4;
+    if(question){
+      var qls=splitW(question,9,CW);
+      qls.forEach(function(ln,i){txt(ln,ML,y+i*9*0.3528*1.2,9,false,[51,51,51]);});
+      y+=lh(qls.length,9*0.3528*1.2)+2;
     }
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);doc.line(ML,y,PW-MR,y);y+=3;
 
-    sectionLabel('Colour Key');
-    checkY(8);
-    let kx = ML;
-    Object.entries(COLOURS).forEach(([term, c]) => {
-      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
-      const tw = doc.getTextWidth(cap(term)) + 5;
-      if (kx + tw > PW - MR) { kx = ML; y += 6; }
-      doc.setFillColor(...c.bg);
-      doc.roundedRect(kx, y - 3.5, tw, 5.5, 1.5, 1.5, 'F');
-      doc.setTextColor(...c.fg);
-      doc.text(cap(term), kx + 2.5, y);
-      kx += tw + 2;
+    // Colour key
+    txt('COLOUR KEY',ML,y,6,true,[153,153,144]);y+=3.5;
+    var kx=ML;
+    Object.keys(COLS).forEach(function(term){
+      var c=COLS[term];
+      setFont(true,6.5);var kw=doc.getTextWidth(cap(term))+4;
+      if(kx+kw>PW-MR){kx=ML;y+=5;}
+      doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
+      doc.roundedRect(kx,y-3,kw,4.5,1,1,'F');
+      doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
+      doc.text(cap(term),kx+2,y,{align:'left'});
+      kx+=kw+2;
     });
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
-    doc.setTextColor(107, 115, 88);
-    const exw = doc.getTextWidth('Example') + 5;
-    if (kx + exw > PW - MR) { kx = ML; y += 6; }
-    doc.text('Example', kx + 2.5, y);
-    doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.5);
-    doc.line(kx + 2.5, y + 0.8, kx + 2.5 + doc.getTextWidth('Example'), y + 0.8);
-    y += 7; doc.setTextColor(30, 38, 20);
-    drawDivider();
+    setFont(false,6.5);var exw=doc.getTextWidth('Example')+4;
+    if(kx+exw>PW-MR){kx=ML;y+=5;}
+    doc.setFillColor(245,242,235);doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
+    doc.roundedRect(kx,y-3,exw,4.5,1,1,'FD');
+    doc.setTextColor(107,80,50);doc.text('Example',kx+2,y,{align:'left'});
+    y+=6;
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);doc.line(ML,y,PW-MR,y);y+=3;
 
-    sectionLabel('Colour-Coded Response');
-    const FS = 9.5;
-    const LINE_H = 5.2;
-    const H_PAD = 1.5;
+    // ── THREE-COLUMN SECTION ──────────────────────────────────────────────
+    // Left and right callout columns advance independently.
+    // Response text advances y. Callouts do NOT affect y.
+    // Callouts are spaced evenly: placed every N response lines.
+    var lColY=y, rColY=y, lI=0, rI=0;
+    var lTotal=leftList.length, rTotal=rightList.length;
+    var lLines=wlines.length, rLines=wlines.length;
+    // Place one callout every (wlines / count) lines
+    var lEvery = lTotal>0 ? Math.max(1,Math.floor(wlines.length/lTotal)) : 99999;
+    var rEvery = rTotal>0 ? Math.max(1,Math.floor(wlines.length/rTotal)) : 99999;
+    var lSince=0, rSince=0;
 
-    function getW(text, bold) {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      doc.setFontSize(FS);
-      return doc.getTextWidth(text);
-    }
+    wlines.forEach(function(wl){
+      // Page break for response text
+      if(y+RLA>BOT){
+        newPage();
+        lColY=y; rColY=y;  // reset callout columns to new page top
+      }
+      y+=RLA;
+      drawLine(wl.items,y);
+      if(wl.pb) y+=PG;
+      lSince++; rSince++;
 
-    // Each lineItem is { text, term, isEx } where text is a complete run
-    // (no per-word splitting inside a highlighted segment).
-    function drawResponseLine(lineItems) {
-      checkY(LINE_H + 1);
-      let dx = ML;
-      lineItems.forEach(item => {
-        if (!item.text) return;
-        const isHL = item.term && COLOURS[item.term];
-        const w = getW(item.text, !!isHL);
-        if (isHL) {
-          const c = COLOURS[item.term];
-          doc.setFillColor(...c.bg);
-          doc.roundedRect(dx, y - LINE_H + 1.2, w + H_PAD * 2, LINE_H, 1, 1, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
-          doc.setTextColor(...c.fg);
-          doc.text(item.text, dx + H_PAD, y);
-          if (item.isEx) {
-            doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
-            doc.line(dx + H_PAD, y + 0.9, dx + H_PAD + w, y + 0.9);
-          }
-          dx += w + H_PAD * 2;
-        } else if (item.isEx) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
-          doc.setTextColor(107, 80, 50);
-          doc.text(item.text, dx, y);
-          doc.setDrawColor(139, 108, 66); doc.setLineWidth(0.4);
-          doc.line(dx, y + 0.9, dx + w, y + 0.9);
-          dx += w;
-        } else {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
-          doc.setTextColor(30, 38, 20);
-          doc.text(item.text, dx, y);
-          dx += w;
+      // Place left callout if due
+      if(lI<lTotal && lSince>=lEvery){
+        var need=calloutH(leftList[lI].text);
+        if(lColY+need<=BOT){
+          lColY+=calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text)+2;
+          lI++; lSince=0;
         }
-      });
-      y += LINE_H + 0.6;
-    }
-
-    // Build lines by treating each segment as an atomic unit where possible.
-    // Non-highlighted segments are split word-by-word for line-wrapping.
-    // Highlighted segments stay whole — only split at a word boundary if the
-    // entire segment is wider than the column (very long sentences).
-    let lineItems = [];
-    let lineW = 0;
-
-    function pushLine() {
-      if (lineItems.length) drawResponseLine(lineItems);
-      lineItems = [];
-      lineW = 0;
-    }
-
-    function itemWidth(text, isHL) {
-      return getW(text, !!isHL) + (isHL ? H_PAD * 2 : 0);
-    }
-
-    segments.forEach(seg => {
-      if (!seg.text) return;
-      const isHL = seg.term && COLOURS[seg.term];
-
-      if (isHL) {
-        // Highlighted segment — try to keep as one unit per line.
-        // Split only at word boundaries when the segment is wider than CW.
-        const words = seg.text.match(/\S+\s*/g) || [];
-        let run = '';
-        words.forEach((word, wi) => {
-          const candidate = run + word;
-          const candidateW = itemWidth(candidate, true);
-          if (run && lineW + candidateW > CW) {
-            // Flush current run and current line
-            lineItems.push({ text: run, term: seg.term, isEx: seg.isEx || false });
-            pushLine();
-            run = word;
-          } else {
-            run = candidate;
-          }
-        });
-        if (run) {
-          const rw = itemWidth(run, true);
-          if (lineW + rw > CW && lineItems.length > 0) pushLine();
-          lineItems.push({ text: run, term: seg.term, isEx: seg.isEx || false });
-          lineW += rw;
+      }
+      // Place right callout if due
+      if(rI<rTotal && rSince>=rEvery){
+        var need=calloutH(rightList[rI].text);
+        if(rColY+need<=BOT){
+          rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;
+          rI++; rSince=0;
         }
-      } else {
-        // Plain text — split word by word for wrapping
-        const chunks = seg.text.match(/\S+\s*/g) || [];
-        chunks.forEach(chunk => {
-          const cw = itemWidth(chunk, false);
-          if (lineW + cw > CW && lineItems.length > 0) pushLine();
-          lineItems.push({ text: chunk, term: null, isEx: seg.isEx || false });
-          lineW += cw;
-        });
       }
     });
 
-    pushLine();
+    // Response text is done — record this y
+    var respEndY=y;
 
-    doc.setTextColor(30, 38, 20);
-    doc.setFont('helvetica', 'normal');
-    y += 2;
-
-    newPage();
-
-    if (feedback.length) {
-      sectionLabel('Marker Feedback');
-      const qW = (CW - 5) / 2;
-      feedback.forEach((q, i) => {
-        const col = i % 2;
-        if (col === 0 && i > 0) y += 3;
-        const qX = ML + col * (qW + 5);
-        let qH = 14;
-        q.bullets.forEach(b => { const lines = doc.splitTextToSize(b, qW - 8); qH += lines.length * 8.5 * 0.38 + 3; });
-        checkY(qH);
-        doc.setFillColor(242, 237, 224); doc.setDrawColor(200, 184, 122); doc.setLineWidth(0.3);
-        doc.roundedRect(qX, y, qW, qH, 2, 2, 'FD');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(61, 92, 46);
-        doc.text(q.heading.toUpperCase(), qX + 4, y + 5.5);
-        let qy = y + 10;
-        q.bullets.forEach(b => {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(46, 58, 28);
-          const lines = doc.splitTextToSize(b, qW - 10);
-          doc.text('•', qX + 3, qy);
-          doc.text(lines, qX + 6.5, qy);
-          qy += lines.length * 8.5 * 0.38 + 3;
-        });
-        if (col === 1 || i === feedback.length - 1) y += qH + 3;
-      });
-      doc.setTextColor(30, 38, 20);
-      drawDivider();
+    // Place any remaining callouts that didn't fit during the response.
+    // They go onto a new page PAIRED — both columns reset together.
+    // We never touch respEndY — main content picks up from there.
+    while(lI<lTotal||rI<rTotal){
+      var lNeed=lI<lTotal?calloutH(leftList[lI].text)+2:0;
+      var rNeed=rI<rTotal?calloutH(rightList[rI].text)+2:0;
+      if((lNeed&&lColY+lNeed>BOT)||(rNeed&&rColY+rNeed>BOT)){
+        doc.addPage();pageNum++;drawPageFurniture();
+        lColY=TOP;rColY=TOP;
+      }
+      if(lI<lTotal){lColY+=calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text)+2;lI++;}
+      if(rI<rTotal){rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;rI++;}
     }
 
-    if (projected && projected.mark) {
-      sectionLabel('Estimated Mark');
-      checkY(14);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(30, 38, 20);
-      doc.text(projected.mark, ML, y); y += 8;
-      if (projected.rationale) drawParagraph(projected.rationale, 9, [107, 115, 88], 0);
-      drawDivider();
+    // Main content resumes from response end
+    y=respEndY+3;
+
+    // Gold divider
+    if(y+4>BOT) newPage();
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);doc.line(ML,y,PW-MR,y);y+=4;
+
+    // Command Term panel
+    if(ctf.length){
+      var cBody=ctf.join(' ');
+      var cLines=splitW(cBody,BFS,CW-7);
+      var cH=4+HHT+2+lh(cLines.length,BLA)+4;
+      if(y+cH>BOT) newPage();
+      doc.setFillColor(252,228,236);doc.setDrawColor(244,143,177);doc.setLineWidth(0.4);
+      doc.roundedRect(ML,y,CW,cH,2,2,'FD');
+      txt('COMMAND TERM ACHIEVEMENT \xb7 '+(ptm?ptm.toUpperCase():''),ML+3.5,y+4+HFS*0.3528*0.75,HFS,true,[136,14,79]);
+      var cBase=y+4+HHT+2+BFS*0.3528*0.75;
+      cLines.forEach(function(ln,i){txt(ln,ML+3.5,cBase+i*BLA,BFS,false,[80,20,50]);});
+      y+=cH+4;
     }
 
-    checkY(16);
-    doc.setFillColor(242, 237, 224); doc.setDrawColor(200, 184, 122); doc.setLineWidth(0.3);
-    const dText = 'AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
-    const dLines = doc.splitTextToSize(dText, CW - 8);
-    const dH = dLines.length * 7.5 * 0.4 + 8;
-    doc.roundedRect(ML, y, CW, dH, 2, 2, 'FD');
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(107, 115, 88);
-    doc.text(dLines, ML + 4, y + 5);
+    // Estimated mark
+    if(proj&&proj.mark){
+      var MFS=20,MH=MFS*0.3528*0.9;
+      var rLines=proj.rat?splitW(proj.rat,BFS,CW-8):[];
+      var bH=4+5+MH+(rLines.length?BLA*0.5+lh(rLines.length,BLA):0)+4;
+      if(y+bH>BOT) newPage();
+      doc.setFillColor(0,0,0);doc.roundedRect(ML,y,CW,bH,2,2,'F');
+      txt('ESTIMATED MARK',ML+4,y+4+6.5*0.3528*0.75,6.5,true,[136,136,128]);
+      txt(proj.mark,ML+4,y+4+5+MFS*0.3528*0.82,MFS,true,[200,168,75]);
+      if(rLines.length){
+        var rBase=y+4+5+MH+BLA*0.5+BFS*0.3528*0.75;
+        rLines.forEach(function(ln,i){txt(ln,ML+4,rBase+i*BLA,BFS,false,[136,136,128]);});
+      }
+      y+=bH+4;
+    }
 
-    doc.save('CommandoHMS-' + new Date().toISOString().slice(0,10) + '.pdf');
+    // Disclaimer
+    var dt='AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
+    var dls=splitW(dt,6.5,CW-6);
+    var dH=3+lh(dls.length,6.5*0.3528*1.2)+3;
+    if(y+dH>BOT) newPage();
+    doc.setFillColor(245,242,235);doc.setDrawColor(200,184,122);doc.setLineWidth(0.25);
+    doc.roundedRect(ML,y,CW,dH,1.5,1.5,'FD');
+    var dBase=y+3+6.5*0.3528*0.72;
+    dls.forEach(function(ln,i){txt(ln,ML+3,dBase+i*6.5*0.3528*1.2,6.5,false,[107,115,88]);});
 
-  } catch(e) {
-    alert('PDF generation failed: ' + e.message);
+    // Save
+    var blob=doc.output('blob'),url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download='CommandoHMS-'+new Date().toISOString().slice(0,10)+'.pdf';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},2000);
+
+  } catch(e){
+    alert('PDF generation failed: '+e.message);
     console.error(e);
   } finally {
-    btn.innerHTML = origHTML;
-    btn.disabled = false;
+    btn.innerHTML=origHTML;
+    btn.disabled=false;
   }
 }
 
@@ -3036,11 +3180,15 @@ function hideGate() {
 // ── Gated upload click — checks auth + credits before opening file picker ──
 async function gatedUploadClick(inputId) {
   if (!currentUser) { showAuth(); return; }
+  // Use cached credits for the synchronous gate — avoids breaking the user
+  // gesture chain that browsers require for file input .click()
   if (userCredits <= 0) { showGate(); return; }
+  // Fire the file picker immediately (must be synchronous from user gesture)
   document.getElementById(inputId).click();
-  fetchCredits(currentUser.id).then(function(latest) {
-    userCredits = latest; renderNav();
-  }).catch(function(){});
+  // Refresh credit count in the background for accuracy
+  const latest = await fetchCredits(currentUser.id);
+  userCredits = latest;
+  renderNav();
 }
 
 // ── Hamburger dropdown ──
@@ -3150,26 +3298,19 @@ async function fetchCredits(userId) {
 // ── Decrement credit server-side via Supabase ──
 async function spendCredit() {
   if (!currentUser) return false;
-  if (userCredits <= 0) return false;
-  const newBalance = userCredits - 1;
+  // Re-fetch to get latest (avoid race conditions)
+  const latest = await fetchCredits(currentUser.id);
+  if (latest <= 0) return false;
+
   const { error } = await sb
     .from('user_credits')
-    .update({ credits: newBalance, updated_at: new Date().toISOString() })
+    .update({ credits: latest - 1, updated_at: new Date().toISOString() })
     .eq('user_id', currentUser.id);
+
   if (error) return false;
-  userCredits = newBalance;
+  userCredits = latest - 1;
   renderNav();
   return true;
-}
-
-async function refundCredit() {
-  if (!currentUser) return;
-  const latest = await fetchCredits(currentUser.id);
-  const { error } = await sb
-    .from('user_credits')
-    .update({ credits: latest + 1, updated_at: new Date().toISOString() })
-    .eq('user_id', currentUser.id);
-  if (!error) { userCredits = latest + 1; renderNav(); }
 }
 
 // ── Refresh user state ──
@@ -3218,14 +3359,36 @@ function renderNav() {
   }
 }
 
-// ── Gate: check auth + credits before analysis ──
+// ── Refund a credit (called on API failure after spend) ──
+async function refundCredit() {
+  if (!currentUser) return;
+  const latest = await fetchCredits(currentUser.id);
+  const { error } = await sb
+    .from('user_credits')
+    .update({ credits: latest + 1, updated_at: new Date().toISOString() })
+    .eq('user_id', currentUser.id);
+  if (!error) {
+    userCredits = latest + 1;
+    renderNav();
+  }
+}
+
+
 // Returns true if analysis can proceed
 async function checkGate() {
-  if (!currentUser) { showAuth(); return false; }
-  if (userCredits <= 0) { showGate(); return false; }
-  fetchCredits(currentUser.id).then(function(latest) {
-    userCredits = latest; renderNav();
-  }).catch(function(){});
+  // Must be signed in
+  if (!currentUser) {
+    showAuth();
+    return false;
+  }
+  // Must have credits
+  const latest = await fetchCredits(currentUser.id);
+  userCredits = latest;
+  renderNav();
+  if (userCredits <= 0) {
+    showGate();
+    return false;
+  }
   return true;
 }
 
@@ -3253,31 +3416,15 @@ function confirmProceed() {
   if (fn) fn();
 }
 
-// ── analyseText — validate, gate, confirm, spend, run, refund on error ──
+// ── analyseText — gate, confirm, spend, run, refund on error ──
 async function analyseText() {
-  if (!activeSubjectKey) {
-    document.getElementById('subjectModal').classList.add('visible');
-    return;
-  }
-  let text = '';
-  if (activeTab === 'type') {
-    text = document.getElementById('inputText').value.trim();
-  } else {
-    text = document.getElementById('extractedText').value.trim();
-    if (!text) {
-      document.getElementById('extractStatus').textContent = '⚠️ Please upload a photo and click Read Handwriting first.';
-      document.getElementById('extractStatus').style.color = '#8b2c2c';
-      return;
-    }
-  }
-  if (!text) return;
   const ok = await checkGate();
   if (!ok) return;
   showConfirm(async () => {
     const spent = await spendCredit();
     if (!spent) { showGate(); return; }
     try {
-      await _origAnalyseText();
+      await _runAnalysis();
     } catch(e) {
       await refundCredit();
       const out = document.getElementById('outputBox');
@@ -3286,24 +3433,17 @@ async function analyseText() {
   });
 }
 
-// ── Also gate the image/PDF analyse path (analyseFile) ──
-if (typeof analyseFile === 'function') {
-  const _origAnalyseFile = analyseFile;
-  analyseFile = async function() {
-    const ok = await checkGate();
-    if (!ok) return;
-    showConfirm(async () => {
-      const spent = await spendCredit();
-      if (!spent) { showGate(); return; }
-      try {
-        await _origAnalyseFile();
-      } catch(e) {
-        await refundCredit();
-        const out = document.getElementById('outputBox');
-        if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
-      }
-    });
-  };
+// ── Terms of Service Modal ──
+function showTermsModal() {
+  document.getElementById('termsOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function hideTermsModal() {
+  document.getElementById('termsOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleTermsOverlayClick(e) {
+  if (e.target === document.getElementById('termsOverlay')) hideTermsModal();
 }
 
 // ── Privacy Policy Modal ──
@@ -3319,7 +3459,7 @@ function handlePrivacyOverlayClick(e) {
   if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { hidePrivacyModal(); hideConfirm(); }
+  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); }
 });
 
 // ── Init on page load ──
@@ -3357,7 +3497,7 @@ document.addEventListener('keydown', function(e) {
 </script>
 
   <!-- AUTH MODAL -->
-  <div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-overlay hidden" id="authOverlay" onclick="if(event.target===this)hideAuth();">
     <div class="auth-modal">
       <div class="auth-logo">
         <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAABOCAYAAAB4kboSAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAABJRgY" alt="CommandoHSC" style="height:36px;width:auto;" onerror="this.style.display='none'">
@@ -3466,13 +3606,142 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 
+  <!-- TERMS OF SERVICE MODAL -->
+  <div class="terms-overlay" id="termsOverlay" role="dialog" aria-modal="true" aria-label="Terms of Service" onclick="handleTermsOverlayClick(event)">
+    <div class="privacy-modal">
+      <div class="privacy-modal-header">
+        <div>
+          <div class="privacy-modal-title">Terms of Service</div>
+          <div class="privacy-modal-meta">Effective 25 April 2026</div>
+        </div>
+        <button class="privacy-modal-close" onclick="hideTermsModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="privacy-modal-body">
+
+        <p class="pm-p">These Terms of Service ("Terms") govern your access to and use of CommandoHSC ("the Service"), operated by an individual developer based in New South Wales, Australia. By creating an account or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+
+        <hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">01</span><span class="pm-h2">The Service</span></div>
+          <p class="pm-p">CommandoHSC provides AI-powered feedback on HSC exam responses to support student study and exam preparation. The Service is available at <a class="pm-link" href="https://app.commandohsc.com" target="_blank" rel="noopener">app.commandohsc.com</a>. Access to analysis features requires a registered account and the use of credits purchased through the platform.</p>
+          <p class="pm-p">The Service is intended as a study aid only. Feedback generated by the Service is AI-produced and does not constitute official NESA assessment, guaranteed marks, or professional academic advice.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">Eligibility and accounts</span></div>
+          <p class="pm-p">You must be at least 13 years of age to use the Service. Users under 18 should obtain parental or guardian consent before registering an account or making a purchase.</p>
+          <p class="pm-p">You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must notify us immediately at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> if you suspect unauthorised access to your account.</p>
+          <p class="pm-p">You may only hold one account. We reserve the right to suspend or terminate accounts that violate these Terms.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">Credits and payments</span></div>
+          <p class="pm-p">Access to analysis features is governed by a credit system. One credit entitles you to one full analysis. Credits are purchased in advance through our payment provider, Stripe.</p>
+          <ul class="pm-ul">
+            <li>New accounts receive 3 free credits upon registration</li>
+            <li>Credits do not expire while your account is active</li>
+            <li>Credits are non-refundable once used</li>
+            <li>Unused credits are non-transferable between accounts</li>
+          </ul>
+          <p class="pm-p">All prices are displayed in Australian dollars (AUD) and are inclusive of any applicable GST. We reserve the right to change pricing at any time. Price changes will not affect credits already purchased.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">Refund policy</span></div>
+          <p class="pm-p">Credits are consumed at the point of analysis. Because the AI service is delivered immediately upon use, credits that have been spent on analyses are non-refundable.</p>
+          <p class="pm-p">If you experience a technical error that consumes a credit without returning a result, please contact us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> within 7 days of the incident. We will investigate and, where the error is confirmed to be on our end, restore the credit to your account.</p>
+          <p class="pm-p">Unused credits may be refunded at our discretion if requested within 30 days of purchase, provided no credits from that purchase have been spent.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Acceptable use</span></div>
+          <p class="pm-p">You agree to use the Service only for its intended purpose: submitting your own HSC exam responses for AI-generated feedback. You must not:</p>
+          <ul class="pm-ul">
+            <li>Submit content that is unlawful, defamatory, harmful, or offensive</li>
+            <li>Attempt to reverse-engineer, scrape, or systematically extract data from the Service</li>
+            <li>Use automated tools, bots, or scripts to interact with the Service</li>
+            <li>Share your account credentials with others or allow multiple users to access one account</li>
+            <li>Attempt to circumvent the credit system or gain unauthorised access to features</li>
+            <li>Use the Service to generate content for academic misconduct or submission as your own work in a formal assessment context</li>
+            <li>Interfere with the security, integrity, or availability of the Service</li>
+          </ul>
+          <p class="pm-p">We reserve the right to suspend or terminate your account without notice if we determine, at our sole discretion, that you have violated these Terms.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">AI-generated content and limitations</span></div>
+          <div class="pm-callout">The feedback produced by CommandoHSC is generated by an AI model (Anthropic Claude) and is not produced by a qualified teacher, NESA examiner, or registered educational professional. It is a study tool — not an official assessment.</div>
+          <p class="pm-p">AI-generated feedback may contain errors, omissions, or inaccuracies. Marks estimated by the Service are indicative only and do not predict, guarantee, or reflect actual HSC results. You should use the Service as one resource among many, and seek guidance from your teacher for official feedback on your work.</p>
+          <p class="pm-p">We make no representation that the Service's feedback aligns with any specific NESA marking centre's interpretation on a given year's exam.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">07</span><span class="pm-h2">Intellectual property</span></div>
+          <p class="pm-p">All content, design, code, branding, and materials comprising the Service are owned by or licensed to CommandoHSC and are protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works from any part of the Service without our written permission.</p>
+          <p class="pm-p">You retain ownership of the exam response text you submit. By submitting content, you grant us a limited, non-exclusive licence to process that content for the sole purpose of generating your feedback. We do not store your exam responses after analysis is complete, and we do not use your content to train AI models.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">08</span><span class="pm-h2">Privacy</span></div>
+          <p class="pm-p">Your use of the Service is also governed by our <a class="pm-link" href="#" onclick="hideTermsModal();showPrivacyModal();return false;">Privacy Policy</a>, which is incorporated into these Terms by reference. By using the Service, you consent to the collection and use of your information as described in the Privacy Policy.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">09</span><span class="pm-h2">Disclaimer of warranties</span></div>
+          <p class="pm-p">The Service is provided on an "as is" and "as available" basis without warranties of any kind, express or implied. To the maximum extent permitted by law, we disclaim all warranties including fitness for a particular purpose, accuracy, reliability, and non-infringement.</p>
+          <p class="pm-p">We do not warrant that the Service will be uninterrupted, error-free, or free of viruses or other harmful components. We are not responsible for any loss of data resulting from technical failures.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Limitation of liability</span></div>
+          <p class="pm-p">To the maximum extent permitted by Australian law, CommandoHSC and its operator shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of or inability to use the Service, including but not limited to loss of data, loss of revenue, or academic outcomes.</p>
+          <p class="pm-p">Our total liability to you for any claim arising from use of the Service shall not exceed the total amount you have paid to us in the 3 months preceding the claim.</p>
+          <p class="pm-p">Nothing in these Terms excludes liability for fraud, personal injury caused by negligence, or any other liability that cannot be excluded under Australian Consumer Law.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Service availability and modifications</span></div>
+          <p class="pm-p">We reserve the right to modify, suspend, or discontinue any part of the Service at any time, with or without notice. We will endeavour to provide reasonable advance notice of material changes that affect your credits or account access.</p>
+          <p class="pm-p">We are not liable to you or any third party for any modification, suspension, or discontinuation of the Service.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">12</span><span class="pm-h2">Termination</span></div>
+          <p class="pm-p">You may close your account at any time by contacting us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>. Upon closure, any unused credits will be forfeited unless a refund is requested in accordance with our refund policy (Section 4).</p>
+          <p class="pm-p">We may suspend or terminate your account immediately if we determine you have violated these Terms, without refund of unused credits where the termination is due to a breach on your part.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">13</span><span class="pm-h2">Changes to these Terms</span></div>
+          <p class="pm-p">We may update these Terms from time to time. When we make material changes, we will update the effective date at the top of this page and, where appropriate, notify you by email. Continued use of the Service after changes are posted constitutes your acceptance of the updated Terms.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">14</span><span class="pm-h2">Governing law</span></div>
+          <p class="pm-p">These Terms are governed by the laws of New South Wales, Australia. Any disputes arising from these Terms or your use of the Service shall be subject to the exclusive jurisdiction of the courts of New South Wales.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">15</span><span class="pm-h2">Contact</span></div>
+          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></div>
+        </div>
+
+      </div>
+      <div class="privacy-modal-footer">
+        <span class="pm-footer-note">© 2026 CommandoHSC</span>
+        <button class="pm-footer-close" onclick="hideTermsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- PRIVACY POLICY MODAL -->
   <div class="privacy-overlay" id="privacyOverlay" role="dialog" aria-modal="true" aria-label="Privacy Policy" onclick="handlePrivacyOverlayClick(event)">
     <div class="privacy-modal">
       <div class="privacy-modal-header">
         <div>
           <div class="privacy-modal-title">Privacy Policy</div>
-          <div class="privacy-modal-meta">Effective 25 April 2026 &nbsp;·&nbsp; app.commandohsc.com</div>
+          <div class="privacy-modal-meta">Effective 25 April 2026</div>
         </div>
         <button class="privacy-modal-close" onclick="hidePrivacyModal()" aria-label="Close">✕</button>
       </div>
@@ -3480,89 +3749,95 @@ document.addEventListener('keydown', function(e) {
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">01</span><span class="pm-h2">Who we are</span></div>
-          <p class="pm-p">CommandoHSC is an AI-powered HSC exam response analyser operated by an individual developer based in New South Wales, Australia. If you have questions, contact us at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>.</p>
+          <p class="pm-p">CommandoHSC is an AI-powered HSC exam response analyser run by an individual developer in New South Wales, Australia. This policy covers how we handle your personal information under the Privacy Act 1988 (Cth) and the Privacy and Other Legislation Amendment Act 2024 (Cth). Questions? <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">Information we collect</span></div>
-          <p class="pm-p"><strong style="color:#ddd;">Account information</strong> — your email address and (if signing in via Google) your name and profile picture. Passwords are not stored in plain text.</p>
-          <p class="pm-p"><strong style="color:#ddd;">Exam responses</strong> — text you submit is sent to the AI for processing and is not stored permanently after analysis.</p>
-          <p class="pm-p"><strong style="color:#ddd;">Payment information</strong> — handled by Stripe. We never store your card details.</p>
+          <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">What we collect</span></div>
+          <p class="pm-p">We collect only what's needed to run the Service — nothing more.</p>
           <ul class="pm-ul">
-            <li>Credit balance and transaction history</li>
-            <li>Subject and question type selected per analysis</li>
-            <li>Date and time of analyses</li>
-            <li>Basic browser and device information</li>
+            <li><strong style="color:#ddd;">Account</strong> — email address, and name/profile picture if you sign in with Google. Passwords are hashed, never stored in plain text.</li>
+            <li><strong style="color:#ddd;">Exam responses</strong> — the text you submit is sent to Anthropic's Claude API and not stored on our servers after analysis.</li>
+            <li><strong style="color:#ddd;">Payments</strong> — handled entirely by Stripe. We never see or store your card details.</li>
+            <li><strong style="color:#ddd;">Usage data</strong> — credit balance, subject and question type per analysis, date/time of analyses, and basic browser/device info (via cookieless analytics).</li>
           </ul>
+          <p class="pm-p">We don't collect sensitive information (health, racial, religious, biometric data) and don't solicit it.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">How we use your information</span></div>
+          <div class="pm-section-header"><span class="pm-num">03</span><span class="pm-h2">How we use it</span></div>
           <ul class="pm-ul">
-            <li>Provide and improve the CommandoHSC analyser</li>
-            <li>Manage your account, credits, and purchase history</li>
-            <li>Send transactional emails (receipts, low-credit warnings, confirmation)</li>
-            <li>Monitor performance and diagnose errors</li>
-            <li>Detect and prevent fraudulent or abusive use</li>
+            <li>Deliver AI feedback on your submitted responses</li>
+            <li>Manage your account, credits, and purchases</li>
+            <li>Send transactional emails (receipts, confirmations, low-credit alerts)</li>
+            <li>Monitor reliability and fix errors</li>
+            <li>Detect and prevent abuse</li>
+            <li>Meet our legal obligations</li>
           </ul>
-          <p class="pm-p">We do not sell your personal information. We do not use your exam responses to train AI models.</p>
+          <p class="pm-p">We don't sell your data, use it for marketing, or use your exam responses to train AI models.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">AI processing of your exam responses</span></div>
-          <div class="pm-callout">Your exam response text is sent to Anthropic's Claude API for analysis. Anthropic does not use API-submitted data to train their models by default. See <a class="pm-link" href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a>.</div>
-          <p class="pm-p">We recommend you do not include your full legal name, student number, or school name in the body of any response you submit.</p>
+          <div class="pm-section-header"><span class="pm-num">04</span><span class="pm-h2">AI and automated decisions</span></div>
+          <div class="pm-callout">Your submitted text is processed by Anthropic's Claude API to generate feedback and estimated mark ranges — without human review of individual responses. This is disclosed in line with Australian automated decision-making transparency obligations (APP 1 and the forthcoming requirements under the Privacy and Other Legislation Amendment Act 2024, commencing December 2026).</div>
+          <p class="pm-p">AI feedback is a study aid only — not official NESA assessment. Estimated marks are indicative. Anthropic does not use API data to train their models by default. See <a class="pm-link" href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a>. Don't include your full name, student number, or school in submitted responses.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Third-party services</span></div>
+          <div class="pm-section-header"><span class="pm-num">05</span><span class="pm-h2">Third parties and overseas disclosure</span></div>
           <ul class="pm-ul">
-            <li><strong style="color:#ddd;">Supabase</strong> — Authentication and database (Sydney region)</li>
-            <li><strong style="color:#ddd;">Anthropic</strong> — AI analysis via Claude API</li>
-            <li><strong style="color:#ddd;">Stripe</strong> — Payment processing</li>
-            <li><strong style="color:#ddd;">Netlify</strong> — Hosting and serverless functions</li>
-            <li><strong style="color:#ddd;">Plausible Analytics</strong> — Cookieless, privacy-friendly analytics</li>
+            <li><strong style="color:#ddd;">Supabase</strong> — database and auth, AWS Sydney region</li>
+            <li><strong style="color:#ddd;">Anthropic</strong> — AI analysis, processed in the United States</li>
+            <li><strong style="color:#ddd;">Stripe</strong> — payments, United States</li>
+            <li><strong style="color:#ddd;">Netlify</strong> — hosting and serverless functions, United States</li>
+            <li><strong style="color:#ddd;">Plausible Analytics</strong> — cookieless analytics, European Union. No personal identifiers transmitted.</li>
           </ul>
+          <p class="pm-p">For overseas providers, we take reasonable steps to ensure they handle your data consistently with the Australian Privacy Principles. We may also disclose information where required by Australian law.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">Data retention</span></div>
-          <p class="pm-p">Account data is retained while your account is active. Exam response text is not stored after analysis. If you close your account, personal data is deleted within 30 days, except where retention is required by law.</p>
+          <div class="pm-section-header"><span class="pm-num">06</span><span class="pm-h2">How long we keep it</span></div>
+          <ul class="pm-ul">
+            <li><strong style="color:#ddd;">Exam responses</strong> — deleted immediately after analysis</li>
+            <li><strong style="color:#ddd;">Account data</strong> — held while your account is active, deleted within 30 days of closure</li>
+            <li><strong style="color:#ddd;">Transaction records</strong> — 7 years (financial record-keeping obligations)</li>
+            <li><strong style="color:#ddd;">Technical logs</strong> — up to 90 days, then purged</li>
+          </ul>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">07</span><span class="pm-h2">Your rights</span></div>
-          <p class="pm-p">Under the Australian Privacy Act 1988, you may access, correct, or request deletion of your data. Email <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> — we'll respond within 14 days.</p>
+          <p class="pm-p">Under the Privacy Act 1988 (Cth), you can access, correct, or request deletion of your data at any time — email <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> and we'll respond within 14 business days at no charge. Under the Privacy and Other Legislation Amendment Act 2024 (Cth) (commenced June 2025), you may also have the right to bring a civil claim for serious invasions of privacy. If we can't resolve your concern, contact the OAIC at <a class="pm-link" href="https://www.oaic.gov.au" target="_blank" rel="noopener">oaic.gov.au</a> or 1300 363 992.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">08</span><span class="pm-h2">Children's privacy</span></div>
-          <p class="pm-p">CommandoHSC is designed for HSC students (typically aged 16–18). Users under 18 should obtain parental consent before creating an account or making a purchase. We do not knowingly collect data from children under 13.</p>
+          <p class="pm-p">CommandoHSC is designed for HSC students (typically 16–18). Users under 18 should have parental consent before registering or purchasing. We don't knowingly collect data from children under 13 — if you believe this has happened, contact us immediately and we'll delete the account. We'll update our practices when the OAIC's Children's Online Privacy Code comes into force (December 2026).</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">09</span><span class="pm-h2">Security</span></div>
-          <ul class="pm-ul">
-            <li>HTTPS on all pages and API calls</li>
-            <li>Row-level security (RLS) on our database</li>
-            <li>API keys stored server-side, never exposed to the client</li>
-            <li>No storage of payment card details</li>
-          </ul>
+          <p class="pm-p">We take reasonable technical and organisational measures to protect your data (APP 11, Privacy Act 1988): HTTPS everywhere, row-level database security, server-side API keys never exposed to the browser, and Stripe's PCI-compliant infrastructure for payments. No system is 100% secure — if we become aware of a breach likely to cause serious harm, we'll notify affected users and the OAIC under the Notifiable Data Breaches scheme.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Changes to this policy</span></div>
-          <p class="pm-p">We may update this policy from time to time. Material changes will be reflected in the "Last updated" date and, where appropriate, notified by email.</p>
+          <div class="pm-section-header"><span class="pm-num">10</span><span class="pm-h2">Data breaches</span></div>
+          <p class="pm-p">Under the Notifiable Data Breaches scheme (Part IIIC, Privacy Act 1988), if we experience a breach likely to cause serious harm we will notify the OAIC and affected individuals as soon as practicable — including what happened, what data was involved, and what steps to take. Suspect your account is compromised? Contact us immediately at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a>.</p>
         </div><hr class="pm-divider">
 
         <div class="pm-section">
-          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Contact</span></div>
-          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></div>
+          <div class="pm-section-header"><span class="pm-num">11</span><span class="pm-h2">Changes</span></div>
+          <p class="pm-p">We'll update this policy as our practices or the law changes — including ongoing reforms under the Privacy and Other Legislation Amendment Act 2024. Material changes will be noted in the effective date above and emailed where appropriate. Continued use means acceptance.</p>
+        </div><hr class="pm-divider">
+
+        <div class="pm-section">
+          <div class="pm-section-header"><span class="pm-num">12</span><span class="pm-h2">Contact</span></div>
+          <div class="pm-callout">CommandoHSC · New South Wales, Australia<br><a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a><br><br>OAIC (escalation): <a class="pm-link" href="https://www.oaic.gov.au" target="_blank" rel="noopener">oaic.gov.au</a> · 1300 363 992</div>
         </div>
 
       </div>
       <div class="privacy-modal-footer">
-        <span class="pm-footer-note">© 2025 CommandoHSC</span>
+        <span class="pm-footer-note">© 2026 CommandoHSC</span>
         <button class="pm-footer-close" onclick="hidePrivacyModal()">Close</button>
       </div>
     </div>
