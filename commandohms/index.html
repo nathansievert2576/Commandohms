@@ -3383,14 +3383,16 @@ async function checkGate() {
     showAuth();
     return false;
   }
-  // Must have credits
-  const latest = await fetchCredits(currentUser.id);
-  userCredits = latest;
-  renderNav();
+  // Use cached credits for immediate response — avoids network delay on button click
   if (userCredits <= 0) {
     showGate();
     return false;
   }
+  // Refresh credits in background for accuracy (don't await)
+  fetchCredits(currentUser.id).then(function(latest) {
+    userCredits = latest;
+    renderNav();
+  }).catch(function(){});
   return true;
 }
 
