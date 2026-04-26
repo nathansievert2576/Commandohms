@@ -2028,25 +2028,17 @@ function combineExtractedText() {
 }
 
 async function _runAnalysis() {
-  // Check a subject is selected
-  if (!activeSubjectKey) {
-    document.getElementById('subjectModal').classList.add('visible');
-    return;
-  }
-
+  // Note: subject and text validation already done in analyseText() before confirm modal
   let text = '';
   if (activeTab === 'type') {
     text = document.getElementById('inputText').value.trim();
   } else {
     text = document.getElementById('extractedText').value.trim();
-    if (!text) {
-      document.getElementById('extractStatus').textContent = '⚠️ Please upload a photo and click Read Handwriting first.';
-      document.getElementById('extractStatus').style.color = '#8b2c2c';
-      return;
-    }
   }
-
-  if (!text) return;
+  if (!text) {
+    console.warn('_runAnalysis: text was empty at execution time');
+    return;
+  }
   const question = document.getElementById('questionText').value.trim();
   const markValue = parseInt(document.getElementById('markValue').value) || null;
 
@@ -3420,8 +3412,29 @@ function confirmProceed() {
 
 // ── analyseText — gate, confirm, spend, run, refund on error ──
 async function analyseText() {
+  // Validate subject first
+  if (!activeSubjectKey) {
+    document.getElementById('subjectModal').classList.add('visible');
+    return;
+  }
+
+  // Capture and validate text BEFORE showing the confirm modal
+  let text = '';
+  if (activeTab === 'type') {
+    text = document.getElementById('inputText').value.trim();
+  } else {
+    text = document.getElementById('extractedText').value.trim();
+    if (!text) {
+      document.getElementById('extractStatus').textContent = '⚠️ Please upload a photo and click Read Handwriting first.';
+      document.getElementById('extractStatus').style.color = '#8b2c2c';
+      return;
+    }
+  }
+  if (!text) return;
+
   const ok = await checkGate();
   if (!ok) return;
+
   showConfirm(async () => {
     const spent = await spendCredit();
     if (!spent) { showGate(); return; }
