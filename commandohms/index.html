@@ -3298,17 +3298,14 @@ async function fetchCredits(userId) {
 // ── Decrement credit server-side via Supabase ──
 async function spendCredit() {
   if (!currentUser) return false;
-  // Re-fetch to get latest (avoid race conditions)
-  const latest = await fetchCredits(currentUser.id);
-  if (latest <= 0) return false;
-
+  if (userCredits <= 0) return false;
+  const newBalance = userCredits - 1;
   const { error } = await sb
     .from('user_credits')
-    .update({ credits: latest - 1, updated_at: new Date().toISOString() })
+    .update({ credits: newBalance, updated_at: new Date().toISOString() })
     .eq('user_id', currentUser.id);
-
   if (error) return false;
-  userCredits = latest - 1;
+  userCredits = newBalance;
   renderNav();
   return true;
 }
@@ -3376,19 +3373,11 @@ async function refundCredit() {
 
 // Returns true if analysis can proceed
 async function checkGate() {
-  // Must be signed in
-  if (!currentUser) {
-    showAuth();
-    return false;
-  }
-  // Must have credits
-  const latest = await fetchCredits(currentUser.id);
-  userCredits = latest;
-  renderNav();
-  if (userCredits <= 0) {
-    showGate();
-    return false;
-  }
+  if (!currentUser) { showAuth(); return false; }
+  if (userCredits <= 0) { showGate(); return false; }
+  fetchCredits(currentUser.id).then(function(latest) {
+    userCredits = latest; renderNav();
+  }).catch(function(){});
   return true;
 }
 
