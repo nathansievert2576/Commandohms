@@ -2638,12 +2638,11 @@ async function downloadPDF(event) {
     var TOP=HDR+5, BOT=PH-FTR-4;
     var CW=PW-ML-MR;         // full content width = 186mm
 
-    // Three-column layout
-    var SW=42, GAP=3;
-    var CX=ML+SW+GAP;        // centre col left  = 12+42+3 = 57mm
-    var CW_C=CW-2*(SW+GAP);  // centre col width = 186-90  = 96mm
-    var RX=CX+CW_C+GAP;      // right col left   = 57+96+3 = 156mm
-    // Sanity: RX+SW = 156+42 = 198 < 198 = PW-MR ✓
+    // Three-column layout — wider side columns, more gap to prevent overlap
+    var SW=44, GAP=5;
+    var CX=ML+SW+GAP;        // centre col left  = 12+44+5 = 61mm
+    var CW_C=CW-2*(SW+GAP);  // centre col width = 186-98  = 88mm
+    var RX=CX+CW_C+GAP;      // right col left   = 61+88+5 = 154mm
 
     // ─── Typography (jsPDF: 1pt = 0.3528mm) ──────────────────────────────
     var RFS=8.5, RLA=3.8;   // response font, line-advance mm
@@ -2898,7 +2897,7 @@ async function downloadPDF(event) {
           var wTr=doc.getTextWidth(tr);
           setFont(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
           var c=COLS[item.term];
-          var rectW=Math.min(wTr+HP*2, CX+CW_C-dx);
+          var rectW=Math.min(wTr+HP*2, CX+CW_C-dx-1);
           if(rectW>0){
             doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
             doc.roundedRect(dx,atY-HA,rectW,HHR,0.7,0.7,'F');
@@ -3015,36 +3014,39 @@ async function downloadPDF(event) {
     // Callouts are spaced evenly: placed every N response lines.
     var lColY=y, rColY=y, lI=0, rI=0;
     var lTotal=leftList.length, rTotal=rightList.length;
-    var lLines=wlines.length, rLines=wlines.length;
-    // Place one callout every (wlines / count) lines
-    var lEvery = lTotal>0 ? Math.max(1,Math.floor(wlines.length/lTotal)) : 99999;
-    var rEvery = rTotal>0 ? Math.max(1,Math.floor(wlines.length/rTotal)) : 99999;
+    // Place one callout every (wlines / count) lines, minimum 3 lines apart
+    var lEvery = lTotal>0 ? Math.max(3,Math.floor(wlines.length/lTotal)) : 99999;
+    var rEvery = rTotal>0 ? Math.max(3,Math.floor(wlines.length/rTotal)) : 99999;
     var lSince=0, rSince=0;
 
     wlines.forEach(function(wl){
       // Page break for response text
       if(y+RLA>BOT){
         newPage();
-        lColY=y; rColY=y;  // reset callout columns to new page top
+        // On new page, callout columns start at TOP — never behind current y
+        lColY=TOP; rColY=TOP;
       }
       y+=RLA;
       drawLine(wl.items,y);
       if(wl.pb) y+=PG;
       lSince++; rSince++;
 
-      // Place left callout if due
+      // Place left callout if due — only if it fits without overlap
       if(lI<lTotal && lSince>=lEvery){
-        var need=calloutH(leftList[lI].text);
+        var need=calloutH(leftList[lI].text)+2;
+        // Callout must fit on page and not exceed BOT
         if(lColY+need<=BOT){
-          lColY+=calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text)+2;
+          calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text);
+          lColY+=need;
           lI++; lSince=0;
         }
       }
-      // Place right callout if due
+      // Place right callout if due — only if it fits without overlap
       if(rI<rTotal && rSince>=rEvery){
-        var need=calloutH(rightList[rI].text);
+        var need=calloutH(rightList[rI].text)+2;
         if(rColY+need<=BOT){
-          rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;
+          calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text);
+          rColY+=need;
           rI++; rSince=0;
         }
       }
