@@ -2030,6 +2030,7 @@ function combineExtractedText() {
 async function _runAnalysis() {
   // Check a subject is selected
   if (!activeSubjectKey) {
+    console.log('_runAnalysis: no subject selected');
     document.getElementById('subjectModal').classList.add('visible');
     return;
   }
@@ -2046,7 +2047,8 @@ async function _runAnalysis() {
     }
   }
 
-  if (!text) return;
+  console.log('_runAnalysis: text length =', text.length, 'activeTab =', activeTab);
+  if (!text) { console.log('_runAnalysis: text empty, returning'); return; }
   const question = document.getElementById('questionText').value.trim();
   const markValue = parseInt(document.getElementById('markValue').value) || null;
 
@@ -3392,17 +3394,15 @@ function showConfirm(proceedFn) {
     : `After this analysis: ${remaining} credit${remaining !== 1 ? 's' : ''} remaining`;
   _pendingAnalyse = proceedFn;
   document.getElementById('confirmOverlay').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
 }
 function hideConfirm() {
   document.getElementById('confirmOverlay').classList.add('hidden');
-  document.body.style.overflow = '';
   _pendingAnalyse = null;
 }
 function confirmProceed() {
   const fn = _pendingAnalyse;
   hideConfirm();
-  if (fn) fn();
+  if (fn) setTimeout(fn, 80);
 }
 
 // ── analyseText — gate, confirm, spend, run, refund on error ──
