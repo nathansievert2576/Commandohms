@@ -71,13 +71,16 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'No email in session' };
   }
 
-  // ── 6. Look up user by email via admin API ──────────────────────────────
-  const { data: adminLookup, error: lookupError } = await supabase.auth.admin.getUserByEmail(customerEmail);
-  const userId = adminLookup?.user?.id || null;
+  // ── 6. Look up user by email via Supabase RPC ───────────────────────────
+  // getUserByEmail not available in all SDK versions — use raw SQL via RPC
+  const { data: userRow, error: lookupError } = await supabase
+    .rpc('get_user_id_by_email', { user_email: customerEmail });
 
   if (lookupError) {
     console.error('Error looking up user by email:', lookupError);
   }
+
+  const userId = userRow || null;
 
   if (!userId) {
     // ── 7. No account yet — store as pending so no payment is ever lost ────
