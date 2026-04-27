@@ -1348,7 +1348,7 @@
   }
   /* ── CONFIRM ANALYSIS MODAL ── */
   .confirm-overlay {
-    position: fixed; inset: 0; z-index: 2000;
+    position: fixed; inset: 0; z-index: 999;
     background: rgba(0,0,0,0.82);
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center; padding: 1rem;
@@ -1381,6 +1381,27 @@
     transition: opacity 0.18s; margin-bottom: 0.75rem;
   }
   .confirm-btn:hover { opacity: 0.88; }
+
+  /* ── PAYMENT TOAST ── */
+  .payment-toast {
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(120%);
+    z-index: 9999;
+    display: flex; align-items: center; gap: 0.75rem;
+    background: #111; border: 1.5px solid rgba(200,168,75,0.5);
+    border-radius: 12px; padding: 0.9rem 1.4rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(200,168,75,0.1);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 0.9rem; color: #f0ece4;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+    opacity: 0; pointer-events: none; white-space: nowrap;
+  }
+  .payment-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1; pointer-events: auto;
+  }
+  .payment-toast-icon { font-size: 1.3rem; flex-shrink: 0; }
+  .payment-toast-text strong { color: var(--gold); }
+  .payment-toast.error { border-color: rgba(232,69,69,0.5); }
 
 </style>
 </head>
@@ -2030,7 +2051,6 @@ function combineExtractedText() {
 async function _runAnalysis() {
   // Check a subject is selected
   if (!activeSubjectKey) {
-    console.log('_runAnalysis: no subject selected');
     document.getElementById('subjectModal').classList.add('visible');
     return;
   }
@@ -2047,8 +2067,7 @@ async function _runAnalysis() {
     }
   }
 
-  console.log('_runAnalysis: text length =', text.length, 'activeTab =', activeTab);
-  if (!text) { console.log('_runAnalysis: text empty, returning'); return; }
+  if (!text) return;
   const question = document.getElementById('questionText').value.trim();
   const markValue = parseInt(document.getElementById('markValue').value) || null;
 
@@ -3069,9 +3088,8 @@ async function downloadPDF(event) {
       if(rI<rTotal){rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;rI++;}
     }
 
-    // Main content resumes from the bottom of ALL three columns
-    // (response text, left callouts, right callouts — whichever is lowest)
-    y = Math.max(respEndY, lColY, rColY) + 3;
+    // Main content resumes from response end
+    y=respEndY+3;
 
     // Gold divider
     if(y+4>BOT) newPage();
@@ -3298,17 +3316,12 @@ async function fetchCredits(userId) {
   return data?.credits ?? 0;
 }
 
-// ── Decrement credit server-side via Supabase ──
+// ── Decrement credit via secure Supabase RPC (SECURITY DEFINER — not bypassable from client) ──
 async function spendCredit() {
   if (!currentUser) return false;
-  if (userCredits <= 0) return false;
-  const newBalance = userCredits - 1;
-  const { error } = await sb
-    .from('user_credits')
-    .update({ credits: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_id', currentUser.id);
-  if (error) return false;
-  userCredits = newBalance;
+  const { data, error } = await sb.rpc('spend_credit', { uid: currentUser.id });
+  if (error || !data) return false;
+  userCredits = await fetchCredits(currentUser.id);
   renderNav();
   return true;
 }
@@ -3359,16 +3372,12 @@ function renderNav() {
   }
 }
 
-// ── Refund a credit (called on API failure after spend) ──
+// ── Refund a credit via secure Supabase RPC (SECURITY DEFINER — not bypassable from client) ──
 async function refundCredit() {
   if (!currentUser) return;
-  const latest = await fetchCredits(currentUser.id);
-  const { error } = await sb
-    .from('user_credits')
-    .update({ credits: latest + 1, updated_at: new Date().toISOString() })
-    .eq('user_id', currentUser.id);
+  const { error } = await sb.rpc('refund_credit', { uid: currentUser.id });
   if (!error) {
-    userCredits = latest + 1;
+    userCredits = await fetchCredits(currentUser.id);
     renderNav();
   }
 }
@@ -3376,11 +3385,19 @@ async function refundCredit() {
 
 // Returns true if analysis can proceed
 async function checkGate() {
-  if (!currentUser) { showAuth(); return false; }
-  if (userCredits <= 0) { showGate(); return false; }
-  fetchCredits(currentUser.id).then(function(latest) {
-    userCredits = latest; renderNav();
-  }).catch(function(){});
+  // Must be signed in
+  if (!currentUser) {
+    showAuth();
+    return false;
+  }
+  // Must have credits
+  const latest = await fetchCredits(currentUser.id);
+  userCredits = latest;
+  renderNav();
+  if (userCredits <= 0) {
+    showGate();
+    return false;
+  }
   return true;
 }
 
@@ -3395,15 +3412,17 @@ function showConfirm(proceedFn) {
     : `After this analysis: ${remaining} credit${remaining !== 1 ? 's' : ''} remaining`;
   _pendingAnalyse = proceedFn;
   document.getElementById('confirmOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
 function hideConfirm() {
   document.getElementById('confirmOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
   _pendingAnalyse = null;
 }
 function confirmProceed() {
   const fn = _pendingAnalyse;
   hideConfirm();
-  if (fn) setTimeout(fn, 80);
+  if (fn) fn();
 }
 
 // ── analyseText — gate, confirm, spend, run, refund on error ──
@@ -3471,16 +3490,24 @@ document.addEventListener('keydown', function(e) {
   // Check if returning from Stripe payment
   const params = new URLSearchParams(window.location.search);
   if (params.get('payment') === 'success') {
-    // Remove param from URL cleanly
     window.history.replaceState({}, '', window.location.pathname);
-    // Wait a moment for webhook to process, then refresh credits
-    setTimeout(async () => {
-      if (currentUser) {
-        userCredits = await fetchCredits(currentUser.id);
-        renderNav();
-        alert('Payment successful! Your credits have been added.');
-      }
-    }, 3000);
+    if (currentUser) {
+      // Poll for credit update — webhook may take a few seconds to fire
+      const creditsBefore = userCredits;
+      let attempts = 0;
+      const poll = async () => {
+        attempts++;
+        const latest = await fetchCredits(currentUser.id);
+        if (latest > creditsBefore || attempts >= 10) {
+          userCredits = latest;
+          renderNav();
+          showPaymentToast(latest > creditsBefore);
+        } else {
+          setTimeout(poll, 2000);
+        }
+      };
+      setTimeout(poll, 2000);
+    }
   }
 })();
 
@@ -3564,17 +3591,17 @@ document.addEventListener('keydown', function(e) {
       <h2>Top up your credits</h2>
       <p>Buy once, use anytime. One credit = one full analysis (colour-coding + mark + feedback + PDF).</p>
       <div class="buy-tiers">
-        <a href="https://buy.stripe.com/test_dRm7sM4qM1gI7k19CHdnW00" target="_blank" class="buy-tier" onclick="hideBuy()">
+        <a href="https://buy.stripe.com/8x200k4sb1HlbQw5yoeZ200" target="_blank" class="buy-tier" onclick="hideBuy()">
           <div class="buy-tier-name">Starter</div>
           <div class="buy-tier-price">$3.99</div>
           <div class="buy-tier-credits">10 analyses</div>
         </a>
-        <a href="https://buy.stripe.com/test_fZu6oIaPacZq6fXcOTdnW01" target="_blank" class="buy-tier featured" onclick="hideBuy()">
+        <a href="https://buy.stripe.com/5kQbJ22k3gCfaMsgd2eZ201" target="_blank" class="buy-tier featured" onclick="hideBuy()">
           <div class="buy-tier-name">Standard</div>
           <div class="buy-tier-price">$9.99</div>
           <div class="buy-tier-credits">30 analyses</div>
         </a>
-        <a href="https://buy.stripe.com/test_6oU14o3mI4sU8o57uzdnW02" target="_blank" class="buy-tier" onclick="hideBuy()">
+        <a href="https://buy.stripe.com/bJedRa6AjclZ3k0e4UeZ202" target="_blank" class="buy-tier" onclick="hideBuy()">
           <div class="buy-tier-name">Intensive</div>
           <div class="buy-tier-price">$14.99</div>
           <div class="buy-tier-credits">60 analyses</div>
@@ -3842,6 +3869,31 @@ document.addEventListener('keydown', function(e) {
       <button class="subject-modal-btn" onclick="closeSubjectModal()">Got it — select a subject</button>
     </div>
   </div>
+
+  <!-- PAYMENT SUCCESS TOAST -->
+  <div class="payment-toast" id="paymentToast">
+    <span class="payment-toast-icon" id="paymentToastIcon">🎯</span>
+    <span class="payment-toast-text" id="paymentToastText"></span>
+  </div>
+
+<script>
+function showPaymentToast(success) {
+  const toast = document.getElementById('paymentToast');
+  const icon  = document.getElementById('paymentToastIcon');
+  const text  = document.getElementById('paymentToastText');
+  if (success) {
+    toast.classList.remove('error');
+    icon.textContent = '🎯';
+    text.innerHTML = '<strong>Payment successful!</strong> Your credits have been added.';
+  } else {
+    toast.classList.add('error');
+    icon.textContent = '⚠️';
+    text.innerHTML = 'Payment received — credits may take a moment to appear. <strong>Refresh if needed.</strong>';
+  }
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 6000);
+}
+</script>
 
 </body>
 </html>
