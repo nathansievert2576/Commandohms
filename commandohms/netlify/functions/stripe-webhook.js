@@ -71,21 +71,12 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'No email in session' };
   }
 
-  // ── 6. Look up user by email directly — no listUsers() ──────────────────
-  // Uses the auth.users view via service role (fast, single-row lookup)
-  const { data: userData, error: userError } = await supabase
-    .from('auth.users')
-    .select('id')
-    .eq('email', customerEmail)
-    .maybeSingle();
+  // ── 6. Look up user by email via admin API ──────────────────────────────
+  const { data: adminLookup, error: lookupError } = await supabase.auth.admin.getUserByEmail(customerEmail);
+  const userId = adminLookup?.user?.id || null;
 
-  // Fallback: use RPC if the direct view isn't exposed
-  let userId = userData?.id;
-
-  if (!userId && !userError) {
-    // Try admin lookup as fallback (single user, not list)
-    const { data: adminLookup } = await supabase.auth.admin.getUserByEmail(customerEmail).catch(() => ({ data: null }));
-    userId = adminLookup?.user?.id || null;
+  if (lookupError) {
+    console.error('Error looking up user by email:', lookupError);
   }
 
   if (!userId) {
