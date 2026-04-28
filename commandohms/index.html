@@ -2908,11 +2908,6 @@ async function downloadPDF(event) {
 
     function drawLine(items,atY){
       var dx=CX;
-      // Clip rendering to centre column boundaries
-      doc.saveGraphicsState();
-      doc.rect(CX, atY-HA-1, CW_C, HHR+2);
-      doc.clip();
-      doc.discardPath();
       items.forEach(function(item){
         if(!item.t) return;
         var hl=!!(item.term&&COLS[item.term]);
@@ -2950,7 +2945,6 @@ async function downloadPDF(event) {
           dx+=w;
         }
       });
-      doc.restoreGraphicsState();
     }
 
     // ─── Parse feedback ───────────────────────────────────────────────────
