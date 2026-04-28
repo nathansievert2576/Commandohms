@@ -2910,7 +2910,7 @@ async function downloadPDF(event) {
       var dx=CX;
       // Clip rendering to centre column boundaries
       doc.saveGraphicsState();
-      doc.rect(CX, atY-HA-0.5, CW_C, HHR+1, 'S');
+      doc.rect(CX, atY-HA-1, CW_C, HHR+2);
       doc.clip();
       doc.discardPath();
       items.forEach(function(item){
@@ -3028,8 +3028,8 @@ async function downloadPDF(event) {
     });
     setFont(false,6.5);var exw=doc.getTextWidth('Example')+4;
     if(kx+exw>PW-MR){kx=ML;y+=5;}
-    doc.setFillColor(245,242,235);doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
-    doc.roundedRect(kx,y-3,exw,4.5,1,1,'FD');
+    doc.setFillColor(245,242,235);doc.setLineWidth(0.3);
+    doc.roundedRect(kx,y-3,exw,4.5,1,1,'F');
     doc.setTextColor(107,80,50);doc.text('Example',kx+2,y,{align:'left'});
     y+=6;
     doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);doc.line(ML,y,PW-MR,y);y+=3;
@@ -3039,6 +3039,7 @@ async function downloadPDF(event) {
     // Response text advances y. Callouts do NOT affect y.
     // Callouts are spaced evenly: placed every N response lines.
     var lColY=y, rColY=y, lI=0, rI=0;
+    var lColPage=pageNum, rColPage=pageNum, respPage=pageNum;
     var lTotal=leftList.length, rTotal=rightList.length;
     var lLines=wlines.length, rLines=wlines.length;
     // Place one callout every (wlines / count) lines
@@ -3077,6 +3078,7 @@ async function downloadPDF(event) {
 
     // Response text is done — record this y
     var respEndY=y;
+    respPage=pageNum;
 
     // Place any remaining callouts that didn't fit during the response.
     // They go onto a new page PAIRED — both columns reset together.
@@ -3086,14 +3088,25 @@ async function downloadPDF(event) {
       var rNeed=rI<rTotal?calloutH(rightList[rI].text)+2:0;
       if((lNeed&&lColY+lNeed>BOT)||(rNeed&&rColY+rNeed>BOT)){
         doc.addPage();pageNum++;drawPageFurniture();
-        lColY=TOP;rColY=TOP;
+        lColY=TOP;rColY=TOP;lColPage=pageNum;rColPage=pageNum;
       }
       if(lI<lTotal){lColY+=calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text)+2;lI++;}
       if(rI<rTotal){rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;rI++;}
     }
 
     // Main content resumes from whichever ended lowest: response text or callout columns
-    y=Math.max(respEndY,lColY,rColY)+3;
+    // Must account for page position — if callouts are on a later page, go there
+    var maxPage=Math.max(respPage,lColPage,rColPage);
+    if(maxPage>pageNum){
+      doc.addPage();pageNum++;drawPageFurniture();
+      y=TOP;
+    } else {
+      // All on same page — take highest y
+      var candidateY=respEndY;
+      if(lColPage===maxPage) candidateY=Math.max(candidateY,lColY);
+      if(rColPage===maxPage) candidateY=Math.max(candidateY,rColY);
+      y=candidateY+3;
+    }
 
     // Gold divider
     if(y+4>BOT) newPage();
