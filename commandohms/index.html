@@ -2720,10 +2720,8 @@ async function downloadPDF(event) {
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,10,{align:'right'});
       // Footer
       doc.setFillColor(17,17,17);doc.rect(0,PH-FTR,PW,FTR,'F');
-      doc.setFont('helvetica','italic');doc.setFontSize(6);doc.setTextColor(85,85,85);
-      doc.text('AI-generated \xb7 treat as a learning guide only \xb7 consult your teacher for official marking advice',ML,PH-4,{align:'left'});
-      doc.setTextColor(200,168,75);
-      doc.text('commandohsc.netlify.app',PW-MR,PH-4,{align:'right'});
+      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(200,168,75);
+      doc.text('CommandoHSC Copyright 2026',PW/2,PH-4,{align:'center'});
     }
 
     function newPage(){
@@ -2910,6 +2908,11 @@ async function downloadPDF(event) {
 
     function drawLine(items,atY){
       var dx=CX;
+      // Clip rendering to centre column boundaries
+      doc.saveGraphicsState();
+      doc.rect(CX, atY-HA-0.5, CW_C, HHR+1, 'S');
+      doc.clip();
+      doc.discardPath();
       items.forEach(function(item){
         if(!item.t) return;
         var hl=!!(item.term&&COLS[item.term]);
@@ -2947,6 +2950,7 @@ async function downloadPDF(event) {
           dx+=w;
         }
       });
+      doc.restoreGraphicsState();
     }
 
     // ─── Parse feedback ───────────────────────────────────────────────────
@@ -3088,8 +3092,8 @@ async function downloadPDF(event) {
       if(rI<rTotal){rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;rI++;}
     }
 
-    // Main content resumes from response end
-    y=respEndY+3;
+    // Main content resumes from whichever ended lowest: response text or callout columns
+    y=Math.max(respEndY,lColY,rColY)+3;
 
     // Gold divider
     if(y+4>BOT) newPage();
