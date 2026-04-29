@@ -2656,23 +2656,20 @@ async function downloadPDF(event) {
 
     // ─── Page geometry ────────────────────────────────────────────────────
     var PW=210, PH=297, ML=12, MR=12, HDR=16, FTR=10;
-    var TOP=HDR+5, BOT=PH-FTR-4;
-    var CW=PW-ML-MR;         // full content width = 186mm
+    var TOP=HDR+5, BOT=PH-FTR-6;
+    var CW=PW-ML-MR;           // full content width 186mm
+    var PW_PILL=52;             // feedback pill width (right side)
+    var GAP_PILL=4;             // gap between response text and pill
+    var RW=CW-PW_PILL-GAP_PILL; // response text width
 
-    // Three-column layout
-    var SW=42, GAP=3;
-    var CX=ML+SW+GAP;        // centre col left  = 12+42+3 = 57mm
-    var CW_C=CW-2*(SW+GAP);  // centre col width = 186-90  = 96mm
-    var RX=CX+CW_C+GAP;      // right col left   = 57+96+3 = 156mm
-    // Sanity: RX+SW = 156+42 = 198 < 198 = PW-MR ✓
-
-    // ─── Typography (jsPDF: 1pt = 0.3528mm) ──────────────────────────────
-    var RFS=8.5, RLA=3.8;   // response font, line-advance mm
-    var CFS=7.5, CLA=3.3;   // callout body font, line-advance mm
-    var HFS=6.5, HHT=5.0;   // callout heading font, heading-row height
-    var BFS=8,   BLA=3.6;   // body font (CTF, mark rationale)
-    var HP=1.2;              // horizontal padding inside highlight rect
-    var PG=2.0;              // extra gap between paragraphs
+    // ─── Typography ───────────────────────────────────────────────────────
+    var RFS=7.5, RLA=5.8;      // response font + double-spaced line advance
+    var PFS=6.5, PLA=3.0;      // pill body font + line advance
+    var BFS=7.5, BLA=3.4;      // body sections font
+    var HP=1.2;                 // highlight rect horizontal padding
+    var HA=RFS*0.3528*0.80;    // highlight ascender
+    var HHR=RFS*0.3528*1.15;   // highlight row height
+    var PG=2.5;                 // paragraph gap
 
     // ─── Colours ─────────────────────────────────────────────────────────
     var COLS={
@@ -2692,20 +2689,17 @@ async function downloadPDF(event) {
       evaluate:    {bg:[232,69,69],  fg:[255,255,255]}
     };
 
-    // Callout styles
-    // LEFT:  strengths (green label) + develops (amber label)  — white bg
-    // RIGHT: next steps — gold-tinted bg
-    var ST={
-      strength:{bg:[248,248,248],bd:[200,200,200],lb:[46,125,50], ti:'STRENGTH'},
-      develop: {bg:[248,248,248],bd:[200,200,200],lb:[122,78,0],  ti:'DEVELOP'},
-      nextstep:{bg:[255,251,235],bd:[200,168,75], lb:[21,101,192],ti:'NEXT STEP'}
+    // Pill styles: Strength → Develop → Try This
+    var PILLS={
+      strength:{ bg:[241,248,241], lb:[46,125,50],  lw:0.4, bc:[165,214,167], ti:'STRENGTH'  },
+      develop: { bg:[255,253,231], lb:[122,78,0],   lw:0.4, bc:[255,224,130], ti:'DEVELOP'   },
+      trythis: { bg:[232,244,253], lb:[21,101,192], lw:0.4, bc:[144,202,249], ti:'TRY THIS'  }
     };
 
     // ─── Page state ───────────────────────────────────────────────────────
     var pageNum=0, y=TOP;
 
-    function drawPageFurniture() {
-      // Header
+    function drawPageFurniture(){
       doc.setFillColor(0,0,0); doc.rect(0,0,PW,HDR,'F');
       doc.setFillColor(200,168,75); doc.rect(0,0,PW,1.2,'F');
       var logo=document.querySelector('.nav-logo img');
@@ -2718,10 +2712,9 @@ async function downloadPDF(event) {
       var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
       doc.text(sn+' \xb7 Response Analysis',PW/2,10,{align:'center'});
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,10,{align:'right'});
-      // Footer
-      doc.setFillColor(17,17,17);doc.rect(0,PH-FTR,PW,FTR,'F');
+      doc.setFillColor(17,17,17); doc.rect(0,PH-FTR,PW,FTR,'F');
       doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(200,168,75);
-      doc.text('CommandoHSC Copyright 2026',PW/2,PH-4,{align:'center'});
+      doc.text('CommandoHSC \xa9 2026',PW/2,PH-4,{align:'center'});
     }
 
     function newPage(){
@@ -2741,7 +2734,6 @@ async function downloadPDF(event) {
       s=s.replace(/[^\u0000-\u007E]/g,'');
       return s;
     }
-
     function setFont(bold,fs){ doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(fs); }
     function gw(text,bold,fs){ setFont(bold,fs); return doc.getTextWidth(text); }
     function txt(text,x,yy,fs,bold,rgb){
@@ -2749,29 +2741,9 @@ async function downloadPDF(event) {
       doc.text(clean(String(text)),x,yy,{align:'left'});
     }
     function splitW(text,fs,w){ setFont(false,fs); return doc.splitTextToSize(clean(text),w); }
-    function lh(n,la){ return n>0?(n-1)*la+la*0.85:0; }
+    function lhCalc(n,la){ return n>0?(n-1)*la+la*0.85:0; }
 
-    // ─── Callout box (draws at topY, returns height) ──────────────────────
-    function calloutBox(x,topY,st,text){
-      var PAD=3;
-      var lines=splitW(text,CFS,SW-PAD*2);
-      var bodyH=lh(lines.length,CLA);
-      var totH=PAD+HHT+2+bodyH+PAD;
-      doc.setFillColor(st.bg[0],st.bg[1],st.bg[2]);
-      doc.setDrawColor(st.bd[0],st.bd[1],st.bd[2]);
-      doc.setLineWidth(0.35);
-      doc.roundedRect(x,topY,SW,totH,2,2,'FD');
-      txt(st.ti,x+PAD,topY+PAD+HFS*0.3528*0.75,HFS,true,st.lb);
-      var by=topY+PAD+HHT+2+CFS*0.3528*0.75;
-      lines.forEach(function(ln,i){ txt(ln,x+PAD,by+i*CLA,CFS,false,[40,40,40]); });
-      return totH;
-    }
-    function calloutH(text){
-      var PAD=3,lines=splitW(text,CFS,SW-PAD*2);
-      return PAD+HHT+2+lh(lines.length,CLA)+PAD;
-    }
-
-    // ─── Segment builder ──────────────────────────────────────────────────
+    // ─── Segment builder (unchanged) ─────────────────────────────────────
     function buildSegs(fullText,annotations){
       var cmdAnns=annotations.filter(function(a){return a.term!=='example';});
       var exAnns =annotations.filter(function(a){return a.term==='example';});
@@ -2811,22 +2783,15 @@ async function downloadPDF(event) {
       return segs.filter(function(s){return s.t;});
     }
 
-    // ─── Line wrapper ─────────────────────────────────────────────────────
-    // Wraps segments into lines that fit within CW_C.
-    // Highlighted runs get HP*2 padding added to their width in the check.
-    // Plain text and highlighted text share the same lineW accumulator.
+    // ─── Line wrapper — wraps to RW (response text width) ────────────────
     function wrapSegs(segs){
-      var W=CW_C;
+      var W=RW;
       var result=[],line=[],lineW=0;
-
       function gW(text,bold){ return gw(text,bold,RFS); }
-
       function flush(pb){
         if(line.length) result.push({items:line.slice(),pb:!!pb});
         line=[];lineW=0;
       }
-
-      // Break text into tokens at whitespace and mid-word hyphens
       function tokens(text){
         var out=[];
         (text.match(/\S+\s*/g)||[]).forEach(function(word){
@@ -2840,12 +2805,9 @@ async function downloadPDF(event) {
         });
         return out;
       }
-
       segs.forEach(function(seg){
         if(!seg.t) return;
         var hl=!!(seg.term&&COLS[seg.term]);
-
-        // Paragraph break
         if(!hl&&seg.t.indexOf('\n')!==-1){
           seg.t.split('\n').forEach(function(part,pi){
             if(pi>0) flush(true);
@@ -2858,13 +2820,7 @@ async function downloadPDF(event) {
           });
           return;
         }
-
         if(hl){
-          // Measure a highlighted run exactly as drawLine renders it:
-          // - trimmed portion in bold
-          // - trailing whitespace in normal
-          // - HP*2 added once for the rect padding
-          // This ensures wrapSegs and drawLine agree on pixel widths.
           function runRenderedW(runText){
             var tr=runText.trimEnd();
             var trail=runText.slice(tr.length);
@@ -2872,19 +2828,14 @@ async function downloadPDF(event) {
             var wSp=trail?gW(trail,false):0;
             return wTr+HP*2+wSp;
           }
-
           var toks=tokens(seg.t), run='', runW=0;
           toks.forEach(function(tok){
             var newRunW=runRenderedW(run+tok);
             if(run!==''&&lineW+newRunW>W){
-              // Current run fits; adding this token would overflow — commit run
               line.push({t:run,term:seg.term,ex:seg.ex});
-              lineW+=runW;
-              flush(false);
+              lineW+=runW; flush(false);
               run=tok; runW=runRenderedW(tok);
-            } else {
-              run+=tok; runW=newRunW;
-            }
+            } else { run+=tok; runW=newRunW; }
           });
           if(run!==''){
             if(lineW+runW>W&&line.length) flush(false);
@@ -2903,11 +2854,9 @@ async function downloadPDF(event) {
       return result;
     }
 
-    // ─── Draw one response line ───────────────────────────────────────────
-    var HA=RFS*0.3528*0.80, HHR=RFS*0.3528*1.15;
-
+    // ─── Draw one response line at x=ML ──────────────────────────────────
     function drawLine(items,atY){
-      var dx=CX;
+      var dx=ML;
       items.forEach(function(item){
         if(!item.t) return;
         var hl=!!(item.term&&COLS[item.term]);
@@ -2917,7 +2866,7 @@ async function downloadPDF(event) {
           var wTr=doc.getTextWidth(tr);
           setFont(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
           var c=COLS[item.term];
-          var rectW=Math.min(wTr+HP*2, CX+CW_C-dx);
+          var rectW=Math.min(wTr+HP*2, ML+RW-dx);
           if(rectW>0){
             doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
             doc.roundedRect(dx,atY-HA,rectW,HHR,0.7,0.7,'F');
@@ -2931,7 +2880,7 @@ async function downloadPDF(event) {
           }
           dx+=wTr+HP*2+wSp;
         } else if(item.ex){
-          setFont('bolditalic',RFS);
+          setFont(false,RFS);
           var w=doc.getTextWidth(item.t);
           doc.setTextColor(0,0,0);
           doc.text(clean(item.t),dx,atY,{align:'left'});
@@ -2945,6 +2894,45 @@ async function downloadPDF(event) {
           dx+=w;
         }
       });
+    }
+
+    // ─── Draw ruled writing line below a response row ─────────────────────
+    // Draws a light dotted baseline for student handwriting
+    function drawRuledLine(atY){
+      doc.setDrawColor(220,220,220);
+      doc.setLineWidth(0.2);
+      doc.setLineDashPattern([0.5,1.5],0);
+      doc.line(ML, atY+1.8, ML+RW, atY+1.8);
+      doc.setLineDashPattern([],0);
+    }
+
+    // ─── Draw a feedback pill ─────────────────────────────────────────────
+    // Returns the height drawn
+    function drawPill(px, topY, pst, text){
+      var PAD=2.5, LW=3.5;
+      var lines=splitW(text,PFS,PW_PILL-PAD*2-LW);
+      var labelH=5.5;
+      var bodyH=lhCalc(lines.length,PLA);
+      var totH=PAD+labelH+bodyH+PAD;
+      // background
+      doc.setFillColor(pst.bg[0],pst.bg[1],pst.bg[2]);
+      doc.setDrawColor(pst.bc[0],pst.bc[1],pst.bc[2]);
+      doc.setLineWidth(pst.lw);
+      doc.roundedRect(px,topY,PW_PILL,totH,1.5,1.5,'FD');
+      // left accent bar
+      doc.setFillColor(pst.lb[0],pst.lb[1],pst.lb[2]);
+      doc.rect(px,topY,LW,totH,'F');
+      // label
+      txt(pst.ti, px+LW+2, topY+PAD+5.5*0.3528*0.75, 5.5, true, pst.lb);
+      // body text
+      var by=topY+PAD+labelH+PFS*0.3528*0.75;
+      lines.forEach(function(ln,i){ txt(ln, px+LW+2, by+i*PLA, PFS, false, [60,60,60]); });
+      return totH;
+    }
+    function pillH(text){
+      var PAD=2.5, LW=3.5;
+      var lines=splitW(text,PFS,PW_PILL-PAD*2-LW);
+      return PAD+5.5+lhCalc(lines.length,PLA)+PAD;
     }
 
     // ─── Parse feedback ───────────────────────────────────────────────────
@@ -2962,27 +2950,17 @@ async function downloadPDF(event) {
     }
 
     // ─── Read all data ────────────────────────────────────────────────────
-    var question=document.getElementById('questionText').value.trim();
-    var markVal =document.getElementById('markValue').value.trim();
-    var rawText =lastText||'';
-    var segs    =buildSegs(rawText,lastAnnotations);
-    var wlines  =wrapSegs(segs);
-
-    var fb  =parseFB();
-    var www =fb['What Went Well']       ||[];
-    var aif =fb['Areas for Improvement']||[];
-    var ctf =fb['Command Term Focus']   ||[];
-    var ns  =fb['Next Steps']           ||[];
-    var ptm =(document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
-
-    // ─── Build fixed left/right callout lists ─────────────────────────────
-    // LEFT:  all Strengths + all Develops  (white bg, coloured label)
-    // RIGHT: all Next Steps                (gold-tinted bg)
-    var leftList=[];
-    www.forEach(function(b){leftList.push({st:ST.strength,text:b});});
-    aif.forEach(function(b){leftList.push({st:ST.develop, text:b});});
-    var rightList=[];
-    ns.forEach(function(b){rightList.push({st:ST.nextstep,text:b});});
+    var question = document.getElementById('questionText').value.trim();
+    var markVal  = document.getElementById('markValue').value.trim();
+    var rawText  = lastText||'';
+    var segs     = buildSegs(rawText,lastAnnotations);
+    var wlines   = wrapSegs(segs);
+    var fb       = parseFB();
+    var www      = fb['What Went Well']        ||[];
+    var aif      = fb['Areas for Improvement'] ||[];
+    var ctf      = fb['Command Term Focus']    ||[];
+    var ns       = fb['Next Steps']            ||[];
+    var ptm      = (document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
 
     // Projected mark
     var proj=(function(){
@@ -2992,22 +2970,67 @@ async function downloadPDF(event) {
       return{mark:m?m.innerText.trim():'',rat:r?r.innerText.trim():''};
     })();
 
-    // ─────────────────────────────────────────────────────────────────────
-    // RENDER — single pass, no lookahead, no anchor logic
-    // ─────────────────────────────────────────────────────────────────────
+    // Build ordered pill list: Strength → Develop → Try This
+    var pillList=[];
+    www.forEach(function(b){ pillList.push({pst:PILLS.strength, text:b}); });
+    aif.forEach(function(b){ pillList.push({pst:PILLS.develop,  text:b}); });
+    ns.forEach(function(b){  pillList.push({pst:PILLS.trythis,  text:b}); });
+
+    // Pill x position
+    var PX = ML+RW+GAP_PILL;
+
+    // ═════════════════════════════════════════════════════════════════════
+    // RENDER — strictly sequential, single Y cursor
+    // ═════════════════════════════════════════════════════════════════════
     newPage();
 
-    // Question strip
-    txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),ML,y,6.5,true,[153,153,144]);
-    y+=4;
-    if(question){
-      var qls=splitW(question,9,CW);
-      qls.forEach(function(ln,i){txt(ln,ML,y+i*9*0.3528*1.2,9,false,[51,51,51]);});
-      y+=lh(qls.length,9*0.3528*1.2)+2;
+    // ── Question block ────────────────────────────────────────────────────
+    var qLabelH=4;
+    var qLines=question?splitW(question,9,CW):[];
+    var qBodyH=qLines.length?lhCalc(qLines.length,9*0.3528*1.2)+2:0;
+    var qTotH=qLabelH+qBodyH+3;
+    doc.setFillColor(247,247,247);
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
+    doc.rect(ML,y,CW,qTotH,'FD');
+    doc.setFillColor(200,168,75);
+    doc.rect(ML,y,2,qTotH,'F');
+    txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),
+        ML+4,y+qLabelH*0.75,6,true,[153,153,144]);
+    if(qLines.length){
+      var qBase=y+qLabelH+9*0.3528*0.85;
+      qLines.forEach(function(ln,i){txt(ln,ML+4,qBase+i*9*0.3528*1.2,9,false,[51,51,51]);});
     }
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);doc.line(ML,y,PW-MR,y);y+=3;
+    y+=qTotH+3;
 
-    // Colour key
+    // ── Command Term bar — full width gold ────────────────────────────────
+    var ctfText=ctf.length?ctf.join(' '):'';
+    var ctfColW=18; // narrow left column for label+term
+    var ctfTxtW=CW-ctfColW-6; // remaining width for feedback text
+    var ctfLines=ctfText?splitW(ctfText,6.5,ctfTxtW):[];
+    var ctfBodyH=ctfLines.length?lhCalc(ctfLines.length,BLA*0.9)+2:0;
+    var ctfTotH=Math.max(10, 4+5+ctfBodyH+4); // min 10mm
+    doc.setFillColor(200,168,75);
+    doc.rect(0,y,PW,ctfTotH,'F');
+    // Left column: label + term
+    txt('COMMAND TERM',ML,y+4+5*0.3528*0.75,5,true,[0,0,0]);
+    setFont(false,5);
+    var termDisplay=(ptm?ptm.toUpperCase():'');
+    doc.setTextColor(0,0,0);
+    doc.setFontSize(10);doc.setFont('helvetica','bold');
+    doc.text(termDisplay,ML,y+4+5+10*0.3528*0.82,{align:'left'});
+    // Divider
+    doc.setDrawColor(80,80,60);doc.setLineWidth(0.3);
+    doc.line(ML+ctfColW,y+3,ML+ctfColW,y+ctfTotH-3);
+    // Right column: feedback text
+    if(ctfLines.length){
+      var ctfBase=y+4+6.5*0.3528*0.75;
+      ctfLines.forEach(function(ln,i){
+        txt(ln,ML+ctfColW+4,ctfBase+i*BLA*0.9,6.5,false,[0,0,0]);
+      });
+    }
+    y+=ctfTotH+4;
+
+    // ── Colour key ────────────────────────────────────────────────────────
     txt('COLOUR KEY',ML,y,6,true,[153,153,144]);y+=3.5;
     var kx=ML;
     Object.keys(COLS).forEach(function(term){
@@ -3026,130 +3049,125 @@ async function downloadPDF(event) {
     doc.roundedRect(kx,y-3,exw,4.5,1,1,'F');
     doc.setTextColor(107,80,50);doc.text('Example',kx+2,y,{align:'left'});
     y+=6;
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);doc.line(ML,y,PW-MR,y);y+=3;
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);
+    doc.line(ML,y,PW-MR,y);y+=4;
 
-    // ── THREE-COLUMN SECTION ──────────────────────────────────────────────
-    // Left and right callout columns advance independently.
-    // Response text advances y. Callouts do NOT affect y.
-    // Callouts are spaced evenly: placed every N response lines.
-    var lColY=y, rColY=y, lI=0, rI=0;
-    var lColPage=pageNum, rColPage=pageNum, respPage=pageNum;
-    var lTotal=leftList.length, rTotal=rightList.length;
-    var lLines=wlines.length, rLines=wlines.length;
-    // Place one callout every (wlines / count) lines
-    var lEvery = lTotal>0 ? Math.max(1,Math.floor(wlines.length/lTotal)) : 99999;
-    var rEvery = rTotal>0 ? Math.max(1,Math.floor(wlines.length/rTotal)) : 99999;
-    var lSince=0, rSince=0;
+    // ── Section header ────────────────────────────────────────────────────
+    txt('ANNOTATED RESPONSE  \u2014  write your revisions on the lines below each sentence',
+        ML,y,5.5,false,[153,153,144]);
+    y+=4;
 
-    wlines.forEach(function(wl){
-      // Page break for response text
-      if(y+RLA>BOT){
-        newPage();
-        lColY=y; rColY=y;  // reset callout columns to new page top
-      }
-      y+=RLA;
-      drawLine(wl.items,y);
-      if(wl.pb) y+=PG;
-      lSince++; rSince++;
+    // ── Response rows with inline feedback pills ──────────────────────────
+    // Strategy: for each wrapped line, draw the line then the ruled writing
+    // line. Pill is placed alongside — aligned to top of its paragraph block.
+    // A paragraph is a group of wlines ending with pb:true or the last line.
+    // The pill for a paragraph block is drawn starting at the top of that block.
 
-      // Place left callout if due
-      if(lI<lTotal && lSince>=lEvery){
-        var need=calloutH(leftList[lI].text);
-        if(lColY+need<=BOT){
-          lColY+=calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text)+2;
-          lI++; lSince=0;
-        }
-      }
-      // Place right callout if due
-      if(rI<rTotal && rSince>=rEvery){
-        var need=calloutH(rightList[rI].text);
-        if(rColY+need<=BOT){
-          rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;
-          rI++; rSince=0;
-        }
+    var pillIdx=0; // index into pillList
+
+    // Group wlines into paragraph blocks
+    var blocks=[];
+    var cur=[];
+    wlines.forEach(function(wl,i){
+      cur.push(wl);
+      if(wl.pb || i===wlines.length-1){
+        blocks.push(cur.slice());
+        cur=[];
       }
     });
 
-    // Response text is done — record this y
-    var respEndY=y;
-    respPage=pageNum;
+    blocks.forEach(function(block){
+      // Calculate total height this block needs
+      // Each line = RLA (response advance) + writing line gap
+      var writingGap=3.5; // mm below each text line for handwriting
+      var blockH = block.length*(RLA+writingGap);
 
-    // Place any remaining callouts that didn't fit during the response.
-    // They go onto a new page PAIRED — both columns reset together.
-    // We never touch respEndY — main content picks up from there.
-    while(lI<lTotal||rI<rTotal){
-      var lNeed=lI<lTotal?calloutH(leftList[lI].text)+2:0;
-      var rNeed=rI<rTotal?calloutH(rightList[rI].text)+2:0;
-      if((lNeed&&lColY+lNeed>BOT)||(rNeed&&rColY+rNeed>BOT)){
-        doc.addPage();pageNum++;drawPageFurniture();
-        lColY=TOP;rColY=TOP;lColPage=pageNum;rColPage=pageNum;
+      // Check if block fits on current page
+      if(y+blockH>BOT) newPage();
+
+      var blockTop=y;
+
+      // Draw each line in block
+      block.forEach(function(wl,li){
+        y+=RLA;
+        drawLine(wl.items,y);
+        // Draw ruled writing line below
+        drawRuledLine(y);
+        if(wl.pb&&li===block.length-1) y+=PG;
+        else y+=writingGap;
+      });
+
+      // Draw pill for this block alongside (starting at blockTop)
+      if(pillIdx<pillList.length){
+        var p=pillList[pillIdx];
+        var pH=pillH(p.text);
+        // Only draw if pill fits vertically alongside the block
+        // (pill will never exceed block height — if block is short, pill may be taller,
+        //  but we still draw it; it extends below the block which is fine)
+        drawPill(PX, blockTop, p.pst, p.text);
+        pillIdx++;
       }
-      if(lI<lTotal){lColY+=calloutBox(ML,lColY,leftList[lI].st,leftList[lI].text)+2;lI++;}
-      if(rI<rTotal){rColY+=calloutBox(RX,rColY,rightList[rI].st,rightList[rI].text)+2;rI++;}
+
+      // Add gap between paragraph blocks
+      y+=2;
+    });
+
+    // Draw any remaining pills that didn't get placed (more pills than blocks)
+    while(pillIdx<pillList.length){
+      var p=pillList[pillIdx];
+      var pH=pillH(p.text);
+      if(y+pH>BOT) newPage();
+      drawPill(PX,y,p.pst,p.text);
+      y+=pH+3;
+      pillIdx++;
     }
 
-    // Main content resumes from whichever ended lowest: response text or callout columns
-    // Must account for page position — if callouts are on a later page, go there
-    var maxPage=Math.max(respPage,lColPage,rColPage);
-    if(maxPage>pageNum){
-      doc.addPage();pageNum++;drawPageFurniture();
-      y=TOP;
-    } else {
-      // All on same page — take highest y
-      var candidateY=respEndY;
-      if(lColPage===maxPage) candidateY=Math.max(candidateY,lColY);
-      if(rColPage===maxPage) candidateY=Math.max(candidateY,rColY);
-      y=candidateY+3;
-    }
+    y+=4;
 
-    // Gold divider
-    if(y+4>BOT) newPage();
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);doc.line(ML,y,PW-MR,y);y+=4;
-
-    // Command Term panel
-    if(ctf.length){
-      var cBody=ctf.join(' ');
-      var cLines=splitW(cBody,BFS,CW-7);
-      var cH=4+HHT+2+lh(cLines.length,BLA)+4;
-      if(y+cH>BOT) newPage();
-      doc.setFillColor(252,228,236);doc.setDrawColor(244,143,177);doc.setLineWidth(0.4);
-      doc.roundedRect(ML,y,CW,cH,2,2,'FD');
-      txt('COMMAND TERM ACHIEVEMENT \xb7 '+(ptm?ptm.toUpperCase():''),ML+3.5,y+4+HFS*0.3528*0.75,HFS,true,[136,14,79]);
-      var cBase=y+4+HHT+2+BFS*0.3528*0.75;
-      cLines.forEach(function(ln,i){txt(ln,ML+3.5,cBase+i*BLA,BFS,false,[80,20,50]);});
-      y+=cH+4;
-    }
-
-    // Estimated mark
+    // ── Estimated mark bar — full width black ─────────────────────────────
     if(proj&&proj.mark){
-      var MFS=20,MH=MFS*0.3528*0.9;
-      var rLines=proj.rat?splitW(proj.rat,BFS,CW-8):[];
-      var bH=4+5+MH+(rLines.length?BLA*0.5+lh(rLines.length,BLA):0)+4;
-      if(y+bH>BOT) newPage();
-      doc.setFillColor(0,0,0);doc.roundedRect(ML,y,CW,bH,2,2,'F');
-      txt('ESTIMATED MARK',ML+4,y+4+6.5*0.3528*0.75,6.5,true,[136,136,128]);
-      txt(proj.mark,ML+4,y+4+5+MFS*0.3528*0.82,MFS,true,[200,168,75]);
-      if(rLines.length){
-        var rBase=y+4+5+MH+BLA*0.5+BFS*0.3528*0.75;
-        rLines.forEach(function(ln,i){txt(ln,ML+4,rBase+i*BLA,BFS,false,[136,136,128]);});
+      var MFS=18, MH=MFS*0.3528*1.0;
+      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-28):[];
+      var markTotH=Math.max(14, 4+MH+(ratLines.length?BLA*0.4+lhCalc(ratLines.length,BLA):0)+4);
+      if(y+markTotH>BOT) newPage();
+      doc.setFillColor(0,0,0);
+      doc.rect(0,y,PW,markTotH,'F');
+      // Mark number
+      doc.setFont('helvetica','bold');doc.setFontSize(MFS);
+      doc.setTextColor(200,168,75);
+      doc.text(clean(proj.mark),ML,y+4+MH*0.88,{align:'left'});
+      // "/ N" denominator
+      var mw=doc.getTextWidth(clean(proj.mark));
+      doc.setFont('helvetica','normal');doc.setFontSize(8);
+      doc.setTextColor(80,80,80);
+      doc.text('/ '+(markVal||'?'),ML+mw+2,y+4+MH*0.88,{align:'left'});
+      // Vertical divider
+      var divX=ML+26;
+      doc.setDrawColor(50,50,50);doc.setLineWidth(0.4);
+      doc.line(divX,y+3,divX,y+markTotH-3);
+      // Label + rationale
+      txt('ESTIMATED MARK',divX+4,y+4+5.5*0.3528*0.75,5.5,true,[200,168,75]);
+      if(ratLines.length){
+        var rBase=y+4+5.5+BFS*0.3528*0.75+0.5;
+        ratLines.forEach(function(ln,i){txt(ln,divX+4,rBase+i*BLA,BFS,false,[150,150,150]);});
       }
-      y+=bH+4;
+      y+=markTotH;
     }
 
-    // Disclaimer
+    // ── Disclaimer ────────────────────────────────────────────────────────
     var dt='AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
-    var dls=splitW(dt,6.5,CW-6);
-    var dH=3+lh(dls.length,6.5*0.3528*1.2)+3;
+    var dls=splitW(dt,6,CW-6);
+    var dH=3+lhCalc(dls.length,6*0.3528*1.3)+3;
     if(y+dH>BOT) newPage();
     doc.setFillColor(245,242,235);doc.setDrawColor(200,184,122);doc.setLineWidth(0.25);
     doc.roundedRect(ML,y,CW,dH,1.5,1.5,'FD');
-    var dBase=y+3+6.5*0.3528*0.72;
-    dls.forEach(function(ln,i){txt(ln,ML+3,dBase+i*6.5*0.3528*1.2,6.5,false,[107,115,88]);});
+    var dBase=y+3+6*0.3528*0.72;
+    dls.forEach(function(ln,i){txt(ln,ML+3,dBase+i*6*0.3528*1.3,6,false,[107,115,88]);});
 
-    // Save
+    // ── Save ──────────────────────────────────────────────────────────────
     var blob=doc.output('blob'),url=URL.createObjectURL(blob);
     var a=document.createElement('a');
-    a.href=url;a.download='CommandoHMS-'+new Date().toISOString().slice(0,10)+'.pdf';
+    a.href=url;a.download='CommandoHSC-'+new Date().toISOString().slice(0,10)+'.pdf';
     document.body.appendChild(a);a.click();
     setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},2000);
 
@@ -3161,7 +3179,6 @@ async function downloadPDF(event) {
     btn.disabled=false;
   }
 }
-
 // ══════════════════════════════════════════════════════════════
 // SUPABASE AUTH + CREDIT SYSTEM
 // ══════════════════════════════════════════════════════════════
