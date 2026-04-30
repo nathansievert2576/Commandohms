@@ -2655,25 +2655,30 @@ async function downloadPDF(event) {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // ─── Page geometry ────────────────────────────────────────────────────
-    var PW=210, PH=297, ML=12, MR=12, HDR=16, FTR=10;
-    var TOP=HDR+5, BOT=PH-FTR-6;
-    var CW=PW-ML-MR;          // 186mm full content width
+    // A4: 210 x 297mm. Margins mirror mockup padding (16px ~ 6mm at 96dpi/72pt)
+    var PW=210, PH=297, ML=6, MR=6, HDR=14, FTR=9;
+    var TOP=HDR+4, BOT=PH-FTR-4;
+    var CW=PW-ML-MR;              // 198mm
 
-    // Layout columns (v7)
-    var FC_W=50;              // feedback card width (each of 4 cards)
-    var FC_GAP=3;             // gap between cards
-    var TT_W=54;              // Try This column width
-    var TT_GAP=4;             // gap between Try This col and text col
-    var TX_W=CW-TT_W-TT_GAP; // annotated text column width
+    // Two-column section widths (mockup: 72px Try This, rest text, 7px gap)
+    // 72/794 * 198 = ~17.9mm Try This, gap ~1.7mm
+    var TT_W=18, TT_GAP=2, TX_W=CW-TT_W-TT_GAP;
+    var TX_X=ML+TT_W+TT_GAP;
 
-    // ─── Typography ───────────────────────────────────────────────────────
-    var RFS=7,   RLA=3.4;     // response font + line advance
-    var SFS=6,   SLA=2.8;     // small font (feedback cards, pills)
-    var BFS=7,   BLA=3.2;     // body sections (CTF, mark rationale)
-    var HP=1.2;               // highlight rect horizontal padding
-    var HA=RFS*0.3528*0.80;   // highlight ascender
-    var HHR=RFS*0.3528*1.15;  // highlight row height
-    var PG=2.2;               // paragraph gap
+    // Feedback card grid: 4 cards across CW with 1.5mm gaps
+    var FC_GAP=1.5;
+
+    // ─── Typography (all scaled down ~2pt from mockup px values) ─────────
+    // mockup px -> jsPDF pt: px * (72/96) then we use mm via 0.3528
+    var QFS=7,  QLA=7*0.3528*1.35;   // question text
+    var CTF_FS=5.5, CTF_LA=5.5*0.3528*1.6; // CTF feedback text
+    var CFS=4.5, CLA=4.5*0.3528*1.5; // card body text
+    var RFS=6,  RLA=6*0.3528*1.75;   // response text (line advance)
+    var BFS=5,  BLA=5*0.3528*1.55;   // mark rationale
+    var HP=1.0;                        // highlight rect padding
+    var HA=RFS*0.3528*0.80;
+    var HHR=RFS*0.3528*1.15;
+    var PG=1.8;                        // paragraph gap
 
     // ─── Colours ─────────────────────────────────────────────────────────
     var COLS={
@@ -2692,7 +2697,6 @@ async function downloadPDF(event) {
       assess:      {bg:[224,64,251], fg:[255,255,255]},
       evaluate:    {bg:[232,69,69],  fg:[255,255,255]}
     };
-
     var CARD={
       strength:{ bg:[241,248,241], bar:[46,125,50],  lb:[46,125,50],  ti:'STRENGTH' },
       develop: { bg:[255,253,231], bar:[255,193,7],  lb:[122,78,0],   ti:'DEVELOP'  },
@@ -2703,28 +2707,28 @@ async function downloadPDF(event) {
     var pageNum=0, y=TOP;
 
     function drawPageFurniture(){
-      doc.setFillColor(0,0,0); doc.rect(0,0,PW,HDR,'F');
-      doc.setFillColor(200,168,75); doc.rect(0,0,PW,1.2,'F');
+      // Header
+      doc.setFillColor(13,13,13); doc.rect(0,0,PW,HDR,'F');
+      doc.setFillColor(200,168,75); doc.rect(0,HDR-1,PW,1,'F');
       var logo=document.querySelector('.nav-logo img');
       if(logo&&logo.src&&logo.src.startsWith('data:')){
-        var lh=8,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,52);
-        try{doc.addImage(logo.src,'PNG',ML,4,lw,lh);}catch(e){}
+        var lh=7,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,48);
+        try{doc.addImage(logo.src,'PNG',ML,3.5,lw,lh);}catch(e){}
       }
-      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(136,136,128);
+      doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(100,100,95);
       var sb=document.querySelector('.subject-btn.active');
       var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
-      doc.text(sn+' \xb7 Response Analysis',PW/2,10,{align:'center'});
-      doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,10,{align:'right'});
+      doc.text(sn+' \xb7 Response Analysis',PW/2,HDR/2+1,{align:'center'});
+      doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,HDR/2+1,{align:'right'});
+      // Footer
       doc.setFillColor(17,17,17); doc.rect(0,PH-FTR,PW,FTR,'F');
-      doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(200,168,75);
-      doc.text('CommandoHSC \xa9 2026',PW/2,PH-4,{align:'center'});
+      doc.setFont('helvetica','normal');doc.setFontSize(4);doc.setTextColor(200,168,75);
+      doc.text('CommandoHSC \xa9 2026',PW/2,PH-3,{align:'center'});
     }
 
     function newPage(){
       if(pageNum>0) doc.addPage();
-      pageNum++;
-      drawPageFurniture();
-      y=TOP;
+      pageNum++; drawPageFurniture(); y=TOP;
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────
@@ -2746,30 +2750,28 @@ async function downloadPDF(event) {
     function splitW(t,fs,w){ sf(false,fs); return doc.splitTextToSize(clean(t),w); }
     function lhCalc(n,la){ return n>0?(n-1)*la+la*0.85:0; }
 
-    // ─── Draw a feedback card, returns height ─────────────────────────────
+    // ─── Draw feedback card, returns height ───────────────────────────────
+    // Mirrors: padding 5px 6px 5px 10px, bar 3.5px, label 3.5px, text 4px
     function drawCard(cx,cy,cw,cd,text){
-      var BAR=3, PAD=2.5;
-      var tlines=splitW(text,SFS,cw-BAR-PAD*2);
-      var labH=4.5;
-      var bodyH=lhCalc(tlines.length,SLA);
-      var totH=PAD+labH+bodyH+PAD;
-      // bg
+      var BAR=1.0, PAD_V=1.5, PAD_H=1.5;
+      var iw=cw-BAR-PAD_H*2;
+      var tlines=splitW(text,CFS,iw);
+      var labH=3.2;
+      var bodyH=lhCalc(tlines.length,CLA);
+      var totH=PAD_V+labH+bodyH+PAD_V;
       doc.setFillColor(cd.bg[0],cd.bg[1],cd.bg[2]);
-      doc.roundedRect(cx,cy,cw,totH,1.5,1.5,'F');
-      // left bar
+      doc.roundedRect(cx,cy,cw,totH,1,1,'F');
       doc.setFillColor(cd.bar[0],cd.bar[1],cd.bar[2]);
       doc.rect(cx,cy,BAR,totH,'F');
-      // label
-      txt(cd.ti, cx+BAR+PAD, cy+PAD+4.5*0.3528*0.75, 4.5, true, cd.lb);
-      // body
-      var by=cy+PAD+labH+SFS*0.3528*0.75;
-      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD, by+i*SLA, SFS, false, [60,60,60]); });
+      txt(cd.ti, cx+BAR+PAD_H, cy+PAD_V+3.2*0.3528*0.8, 3.2, true, cd.lb);
+      var by=cy+PAD_V+labH+CFS*0.3528*0.78;
+      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD_H, by+i*CLA, CFS, false, [60,60,60]); });
       return totH;
     }
     function cardH(cw,text){
-      var BAR=3, PAD=2.5;
-      var tlines=splitW(text,SFS,cw-BAR-PAD*2);
-      return PAD+4.5+lhCalc(tlines.length,SLA)+PAD;
+      var BAR=1.0, PAD_V=1.5, PAD_H=1.5;
+      var tlines=splitW(text,CFS,cw-BAR-PAD_H*2);
+      return PAD_V+3.2+lhCalc(tlines.length,CLA)+PAD_V;
     }
 
     // ─── Segment builder (unchanged) ─────────────────────────────────────
@@ -2812,7 +2814,7 @@ async function downloadPDF(event) {
       return segs.filter(function(s){return s.t;});
     }
 
-    // ─── Line wrapper (wraps to TX_W) ────────────────────────────────────
+    // ─── Line wrapper (wraps to TX_W) ─────────────────────────────────────
     function wrapSegs(segs){
       var W=TX_W;
       var result=[],line=[],lineW=0;
@@ -2851,8 +2853,7 @@ async function downloadPDF(event) {
         }
         if(hl){
           function runRenderedW(runText){
-            var tr=runText.trimEnd();
-            var trail=runText.slice(tr.length);
+            var tr=runText.trimEnd(), trail=runText.slice(tr.length);
             return gW(tr,true)+HP*2+(trail?gW(trail,false):0);
           }
           var toks=tokens(seg.t), run='', runW=0;
@@ -2879,8 +2880,8 @@ async function downloadPDF(event) {
       return result;
     }
 
-    // ─── Draw one response line at x=TX_X ────────────────────────────────
-    function drawLine(items,atY,TX_X){
+    // ─── Draw one response line ───────────────────────────────────────────
+    function drawLine(items,atY){
       var dx=TX_X;
       items.forEach(function(item){
         if(!item.t) return;
@@ -2894,14 +2895,13 @@ async function downloadPDF(event) {
           var rectW=Math.min(wTr+HP*2, TX_X+TX_W-dx);
           if(rectW>0){
             doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-            doc.roundedRect(dx,atY-HA,rectW,HHR,0.7,0.7,'F');
+            doc.roundedRect(dx,atY-HA,rectW,HHR,0.5,0.5,'F');
           }
-          sf(true,RFS);
-          doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
+          sf(true,RFS); doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
           doc.text(clean(tr),dx+HP,atY,{align:'left'});
           if(item.ex){
-            doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.4);
-            doc.line(dx+HP,atY+0.6,dx+HP+wTr,atY+0.6);
+            doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.3);
+            doc.line(dx+HP,atY+0.5,dx+HP+wTr,atY+0.5);
           }
           dx+=wTr+HP*2+wSp;
         } else if(item.ex){
@@ -2909,8 +2909,8 @@ async function downloadPDF(event) {
           var w=doc.getTextWidth(item.t);
           doc.setTextColor(0,0,0);
           doc.text(clean(item.t),dx,atY,{align:'left'});
-          doc.setDrawColor(0,0,0);doc.setLineWidth(0.4);
-          doc.line(dx,atY+0.6,dx+w,atY+0.6);
+          doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+          doc.line(dx,atY+0.5,dx+w,atY+0.5);
           dx+=w;
         } else {
           var w=doc.getTextWidth(item.t);
@@ -2947,7 +2947,6 @@ async function downloadPDF(event) {
     var ctf      = fb['Command Term Focus']    ||[];
     var ns       = fb['Next Steps']            ||[];
     var ptm      = (document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
-
     var proj=(function(){
       var pb=document.getElementById('projectedMarkBox');if(!pb||!pb.innerHTML)return null;
       var m=pb.querySelector('div[style*="font-size:2.2rem"]');
@@ -2955,188 +2954,190 @@ async function downloadPDF(event) {
       return{mark:m?m.innerText.trim():'',rat:r?r.innerText.trim():''};
     })();
 
-    // Build card lists
-    // Top row: 2 strength + 2 develop (4 cards across full width)
+    // Card lists
     var topCards=[];
-    (www.slice(0,2)).forEach(function(b){ topCards.push({cd:CARD.strength,text:b}); });
-    (aif.slice(0,2)).forEach(function(b){ topCards.push({cd:CARD.develop, text:b}); });
-    // Left column: Try This (all next steps)
+    www.slice(0,2).forEach(function(b){ topCards.push({cd:CARD.strength,text:b}); });
+    aif.slice(0,2).forEach(function(b){ topCards.push({cd:CARD.develop, text:b}); });
     var ttCards=ns.map(function(b){ return {cd:CARD.trythis,text:b}; });
 
     // ═════════════════════════════════════════════════════════════════════
-    // RENDER — strictly sequential, single Y cursor
+    // RENDER
     // ═════════════════════════════════════════════════════════════════════
     newPage();
 
-    // ── 1. QUESTION BLOCK ─────────────────────────────────────────────────
-    var qLines=question?splitW(question,8,CW-8):[];
-    var qLabelH=4;
-    var qBodyH=qLines.length?lhCalc(qLines.length,8*0.3528*1.3)+1:0;
-    var qTotH=qLabelH+qBodyH+4;
+    // ── 1. QUESTION ───────────────────────────────────────────────────────
+    var qLines=question?splitW(question,QFS,CW-5):[];
+    var qLabelH=3.5;
+    var qBodyH=qLines.length?lhCalc(qLines.length,QLA)+1:0;
+    var qTotH=qLabelH+qBodyH+3;
     doc.setFillColor(247,247,247);
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
     doc.rect(ML,y,CW,qTotH,'F');
-    doc.setFillColor(200,168,75); doc.rect(ML,y,2,qTotH,'F');
+    doc.setFillColor(200,168,75); doc.rect(ML,y,1.5,qTotH,'F');
     txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),
-        ML+4,y+qLabelH*0.8,5.5,true,[153,153,144]);
+        ML+3,y+qLabelH*0.82,3.5,true,[153,153,144]);
     if(qLines.length){
-      var qBase=y+qLabelH+8*0.3528*0.85;
-      qLines.forEach(function(ln,i){ txt(ln,ML+4,qBase+i*8*0.3528*1.3,8,false,[51,51,51]); });
+      var qBase=y+qLabelH+QFS*0.3528*0.85;
+      qLines.forEach(function(ln,i){ txt(ln,ML+3,qBase+i*QLA,QFS,false,[51,51,51]); });
     }
     y+=qTotH+2;
 
-    // ── 2. CTF STRIP (gold, full width) ──────────────────────────────────
+    // ── 2. CTF STRIP (gold, full bleed) ──────────────────────────────────
     var ctfText=ctf.length?ctf.join(' '):'';
-    var ctfLeftW=38, ctfGap=6;
-    var ctfTxtW=CW-ctfLeftW-ctfGap-4;
-    var ctfLines=ctfText?splitW(ctfText,6,ctfTxtW):[];
-    var ctfBodyH=ctfLines.length?lhCalc(ctfLines.length,BLA*0.88)+1:0;
-    var ctfTotH=Math.max(10, 3+5+ctfBodyH+3);
+    var ctfLeftW=16, ctfGap=3;
+    var ctfTxtW=CW-ctfLeftW-ctfGap-2;
+    var ctfLines=ctfText?splitW(ctfText,CTF_FS,ctfTxtW):[];
+    var ctfBodyH=ctfLines.length?lhCalc(ctfLines.length,CTF_LA)+1:0;
+    var ctfTotH=Math.max(9, 2.5+4.5+ctfBodyH+2.5);
     doc.setFillColor(200,168,75);
     doc.rect(0,y,PW,ctfTotH,'F');
-    // label + term
-    txt('COMMAND TERM',ML,y+3+4.5*0.3528*0.75,4.5,true,[0,0,0]);
-    doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(0,0,0);
-    doc.text(clean(ptm?ptm.toUpperCase():''),ML,y+3+5+9.5*0.3528*0.82,{align:'left'});
-    // divider
-    doc.setDrawColor(80,60,0);doc.setLineWidth(0.3);
+    // label + term stacked
+    txt('COMMAND TERM',ML,y+2.5+3.2*0.3528*0.8,3.2,true,[0,0,0]);
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(13,13,13);
+    doc.text(clean(ptm?ptm.toUpperCase():''),ML,y+2.5+3.8+8.5*0.3528*0.85,{align:'left'});
+    // vertical divider
+    doc.setDrawColor(80,60,0);doc.setLineWidth(0.25);
     doc.line(ML+ctfLeftW,y+2,ML+ctfLeftW,y+ctfTotH-2);
     // feedback text
     if(ctfLines.length){
-      var ctfBase=y+3+6*0.3528*0.75;
+      var ctfBase=y+2.5+CTF_FS*0.3528*0.78;
       ctfLines.forEach(function(ln,i){
-        txt(ln,ML+ctfLeftW+ctfGap,ctfBase+i*BLA*0.88,6,false,[0,0,0]);
+        txt(ln,ML+ctfLeftW+ctfGap,ctfBase+i*CTF_LA,CTF_FS,false,[13,13,13]);
       });
     }
-    y+=ctfTotH+4;
+    y+=ctfTotH+3;
 
-    // ── 3. TOP FEEDBACK CARDS (4 across) ─────────────────────────────────
+    // ── 3. FOUR FEEDBACK CARDS (2 strength + 2 develop across full width) ─
     if(topCards.length){
-      // Calculate max card height so all 4 are equal height
       var n=Math.min(4,topCards.length);
-      var totalGaps=(n-1)*FC_GAP;
-      var cardW=(CW-totalGaps)/n;
-      var maxCardH=0;
+      var cardW=(CW-(n-1)*FC_GAP)/n;
+      var maxH=0;
       topCards.slice(0,n).forEach(function(c){
-        maxCardH=Math.max(maxCardH,cardH(cardW,c.text));
+        maxH=Math.max(maxH,cardH(cardW,c.text));
       });
-      if(y+maxCardH>BOT) newPage();
+      if(y+maxH>BOT) newPage();
       topCards.slice(0,n).forEach(function(c,i){
         drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text);
       });
-      y+=maxCardH+5;
+      y+=maxH+3;
     }
 
-    // ── 4. COLOUR KEY (above annotated text, right-aligned to text col) ───
-    var TX_X=ML+TT_W+TT_GAP;
+    // ── 4. TWO-COLUMN: Try This (left) | Colour Key + Annotated text (right) ─
+    // Pre-calculate total height of Try This cards to know if we need a new page
+    var ttTotalH=0;
+    ttCards.forEach(function(c){ ttTotalH+=cardH(TT_W,c.text)+1.5; });
+
+    // Also estimate annotated text height
+    var txTotalH=0;
+    wlines.forEach(function(wl){ txTotalH+=RLA+(wl.pb?PG:0); });
+
+    // Use whichever is taller as the section height check
+    // (both render top-down so no overflow risk between them)
+
+    // Key height: one row of tags ~ 5mm
+    var keyH=5;
+
+    // Column headers
+    var colHdrH=4;
+
+    // Start the section
+    if(y+colHdrH+keyH+20>BOT) newPage();
+    var sectionTop=y;
+
+    // ── Try This column header ────────────────────────────────────────────
+    txt('TRY THIS',ML,sectionTop+3,3.5,true,[187,187,187]);
+    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
+    doc.line(ML,sectionTop+3.5,ML+TT_W,sectionTop+3.5);
+
+    // ── Right column: colour key ──────────────────────────────────────────
     // Key label
-    sf(true,5); doc.setTextColor(153,153,144);
-    doc.text('COLOUR KEY',TX_X,y,{align:'left'});
-    y+=3;
-    var kx=TX_X;
+    sf(true,3.5); doc.setTextColor(153,153,153);
+    doc.text('Key:',TX_X,sectionTop+3,{align:'left'});
+    var kx=TX_X+gw('Key:',true,3.5)+1.5;
+    var ky=sectionTop;
     Object.keys(COLS).forEach(function(term){
       var c=COLS[term];
-      sf(true,5.5); var kw=doc.getTextWidth(cap(term))+3;
-      if(kx+kw>PW-MR){kx=TX_X;y+=4.5;}
+      sf(true,3.5); var kw=doc.getTextWidth(cap(term))+2.5;
+      if(kx+kw>PW-MR){ kx=TX_X; ky+=4.5; }
       doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-      doc.roundedRect(kx,y-3,kw,4,1,1,'F');
+      doc.roundedRect(kx,ky-2.5,kw,3.5,0.7,0.7,'F');
       doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
-      doc.text(cap(term),kx+1.5,y,{align:'left'});
-      kx+=kw+1.5;
+      doc.text(cap(term),kx+1.2,ky,{align:'left'});
+      kx+=kw+1;
     });
-    sf(false,5.5);var exw=doc.getTextWidth('Example')+3;
-    if(kx+exw>PW-MR){kx=TX_X;y+=4.5;}
+    sf(false,3.5); var exw=doc.getTextWidth('Example')+2.5;
+    if(kx+exw>PW-MR){ kx=TX_X; ky+=4.5; }
     doc.setFillColor(245,242,235);
-    doc.roundedRect(kx,y-3,exw,4,1,1,'F');
-    doc.setTextColor(107,80,50);doc.text('Example',kx+1.5,y,{align:'left'});
-    y+=4;
-    // thin gold divider under key
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.2);
-    doc.line(TX_X,y,PW-MR,y);
-    y+=2;
+    doc.roundedRect(kx,ky-2.5,exw,3.5,0.7,0.7,'F');
+    doc.setTextColor(107,80,50); doc.text('Example',kx+1.2,ky,{align:'left'});
+    var keyBottomY=ky+2.5;
 
-    // ── 5. TWO-COLUMN SECTION: Try This LEFT | Annotated Text RIGHT ───────
-    var twoColTop=y;
-    var ttY=twoColTop;  // Try This column cursor
-    var txY=twoColTop;  // Text column cursor
+    // ── Right column: annotated response header ───────────────────────────
+    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
+    doc.line(TX_X,keyBottomY+0.5,PW-MR,keyBottomY+0.5);
+    txt('ANNOTATED RESPONSE',TX_X,keyBottomY+3.5,3.5,true,[187,187,187]);
+    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
+    doc.line(TX_X,keyBottomY+4,PW-MR,keyBottomY+4);
 
-    // Draw "Try This" column header
-    sf(true,5); doc.setTextColor(187,187,187);
-    doc.text('TRY THIS',ML,ttY,{align:'left'});
-    ttY+=3;
-    // Divider under header
-    doc.setDrawColor(220,220,220);doc.setLineWidth(0.2);
-    doc.line(ML,ttY,ML+TT_W,ttY);
-    ttY+=2;
+    // Track y positions for both columns independently from here
+    var ttY=sectionTop+colHdrH+1;  // Try This cursor
+    var txY=keyBottomY+5;           // Text cursor (starts after key + header)
 
-    // Draw "Annotated Response" column header
-    sf(true,5); doc.setTextColor(187,187,187);
-    doc.text('ANNOTATED RESPONSE',TX_X,txY,{align:'left'});
-    txY+=3;
-    doc.setDrawColor(220,220,220);doc.setLineWidth(0.2);
-    doc.line(TX_X,txY,PW-MR,txY);
-    txY+=2;
-
-    // Draw Try This cards stacked in left column
+    // ── Draw Try This cards ───────────────────────────────────────────────
     ttCards.forEach(function(c){
       var h=cardH(TT_W,c.text);
-      if(ttY+h>BOT){
-        // overflow — skip to avoid going off page (cards rendered before text)
-        return;
+      if(ttY+h<=BOT){
+        drawCard(ML,ttY,TT_W,c.cd,c.text);
+        ttY+=h+1.5;
       }
-      drawCard(ML,ttY,TT_W,c.cd,c.text);
-      ttY+=h+3;
     });
 
-    // Draw annotated response text in right column
-    // Use txY as cursor, advance line by line
+    // ── Draw annotated response text ──────────────────────────────────────
     wlines.forEach(function(wl){
       if(txY+RLA>BOT){
-        // Start new page — reset both column cursors
         newPage();
+        // On overflow page, reset both cursors (text continues, TT col empty)
         ttY=y; txY=y;
       }
       txY+=RLA;
-      drawLine(wl.items,txY,TX_X);
+      drawLine(wl.items,txY);
       if(wl.pb) txY+=PG;
     });
 
-    // Advance main y past whichever column ended lower
-    y=Math.max(ttY,txY)+5;
+    // Main y advances past whichever column ended lower
+    y=Math.max(ttY,txY)+4;
 
-    // ── 6. ESTIMATED MARK BAR (full width black) ──────────────────────────
+    // ── 5. MARK BAR (full bleed black) ───────────────────────────────────
     if(proj&&proj.mark){
-      var MFS=18, MH=MFS*0.3528*1.0;
-      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-30):[];
-      var markTotH=Math.max(14,4+MH+(ratLines.length?BLA*0.4+lhCalc(ratLines.length,BLA):0)+4);
+      var MFS=16, MH=MFS*0.3528*1.0;
+      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-26):[];
+      var markTotH=Math.max(12,3+MH+(ratLines.length?BLA*0.3+lhCalc(ratLines.length,BLA):0)+3);
       if(y+markTotH>BOT) newPage();
-      doc.setFillColor(0,0,0);
-      doc.rect(0,y,PW,markTotH,'F');
+      doc.setFillColor(13,13,13); doc.rect(0,y,PW,markTotH,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
-      doc.text(clean(proj.mark),ML,y+4+MH*0.88,{align:'left'});
+      doc.text(clean(proj.mark),ML,y+3+MH*0.88,{align:'left'});
       var mw=doc.getTextWidth(clean(proj.mark));
-      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,80,80);
-      doc.text('/ '+(markVal||'?'),ML+mw+2,y+4+MH*0.88,{align:'left'});
-      var divX=ML+28;
-      doc.setDrawColor(50,50,50);doc.setLineWidth(0.4);
-      doc.line(divX,y+3,divX,y+markTotH-3);
-      txt('ESTIMATED MARK',divX+4,y+4+5.5*0.3528*0.75,5.5,true,[200,168,75]);
+      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(80,80,80);
+      doc.text('/ '+(markVal||'?'),ML+mw+1.5,y+3+MH*0.88,{align:'left'});
+      var divX=ML+22;
+      doc.setDrawColor(50,50,50);doc.setLineWidth(0.3);
+      doc.line(divX,y+2,divX,y+markTotH-2);
+      txt('ESTIMATED MARK',divX+3,y+3+3.5*0.3528*0.8,3.5,true,[200,168,75]);
       if(ratLines.length){
-        var rBase=y+4+5.5+BFS*0.3528*0.75+0.5;
-        ratLines.forEach(function(ln,i){ txt(ln,divX+4,rBase+i*BLA,BFS,false,[150,150,150]); });
+        var rBase=y+3+4+BFS*0.3528*0.78;
+        ratLines.forEach(function(ln,i){ txt(ln,divX+3,rBase+i*BLA,BFS,false,[150,150,150]); });
       }
       y+=markTotH;
     }
 
-    // ── 7. DISCLAIMER ─────────────────────────────────────────────────────
+    // ── 6. DISCLAIMER ─────────────────────────────────────────────────────
     var dt='AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
-    var dls=splitW(dt,5.5,CW-6);
-    var dH=3+lhCalc(dls.length,5.5*0.3528*1.3)+3;
+    var dls=splitW(dt,4,CW-4);
+    var dH=2+lhCalc(dls.length,4*0.3528*1.5)+2;
     if(y+dH>BOT) newPage();
     doc.setFillColor(245,242,235);doc.setDrawColor(200,184,122);doc.setLineWidth(0.2);
-    doc.roundedRect(ML,y,CW,dH,1.5,1.5,'FD');
-    var dBase=y+3+5.5*0.3528*0.72;
-    dls.forEach(function(ln,i){ txt(ln,ML+3,dBase+i*5.5*0.3528*1.3,5.5,false,[107,115,88]); });
+    doc.roundedRect(ML,y,CW,dH,1,1,'FD');
+    var dBase=y+2+4*0.3528*0.75;
+    dls.forEach(function(ln,i){ txt(ln,ML+2,dBase+i*4*0.3528*1.5,4,false,[107,115,88]); });
 
     // ── Save ──────────────────────────────────────────────────────────────
     var blob=doc.output('blob'),url=URL.createObjectURL(blob);
