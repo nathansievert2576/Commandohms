@@ -3090,17 +3090,27 @@ async function downloadPDF(event) {
     var txEnd=txY;
     var txTotalH=txEnd-txStart;
 
-    // Try This cards evenly spaced down the length of the annotated response
+    // Try This: evenly distribute cards across EXACTLY the annotated text height
+    // Cards must not extend below txEnd
     if(ttCards.length){
-      var totalCardH=0;
-      var cardHeights=ttCards.map(function(c){ var h=cardH(TT_W,c.text); totalCardH+=h; return h; });
-      var totalGap=txTotalH-totalCardH;
-      var gap=ttCards.length>1 ? totalGap/(ttCards.length+1) : (txTotalH-cardHeights[0])/2;
-      gap=Math.max(gap,2); // minimum 2mm gap
+      var cardHeights=ttCards.map(function(c){ return cardH(TT_W,c.text); });
+      var totalCardH=cardHeights.reduce(function(a,b){return a+b;},0);
+      var n=ttCards.length;
+      // Available space for gaps = total height minus all card heights
+      var gapSpace=txTotalH-totalCardH;
+      // Distribute gaps evenly: gap before first card + between cards + after last card = n+1 slots
+      var gap=gapSpace/(n+1);
+      gap=Math.max(gap,1.5); // floor at 1.5mm
+      // If cards would overflow txEnd, scale gap down
+      var needed=totalCardH+gap*(n+1);
+      if(needed>txTotalH) gap=Math.max((txTotalH-totalCardH)/(n+1),1);
       var ttCur=txStart+gap;
       ttCards.forEach(function(c,i){
         var h=cardHeights[i];
-        if(ttCur+h<=BOT){ drawCard(ML,ttCur,TT_W,c.cd,c.text,null); }
+        // Only draw if card fits before txEnd
+        if(ttCur+h<=txEnd+2){
+          drawCard(ML,ttCur,TT_W,c.cd,c.text,null);
+        }
         ttCur+=h+gap;
       });
     }
@@ -3115,7 +3125,7 @@ async function downloadPDF(event) {
       var denomStr='/ '+(markVal||'?');
       // Left column: mark + denom stacked
       var leftPad=4, markNumH=MFS*0.3528, denomH=DFS*0.3528;
-      var leftColH=leftPad+markNumH+2+denomH+leftPad;
+      var leftColH=leftPad+markNumH+leftPad;
       // Fixed left column width based on longest possible mark string
       sf(true,MFS); var markW=doc.getTextWidth(markStr);
       sf(false,DFS); var denomW=doc.getTextWidth(denomStr);
@@ -3137,9 +3147,7 @@ async function downloadPDF(event) {
       var markCY=y+markTotH/2;
       doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
       doc.text(markStr,ML+(leftColW/2),markCY-denomH/2-1,{align:'center'});
-      // "/ N" denominator — smaller, below mark
-      doc.setFont('helvetica','normal');doc.setFontSize(DFS);doc.setTextColor(130,100,40);
-      doc.text(denomStr,ML+(leftColW/2),markCY+denomH+1,{align:'center'});
+      // denominator removed — mark range speaks for itself
 
       // Gold vertical divider
       doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
