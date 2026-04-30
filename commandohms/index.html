@@ -3028,13 +3028,15 @@ async function downloadPDF(event) {
     }
     y+=ctfTotH+3;
 
-    // ── 3. FOUR CARDS — same height, no empty space ───────────────────────
+    // ── 3. FOUR CARDS — all same height = tallest card's natural height ──────
     if(topCards.length){
       var n=Math.min(4,topCards.length);
       var cardW=(CW-(n-1)*FC_GAP)/n;
-      var maxH=0;
-      topCards.slice(0,n).forEach(function(c){ maxH=Math.max(maxH,cardH(cardW,c.text)); });
+      // Natural height of each card (no font shrinking yet)
+      var naturalHeights=topCards.slice(0,n).map(function(c){ return cardH(cardW,c.text); });
+      var maxH=Math.max.apply(null,naturalHeights);
       if(y+maxH>BOT) newPage();
+      // Draw each card: shorter cards get font shrunk to fill maxH exactly
       topCards.slice(0,n).forEach(function(c,i){
         drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text,maxH);
       });
@@ -3077,59 +3079,76 @@ async function downloadPDF(event) {
     var txY=keyBottomY+7;
     var ttY=txY; // Try This starts at same level
 
-    // Try This cards
-    ttCards.forEach(function(c){
-      var h=cardH(TT_W,c.text);
-      if(ttY+h<=BOT){ drawCard(ML,ttY,TT_W,c.cd,c.text,null); ttY+=h+2; }
-    });
-
-    // Annotated response
+    // Annotated response — draw first to know total height
+    var txStart=txY;
     wlines.forEach(function(wl){
       if(txY+RLA>BOT){ newPage(); txY=y; }
       txY+=RLA;
       drawLine(wl.items,txY);
       if(wl.pb) txY+=PG;
     });
+    var txEnd=txY;
+    var txTotalH=txEnd-txStart;
+
+    // Try This cards evenly spaced down the length of the annotated response
+    if(ttCards.length){
+      var totalCardH=0;
+      var cardHeights=ttCards.map(function(c){ var h=cardH(TT_W,c.text); totalCardH+=h; return h; });
+      var totalGap=txTotalH-totalCardH;
+      var gap=ttCards.length>1 ? totalGap/(ttCards.length+1) : (txTotalH-cardHeights[0])/2;
+      gap=Math.max(gap,2); // minimum 2mm gap
+      var ttCur=txStart+gap;
+      ttCards.forEach(function(c,i){
+        var h=cardHeights[i];
+        if(ttCur+h<=BOT){ drawCard(ML,ttCur,TT_W,c.cd,c.text,null); }
+        ttCur+=h+gap;
+      });
+    }
 
     y=Math.max(ttY,txY)+5;
 
-    // ── 5. MARK BAR — redesigned: dark bg, large gold mark left, rationale right ──
+    // ── 5. MARK BAR — mark large left, rationale right, no duplicate denom ──
     if(proj&&proj.mark){
-      var MFS=20;
+      var MFS=22;   // mark range font (large)
+      var DFS=10;   // "out of N" font (smaller than mark, bigger than body)
       var markStr=clean(proj.mark);
-      var denomStr='out of '+(markVal||'?');
-      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-42):[];
+      var denomStr='/ '+(markVal||'?');
+      // Left column: mark + denom stacked
+      var leftPad=4, markNumH=MFS*0.3528, denomH=DFS*0.3528;
+      var leftColH=leftPad+markNumH+2+denomH+leftPad;
+      // Fixed left column width based on longest possible mark string
+      sf(true,MFS); var markW=doc.getTextWidth(markStr);
+      sf(false,DFS); var denomW=doc.getTextWidth(denomStr);
+      var leftColW=Math.max(markW,denomW)+8; // 4mm padding each side
+      // Right column: label + rationale — strictly within margins
+      var rightX=ML+leftColW+4;
+      var ratW=PW-MR-rightX; // never exceeds right margin
+      var ratLines=proj.rat?splitW(proj.rat,BFS,ratW):[];
       var ratH=ratLines.length?lhCalc(ratLines.length,BLA):0;
-      var markPad=4;
-      // Height = enough for mark + denom on left, label + rationale on right
-      var leftH=markPad+MFS*0.3528+3+7*0.3528+markPad;
-      var rightH=markPad+5+ratH+markPad;
-      var markTotH=Math.max(20, leftH, rightH);
+      var rightColH=leftPad+5+2+ratH+leftPad;
+      var markTotH=Math.max(22, leftColH, rightColH);
       if(y+markTotH>BOT) newPage();
 
-      // Dark background full width
+      // Dark background
       doc.setFillColor(13,13,13);
       doc.rect(0,y,PW,markTotH,'F');
 
-      // Mark number — large, gold, left side
+      // Mark range — large gold, vertically centred in left col
       var markCY=y+markTotH/2;
       doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
-      doc.text(markStr,ML,markCY+MFS*0.3528*0.35,{align:'left'});
-      var markW=doc.getTextWidth(markStr);
-      // "out of N" below mark in smaller gold
-      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(150,120,50);
-      doc.text(denomStr,ML,markCY+MFS*0.3528*0.35+5,{align:'left'});
+      doc.text(markStr,ML+(leftColW/2),markCY-denomH/2-1,{align:'center'});
+      // "/ N" denominator — smaller, below mark
+      doc.setFont('helvetica','normal');doc.setFontSize(DFS);doc.setTextColor(130,100,40);
+      doc.text(denomStr,ML+(leftColW/2),markCY+denomH+1,{align:'center'});
 
-      // Thin gold vertical divider
-      var divX=ML+markW+8;
+      // Gold vertical divider
       doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
-      doc.line(divX,y+4,divX,y+markTotH-4);
+      doc.line(ML+leftColW,y+3,ML+leftColW,y+markTotH-3);
 
-      // Right side: ESTIMATED MARK label + rationale
-      var rightX=divX+4;
-      txt('ESTIMATED MARK',rightX,y+markPad+4.5*0.3528*0.82,4.5,true,[200,168,75]);
+      // Right: label + rationale
+      txt('ESTIMATED MARK',rightX,y+leftPad+4.5*0.3528*0.82,4.5,true,[200,168,75]);
       if(ratLines.length){
-        var rBase=y+markPad+6+BFS*0.3528*0.78;
+        var rBase=y+leftPad+6+BFS*0.3528*0.78;
         ratLines.forEach(function(ln,i){ txt(ln,rightX,rBase+i*BLA,BFS,false,[160,160,160]); });
       }
       y+=markTotH+2;
