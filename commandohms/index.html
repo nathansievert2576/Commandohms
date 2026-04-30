@@ -3079,44 +3079,38 @@ async function downloadPDF(event) {
     var txY=keyBottomY+7;
     var ttY=txY; // Try This starts at same level
 
-    // Annotated response — draw all lines, tracking page 1 bottom boundary
+    // Annotated response — draw all lines
     var txStart=txY;
-    var page1Bot=BOT; // bottom of usable area on page 1
-    var txPage1End=txStart; // how far text got on page 1 before overflow
-    var overflowed=false;
     wlines.forEach(function(wl){
-      if(txY+RLA>BOT){
-        if(!overflowed){ txPage1End=txY; overflowed=true; }
-        newPage(); txY=y;
-      }
+      if(txY+RLA>BOT){ newPage(); txY=y; }
       txY+=RLA;
       drawLine(wl.items,txY);
       if(wl.pb) txY+=PG;
     });
-    if(!overflowed) txPage1End=txY; // all text fit on page 1
 
-    // Try This cards: evenly distributed across page 1 text height only
-    // Cards sit in the left column alongside the response text
+    // Try This cards: spread evenly from txStart to BOT on page 1
+    // Use the full available height of page 1 (txStart → BOT) as the distribution zone
     if(ttCards.length){
       var cardHeights=ttCards.map(function(c){ return cardH(TT_W,c.text); });
       var totalCardH=cardHeights.reduce(function(a,b){return a+b;},0);
-      var availH=txPage1End-txStart; // height of text column on page 1
       var n=ttCards.length;
-      var gap=(availH-totalCardH)/(n+1);
-      gap=Math.max(gap,2); // minimum 2mm gap between cards
-      // If cards + gaps exceed available height, reduce gap to minimum
-      if(totalCardH+gap*(n+1)>availH) gap=Math.max((availH-totalCardH)/(n+1),1.5);
-      var ttCur=txStart+gap;
+      // Spread zone: from txStart to BOT (full page 1 column height)
+      var zoneH=BOT-txStart;
+      // Even distribution: place cards at positions that divide the zone into n+1 equal slots
+      // Position of card i = txStart + (i+1)/(n+1) * zoneH - cardH/2 (centred in its slot)
+      var slotH=zoneH/(n+1);
       ttCards.forEach(function(c,i){
         var h=cardHeights[i];
-        if(ttCur+h<=page1Bot){ // never render off the page
-          drawCard(ML,ttCur,TT_W,c.cd,c.text,null);
-        }
-        ttCur+=h+gap;
+        var slotCentreY=txStart+(i+1)*slotH;
+        var cardTop=slotCentreY-h/2;
+        // Clamp: never above txStart, never below BOT
+        cardTop=Math.max(cardTop,txStart+1);
+        cardTop=Math.min(cardTop,BOT-h-1);
+        drawCard(ML,cardTop,TT_W,c.cd,c.text,null);
       });
     }
 
-    y=Math.max(txPage1End,txY)+5;
+    y=txY+5;
 
     // ── 5. MARK BAR — mark large left, rationale right, no duplicate denom ──
     if(proj&&proj.mark){
