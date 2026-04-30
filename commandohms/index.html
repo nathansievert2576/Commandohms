@@ -3078,10 +3078,9 @@ async function downloadPDF(event) {
     doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
     doc.line(TX_X,keyBottomY+5,PW-MR,keyBottomY+5);
     var txY=keyBottomY+7;
-    var ttY=txY; // Try This starts at same level
+    var ttStart=txY; // Try This cards start at EXACTLY the same y as the annotated text
 
     // Annotated response — draw all lines
-    var txStart=txY;
     wlines.forEach(function(wl){
       if(txY+RLA>BOT){ newPage(); txY=y; }
       txY+=RLA;
@@ -3089,7 +3088,7 @@ async function downloadPDF(event) {
       if(wl.pb) txY+=PG;
     });
 
-    // Try This cards — stacked from sectionTop (right after 4 feedback cards)
+    // Try This cards — stacked from ttStart (top of annotated text column)
     if(ttCards.length){
       var ttCur=ttStart;
       ttCards.forEach(function(c){
