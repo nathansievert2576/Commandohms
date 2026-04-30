@@ -2949,7 +2949,8 @@ async function downloadPDF(event) {
     var txY=keyBottomY+7;
     var TT_START=txY; // <-- this is the definitive start for Try This cards
 
-    // ── STEP C: Draw Try This cards from TT_START downward ──
+    // ── STEP C: Draw Try This cards from TT_START downward, track end ──
+    var ttEnd=TT_START;
     if(ttCards.length){
       var ttCur=TT_START;
       ttCards.forEach(function(c){
@@ -2957,6 +2958,7 @@ async function downloadPDF(event) {
         if(ttCur+h<=BOT){
           drawCard(ML,ttCur,TT_W,c.cd,c.text,null);
           ttCur+=h+3;
+          ttEnd=ttCur;
         }
       });
     }
@@ -2969,7 +2971,8 @@ async function downloadPDF(event) {
       if(wl.pb)txY+=PG;
     });
 
-    y=txY+5;
+    // Mark bar starts after whichever column ended lower
+    y=Math.max(txY,ttEnd)+5;
 
     // 5. MARK BAR
     if(proj&&proj.mark){
