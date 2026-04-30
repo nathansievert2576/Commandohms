@@ -2657,27 +2657,25 @@ async function downloadPDF(event) {
     // ─── Page geometry ────────────────────────────────────────────────────
     var PW=210, PH=297, ML=6, MR=6, HDR=14, FTR=9;
     var TOP=HDR+4, BOT=PH-FTR-4;
-    var CW=PW-ML-MR;              // 198mm full content width
+    var CW=PW-ML-MR;
 
     // Two-column: Try This = 1/3, Text = 2/3
-    var TT_W=Math.floor(CW/3)-2;  // ~64mm
+    var TT_W=Math.floor(CW/3)-2;
     var TT_GAP=3;
-    var TX_W=CW-TT_W-TT_GAP;      // ~131mm
+    var TX_W=CW-TT_W-TT_GAP;
     var TX_X=ML+TT_W+TT_GAP;
-
-    // 4 card grid gaps
     var FC_GAP=1.5;
 
-    // ─── Typography (+2pt across the board, question +3pt) ────────────────
-    var QFS=10,  QLA=10*0.3528*1.35;   // question text (+3pt)
-    var CTF_FS=7, CTF_LA=7*0.3528*1.6; // CTF feedback text (+2pt)
-    var CFS=6.5, CLA=6.5*0.3528*1.5;   // card body text (+2pt)
-    var RFS=8,   RLA=8*0.3528*1.75;    // response text (+2pt)
-    var BFS=7,   BLA=7*0.3528*1.55;    // mark rationale (+2pt)
-    var HP=1.2;                         // highlight rect horizontal padding
+    // ─── Typography ───────────────────────────────────────────────────────
+    var QFS=10,  QLA=10*0.3528*1.35;
+    var CTF_FS=7, CTF_LA=7*0.3528*1.6;
+    var CFS=6.5, CLA=6.5*0.3528*1.5;
+    var RFS=8,   RLA=8*0.3528*1.75;
+    var BFS=7,   BLA=7*0.3528*1.55;
+    var HP=1.2;
     var HA=RFS*0.3528*0.80;
     var HHR=RFS*0.3528*1.15;
-    var PG=2.0;                         // paragraph gap
+    var PG=2.0;
 
     // ─── Colours ─────────────────────────────────────────────────────────
     var COLS={
@@ -2702,7 +2700,6 @@ async function downloadPDF(event) {
       trythis: { bg:[232,244,253], bar:[21,101,192], lb:[21,101,192], ti:'TRY THIS' }
     };
 
-    // ─── Page state ───────────────────────────────────────────────────────
     var pageNum=0, y=TOP;
 
     function drawPageFurniture(){
@@ -2728,7 +2725,6 @@ async function downloadPDF(event) {
       pageNum++; drawPageFurniture(); y=TOP;
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────
     function clean(s){
       if(!s) return '';
       s=String(s);
@@ -2747,21 +2743,30 @@ async function downloadPDF(event) {
     function splitW(t,fs,w){ sf(false,fs); return doc.splitTextToSize(clean(t),w); }
     function lhCalc(n,la){ return n>0?(n-1)*la+la*0.85:0; }
 
-    // ─── Draw feedback card, returns height ───────────────────────────────
-    function drawCard(cx,cy,cw,cd,text){
+    // ─── FIX 2: Cards all same height — pre-calculate max height across all 4 ─
+    // drawCard now accepts a forced height parameter
+    function drawCard(cx,cy,cw,cd,text,forcedH){
       var BAR=1.2, PAD_V=1.8, PAD_H=1.8;
       var iw=cw-BAR-PAD_H*2;
-      var tlines=splitW(text,CFS,iw);
+      // Shrink font until text fits in forcedH if needed
+      var fs=CFS;
+      var la=fs*0.3528*1.5;
       var labH=4;
-      var bodyH=lhCalc(tlines.length,CLA);
-      var totH=PAD_V+labH+bodyH+PAD_V;
+      var availH=forcedH-PAD_V*2-labH;
+      var tlines=splitW(text,fs,iw);
+      // If too tall, reduce font step by step
+      while(lhCalc(tlines.length,la)>availH&&fs>4){
+        fs-=0.5; la=fs*0.3528*1.5;
+        tlines=splitW(text,fs,iw);
+      }
+      var totH=forcedH||PAD_V+labH+lhCalc(tlines.length,la)+PAD_V;
       doc.setFillColor(cd.bg[0],cd.bg[1],cd.bg[2]);
       doc.roundedRect(cx,cy,cw,totH,1,1,'F');
       doc.setFillColor(cd.bar[0],cd.bar[1],cd.bar[2]);
       doc.rect(cx,cy,BAR,totH,'F');
       txt(cd.ti, cx+BAR+PAD_H, cy+PAD_V+4*0.3528*0.8, 4, true, cd.lb);
-      var by=cy+PAD_V+labH+CFS*0.3528*0.78;
-      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD_H, by+i*CLA, CFS, false, [60,60,60]); });
+      var by=cy+PAD_V+labH+fs*0.3528*0.78;
+      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD_H, by+i*la, fs, false, [60,60,60]); });
       return totH;
     }
     function cardH(cw,text){
@@ -2810,7 +2815,7 @@ async function downloadPDF(event) {
       return segs.filter(function(s){return s.t;});
     }
 
-    // ─── Line wrapper — wraps to TX_W ─────────────────────────────────────
+    // ─── Line wrapper ─────────────────────────────────────────────────────
     function wrapSegs(segs){
       var W=TX_W;
       var result=[],line=[],lineW=0;
@@ -2876,14 +2881,12 @@ async function downloadPDF(event) {
       return result;
     }
 
-    // ─── Draw one response line — clipped to TX_W ─────────────────────────
-    // FIX: rectW is capped to never exceed right boundary of TX column
+    // ─── Draw response line clipped to TX column ──────────────────────────
     function drawLine(items,atY){
       var dx=TX_X;
-      var rightEdge=TX_X+TX_W; // hard right boundary — nothing renders beyond this
+      var rightEdge=TX_X+TX_W;
       items.forEach(function(item){
-        if(!item.t) return;
-        if(dx>=rightEdge) return; // already at edge, stop
+        if(!item.t||dx>=rightEdge) return;
         var hl=!!(item.term&&COLS[item.term]);
         sf(hl?'bold':'normal',RFS);
         if(hl){
@@ -2891,13 +2894,11 @@ async function downloadPDF(event) {
           var wTr=doc.getTextWidth(tr);
           sf(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
           var c=COLS[item.term];
-          // Cap rect to never exceed rightEdge
           var rectW=Math.min(wTr+HP*2, rightEdge-dx);
           if(rectW>0){
             doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
             doc.roundedRect(dx,atY-HA,rectW,HHR,0.5,0.5,'F');
           }
-          // Only draw text if it fits
           if(dx+HP<rightEdge){
             sf(true,RFS); doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
             doc.text(clean(tr),dx+HP,atY,{align:'left'});
@@ -2909,12 +2910,12 @@ async function downloadPDF(event) {
           dx+=wTr+HP*2+wSp;
         } else if(item.ex){
           sf(false,RFS);
-          var w=Math.min(doc.getTextWidth(item.t), rightEdge-dx);
+          var w=doc.getTextWidth(item.t);
           doc.setTextColor(0,0,0);
           doc.text(clean(item.t),dx,atY,{align:'left'});
           doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
-          doc.line(dx,atY+0.5,Math.min(dx+doc.getTextWidth(item.t),rightEdge),atY+0.5);
-          dx+=doc.getTextWidth(item.t);
+          doc.line(dx,atY+0.5,Math.min(dx+w,rightEdge),atY+0.5);
+          dx+=w;
         } else {
           var w=doc.getTextWidth(item.t);
           doc.setTextColor(0,0,0);
@@ -2938,7 +2939,7 @@ async function downloadPDF(event) {
       return out;
     }
 
-    // ─── Read all data ────────────────────────────────────────────────────
+    // ─── Data ─────────────────────────────────────────────────────────────
     var question = document.getElementById('questionText').value.trim();
     var markVal  = document.getElementById('markValue').value.trim();
     var rawText  = lastText||'';
@@ -2957,21 +2958,19 @@ async function downloadPDF(event) {
       return{mark:m?m.innerText.trim():'',rat:r?r.innerText.trim():''};
     })();
 
-    // Card lists
     var topCards=[];
     www.slice(0,2).forEach(function(b){ topCards.push({cd:CARD.strength,text:b}); });
     aif.slice(0,2).forEach(function(b){ topCards.push({cd:CARD.develop, text:b}); });
     var ttCards=ns.map(function(b){ return {cd:CARD.trythis,text:b}; });
 
     // ═════════════════════════════════════════════════════════════════════
-    // RENDER — single Y cursor, strictly sequential
+    // RENDER
     // ═════════════════════════════════════════════════════════════════════
     newPage();
 
     // ── 1. QUESTION ───────────────────────────────────────────────────────
     var qLines=question?splitW(question,QFS,CW-5):[];
-    var qLabelH=4;
-    var qBodyH=qLines.length?lhCalc(qLines.length,QLA)+1:0;
+    var qLabelH=4, qBodyH=qLines.length?lhCalc(qLines.length,QLA)+1:0;
     var qTotH=qLabelH+qBodyH+3;
     doc.setFillColor(247,247,247);
     doc.rect(ML,y,CW,qTotH,'F');
@@ -2984,141 +2983,153 @@ async function downloadPDF(event) {
     }
     y+=qTotH+2;
 
-    // ── 2. CTF STRIP ─────────────────────────────────────────────────────
+    // ── 2. CTF STRIP — FIX: tight height, no divider overlap ─────────────
     var ctfText=ctf.length?ctf.join(' '):'';
-    var ctfLeftW=18, ctfGap=3;
+    var ctfLeftW=20, ctfGap=4;
     var ctfTxtW=CW-ctfLeftW-ctfGap-2;
     var ctfLines=ctfText?splitW(ctfText,CTF_FS,ctfTxtW):[];
-    var ctfBodyH=ctfLines.length?lhCalc(ctfLines.length,CTF_LA)+1:0;
-    var ctfTotH=Math.max(11, 3+6+ctfBodyH+3);
+    // Calculate left column height (label + term)
+    var ctfLabelH=3.5, ctfTermFS=10;
+    var ctfLeftColH=ctfLabelH+1.5+ctfTermFS*0.3528;
+    // Calculate right column height (text only)
+    var ctfRightColH=ctfLines.length?lhCalc(ctfLines.length,CTF_LA):0;
+    // Height = whichever column is taller + equal top/bottom padding
+    var ctfPad=2.5;
+    var ctfTotH=Math.max(ctfLeftColH, ctfRightColH)+ctfPad*2;
     doc.setFillColor(200,168,75);
     doc.rect(0,y,PW,ctfTotH,'F');
-    txt('COMMAND TERM',ML,y+3+4*0.3528*0.8,4,true,[0,0,0]);
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(13,13,13);
-    doc.text(clean(ptm?ptm.toUpperCase():''),ML,y+3+5+10*0.3528*0.85,{align:'left'});
-    doc.setDrawColor(80,60,0);doc.setLineWidth(0.25);
+    // Left: label + term, vertically centred
+    var ctfMidY=y+ctfTotH/2;
+    txt('COMMAND TERM',ML,ctfMidY-ctfTermFS*0.3528*0.6,3.5,true,[0,0,0]);
+    doc.setFont('helvetica','bold');doc.setFontSize(ctfTermFS);doc.setTextColor(13,13,13);
+    doc.text(clean(ptm?ptm.toUpperCase():''),ML,ctfMidY+ctfTermFS*0.3528*0.55,{align:'left'});
+    // Divider — spans full height of box
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.25);doc.setGState(new doc.GState({opacity:0.2}));
     doc.line(ML+ctfLeftW,y+2,ML+ctfLeftW,y+ctfTotH-2);
+    doc.setGState(new doc.GState({opacity:1.0}));
+    // Right: feedback text, vertically centred
     if(ctfLines.length){
-      var ctfBase=y+3+CTF_FS*0.3528*0.78;
+      var ctfTextBlockH=lhCalc(ctfLines.length,CTF_LA);
+      var ctfTextStartY=y+(ctfTotH-ctfTextBlockH)/2+CTF_FS*0.3528*0.78;
       ctfLines.forEach(function(ln,i){
-        txt(ln,ML+ctfLeftW+ctfGap,ctfBase+i*CTF_LA,CTF_FS,false,[13,13,13]);
+        txt(ln,ML+ctfLeftW+ctfGap,ctfTextStartY+i*CTF_LA,CTF_FS,false,[13,13,13]);
       });
     }
     y+=ctfTotH+3;
 
-    // ── 3. FOUR CARDS ────────────────────────────────────────────────────
+    // ── 3. FOUR CARDS — FIX: all same height (max of all 4) ──────────────
     if(topCards.length){
       var n=Math.min(4,topCards.length);
       var cardW=(CW-(n-1)*FC_GAP)/n;
+      // Pre-calculate max height across all cards
       var maxH=0;
       topCards.slice(0,n).forEach(function(c){ maxH=Math.max(maxH,cardH(cardW,c.text)); });
       if(y+maxH>BOT) newPage();
+      // Draw all cards at the same forced height
       topCards.slice(0,n).forEach(function(c,i){
-        drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text);
+        drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text,maxH);
       });
       y+=maxH+3;
     }
 
     // ── 4. TWO COLUMNS: Try This (1/3) | Key + Response (2/3) ────────────
+    // FIX: Remove "Try This" header. Both columns start at the same Y.
     var sectionTop=y;
 
-    // Column headers
-    txt('TRY THIS',ML,sectionTop+3.5,4,true,[187,187,187]);
-    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
-    doc.line(ML,sectionTop+4,ML+TT_W,sectionTop+4);
-
-    // Colour key in right column
-    sf(true,4); doc.setTextColor(153,153,153);
-    doc.text('Key:',TX_X,sectionTop+3.5,{align:'left'});
-    var kx=TX_X+gw('Key:',true,4)+1.5, ky=sectionTop+0.5;
+    // ── Right column: colour key ──────────────────────────────────────────
+    // All rows start at TX_X — no offset for "Key:" label, consistent left edge
+    var kx=TX_X, ky=sectionTop+3.5;
     Object.keys(COLS).forEach(function(term){
       var c=COLS[term];
       sf(true,4); var kw=doc.getTextWidth(cap(term))+3;
-      if(kx+kw>PW-MR){ kx=TX_X; ky+=5; }
+      if(kx+kw>PW-MR){ kx=TX_X; ky+=5; } // wrap to TX_X — same start point every row
       doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
       doc.roundedRect(kx,ky-2.8,kw,4,0.8,0.8,'F');
       doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
       doc.text(cap(term),kx+1.5,ky,{align:'left'});
       kx+=kw+1.2;
     });
-    sf(false,4); var exw=doc.getTextWidth('Example')+3;
+    // Example pill: white background, black bold text, solid black underline
+    sf(true,4); var exw=doc.getTextWidth('Example')+3;
     if(kx+exw>PW-MR){ kx=TX_X; ky+=5; }
-    doc.setFillColor(245,242,235);
-    doc.roundedRect(kx,ky-2.8,exw,4,0.8,0.8,'F');
-    doc.setTextColor(107,80,50); doc.text('Example',kx+1.5,ky,{align:'left'});
-    var keyBottomY=ky+2.5;
+    doc.setFillColor(255,255,255);
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+    doc.roundedRect(kx,ky-2.8,exw,4,0.8,0.8,'FD');
+    doc.setTextColor(0,0,0);
+    doc.text('Example',kx+1.5,ky,{align:'left'});
+    // Bold underline under the text
+    var exTxtW=doc.getTextWidth('Example');
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);
+    doc.line(kx+1.5,ky+0.7,kx+1.5+exTxtW,ky+0.7);
+    var keyBottomY=ky+2.8;
 
     // Annotated response header
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.2);
+    doc.line(TX_X,keyBottomY+1,PW-MR,keyBottomY+1);
+    txt('ANNOTATED RESPONSE',TX_X,keyBottomY+4.5,4,true,[187,187,187]);
     doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
-    doc.line(TX_X,keyBottomY+0.5,PW-MR,keyBottomY+0.5);
-    txt('ANNOTATED RESPONSE',TX_X,keyBottomY+4,4,true,[187,187,187]);
-    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
-    doc.line(TX_X,keyBottomY+4.5,PW-MR,keyBottomY+4.5);
+    doc.line(TX_X,keyBottomY+5,PW-MR,keyBottomY+5);
+    var txY=keyBottomY+7;
 
-    // Independent column cursors
-    var ttY=sectionTop+5;
-    var txY=keyBottomY+6;
+    // Try This column starts at same Y as annotated response text
+    var ttY=txY;
 
     // Draw Try This cards
     ttCards.forEach(function(c){
       var h=cardH(TT_W,c.text);
       if(ttY+h<=BOT){
-        drawCard(ML,ttY,TT_W,c.cd,c.text);
+        drawCard(ML,ttY,TT_W,c.cd,c.text,null);
         ttY+=h+2;
       }
     });
 
-    // Draw annotated response text
+    // Draw annotated response
     wlines.forEach(function(wl){
-      if(txY+RLA>BOT){
-        newPage();
-        txY=y;
-      }
+      if(txY+RLA>BOT){ newPage(); txY=y; }
       txY+=RLA;
       drawLine(wl.items,txY);
       if(wl.pb) txY+=PG;
     });
 
-    // Advance y past both columns
     y=Math.max(ttY,txY)+5;
 
-    // ── 5. MARK BAR ───────────────────────────────────────────────────────
-    // FIX: calculate full height before drawing so nothing overlaps
+    // ── 5. MARK BAR — FIX: redesigned, no overlap ────────────────────────
+    // New design: left side = gold accent panel with mark, right = dark with rationale
     if(proj&&proj.mark){
-      var MFS=18;
+      var MFS=22;
       var markStr=clean(proj.mark);
-      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-32):[];
+      var denomStr='/ '+(markVal||'?');
+      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-38):[];
       var ratH=ratLines.length?lhCalc(ratLines.length,BLA):0;
-      // Total height: top padding + mark number + small gap + rationale + bottom padding
-      var markTotH=4 + MFS*0.3528*1.0 + (ratLines.length?2+ratH:0) + 4;
-      markTotH=Math.max(14, markTotH);
+      // Height driven by rationale text + padding
+      var markPad=4;
+      var markTotH=Math.max(18, markPad+MFS*0.3528+markPad, markPad+5+ratH+markPad);
       if(y+markTotH>BOT) newPage();
 
+      // Full width dark background
       doc.setFillColor(13,13,13);
       doc.rect(0,y,PW,markTotH,'F');
 
-      // Mark number — positioned cleanly at top of bar
-      var markNumY=y+4+MFS*0.3528*0.88;
-      doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
-      doc.text(markStr,ML,markNumY,{align:'left'});
+      // Left gold accent panel
+      var accentW=34;
+      doc.setFillColor(200,168,75);
+      doc.rect(0,y,accentW,markTotH,'F');
 
-      // Denominator beside mark
-      var mw=doc.getTextWidth(markStr);
-      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(80,80,80);
-      doc.text('/ '+(markVal||'?'),ML+mw+2,markNumY,{align:'left'});
+      // Mark number centred vertically in gold panel
+      var markCY=y+markTotH/2;
+      doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(13,13,13);
+      doc.text(markStr,accentW/2,markCY+MFS*0.3528*0.38,{align:'center'});
 
-      // Vertical divider
-      var divX=ML+30;
-      doc.setDrawColor(50,50,50);doc.setLineWidth(0.3);
-      doc.line(divX,y+3,divX,y+markTotH-3);
+      // Denominator below mark number
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0,0,0);
+      doc.text(denomStr,accentW/2,markCY+MFS*0.3528*0.38+6,{align:'center'});
 
-      // Label — sits at top of right side
-      txt('ESTIMATED MARK',divX+3,y+4+4*0.3528*0.8,4,true,[200,168,75]);
-
-      // Rationale — sits below label with a small gap
+      // Right side: label + rationale
+      var rightX=accentW+4;
+      txt('ESTIMATED MARK',rightX,y+markPad+4*0.3528*0.8,4,true,[200,168,75]);
       if(ratLines.length){
-        var rBase=y+4+5.5+BFS*0.3528*0.78;
-        ratLines.forEach(function(ln,i){ txt(ln,divX+3,rBase+i*BLA,BFS,false,[150,150,150]); });
+        var rBase=y+markPad+5+BFS*0.3528*0.78;
+        ratLines.forEach(function(ln,i){ txt(ln,rightX,rBase+i*BLA,BFS,false,[160,160,160]); });
       }
       y+=markTotH;
     }
