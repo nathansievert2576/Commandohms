@@ -2654,58 +2654,39 @@ async function downloadPDF(event) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    // ─── Page geometry ────────────────────────────────────────────────────
-    var PW=210, PH=297, ML=6, MR=6, HDR=14, FTR=12;
-    var TOP=HDR+4, BOT=PH-FTR-2;
+    var PW=210,PH=297,ML=6,MR=6,HDR=14,FTR=12;
+    var TOP=HDR+4,BOT=PH-FTR-2;
     var CW=PW-ML-MR;
-
-    // Two-column: Try This = 1/3, Text = 2/3
-    var TT_W=Math.floor(CW/3)-2;
-    var TT_GAP=3;
-    var TX_W=CW-TT_W-TT_GAP;
-    var TX_X=ML+TT_W+TT_GAP;
+    var TT_W=Math.floor(CW/3)-2, TT_GAP=3;
+    var TX_W=CW-TT_W-TT_GAP, TX_X=ML+TT_W+TT_GAP;
     var FC_GAP=1.5;
+    var QFS=10,QLA=10*0.3528*1.35;
+    var CTF_FS=7,CTF_LA=7*0.3528*1.6;
+    var CFS=6.5,CLA=6.5*0.3528*1.5;
+    var RFS=8,RLA=8*0.3528*1.75;
+    var BFS=7,BLA=7*0.3528*1.55;
+    var HP=1.2,HA=RFS*0.3528*0.80,HHR=RFS*0.3528*1.15,PG=2.0;
 
-    // ─── Typography ───────────────────────────────────────────────────────
-    var QFS=10,  QLA=10*0.3528*1.35;
-    var CTF_FS=7, CTF_LA=7*0.3528*1.6;
-    var CFS=6.5, CLA=6.5*0.3528*1.5;  // card body — same as response text
-    var RFS=8,   RLA=8*0.3528*1.75;   // response text
-    var BFS=7,   BLA=7*0.3528*1.55;   // mark rationale
-    var HP=1.2;
-    var HA=RFS*0.3528*0.80;
-    var HHR=RFS*0.3528*1.15;
-    var PG=2.0;
-
-    // ─── Colours ─────────────────────────────────────────────────────────
     var COLS={
-      identify:    {bg:[255,209,102],fg:[13,13,13]},
-      outline:     {bg:[82,214,138], fg:[13,13,13]},
-      describe:    {bg:[91,200,245], fg:[13,13,13]},
-      explain:     {bg:[240,128,80], fg:[13,13,13]},
-      apply:       {bg:[132,169,140],fg:[13,13,13]},
-      compare:     {bg:[66,212,200], fg:[13,13,13]},
-      contrast:    {bg:[6,214,160],  fg:[13,13,13]},
-      examine:     {bg:[168,216,72], fg:[13,13,13]},
-      analyse:     {bg:[181,124,247],fg:[255,255,255]},
-      investigate: {bg:[155,93,229], fg:[255,255,255]},
-      justify:     {bg:[255,154,60], fg:[13,13,13]},
-      discuss:     {bg:[247,111,168],fg:[255,255,255]},
-      assess:      {bg:[224,64,251], fg:[255,255,255]},
-      evaluate:    {bg:[232,69,69],  fg:[255,255,255]}
+      identify:{bg:[255,209,102],fg:[13,13,13]},outline:{bg:[82,214,138],fg:[13,13,13]},
+      describe:{bg:[91,200,245],fg:[13,13,13]},explain:{bg:[240,128,80],fg:[13,13,13]},
+      apply:{bg:[132,169,140],fg:[13,13,13]},compare:{bg:[66,212,200],fg:[13,13,13]},
+      contrast:{bg:[6,214,160],fg:[13,13,13]},examine:{bg:[168,216,72],fg:[13,13,13]},
+      analyse:{bg:[181,124,247],fg:[255,255,255]},investigate:{bg:[155,93,229],fg:[255,255,255]},
+      justify:{bg:[255,154,60],fg:[13,13,13]},discuss:{bg:[247,111,168],fg:[255,255,255]},
+      assess:{bg:[224,64,251],fg:[255,255,255]},evaluate:{bg:[232,69,69],fg:[255,255,255]}
     };
     var CARD={
-      strength:{ bg:[241,248,241], bar:[46,125,50],  lb:[46,125,50],  ti:'STRENGTH' },
-      develop: { bg:[255,253,231], bar:[255,193,7],  lb:[122,78,0],   ti:'DEVELOP'  },
-      trythis: { bg:[232,244,253], bar:[21,101,192], lb:[21,101,192], ti:'TRY THIS' }
+      strength:{bg:[241,248,241],bar:[46,125,50],lb:[46,125,50],ti:'STRENGTH'},
+      develop:{bg:[255,253,231],bar:[255,193,7],lb:[122,78,0],ti:'DEVELOP'},
+      trythis:{bg:[232,244,253],bar:[21,101,192],lb:[21,101,192],ti:'TRY THIS'}
     };
 
-    var pageNum=0, y=TOP;
+    var pageNum=0,y=TOP;
 
     function drawPageFurniture(){
-      // Header
-      doc.setFillColor(13,13,13); doc.rect(0,0,PW,HDR,'F');
-      doc.setFillColor(200,168,75); doc.rect(0,HDR-1,PW,1,'F');
+      doc.setFillColor(13,13,13);doc.rect(0,0,PW,HDR,'F');
+      doc.setFillColor(200,168,75);doc.rect(0,HDR-1,PW,1,'F');
       var logo=document.querySelector('.nav-logo img');
       if(logo&&logo.src&&logo.src.startsWith('data:')){
         var lh=7,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,48);
@@ -2716,94 +2697,72 @@ async function downloadPDF(event) {
       var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
       doc.text(sn+' \xb7 Response Analysis',PW/2,HDR/2+1,{align:'center'});
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,HDR/2+1,{align:'right'});
-      // Footer — AI disclaimer + copyright
-      doc.setFillColor(17,17,17); doc.rect(0,PH-FTR,PW,FTR,'F');
+      doc.setFillColor(17,17,17);doc.rect(0,PH-FTR,PW,FTR,'F');
       doc.setFont('helvetica','italic');doc.setFontSize(4.5);doc.setTextColor(120,120,110);
       doc.text('AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.',PW/2,PH-FTR+4,{align:'center',maxWidth:PW-20});
       doc.setFont('helvetica','normal');doc.setFontSize(4.5);doc.setTextColor(200,168,75);
       doc.text('CommandoHSC \xa9 2026',PW/2,PH-2.5,{align:'center'});
     }
 
-    function newPage(){
-      if(pageNum>0) doc.addPage();
-      pageNum++; drawPageFurniture(); y=TOP;
-    }
+    function newPage(){if(pageNum>0)doc.addPage();pageNum++;drawPageFurniture();y=TOP;}
 
     function clean(s){
-      if(!s) return '';
-      s=String(s);
+      if(!s)return'';s=String(s);
       s=s.replace(/\u00d7/g,'x').replace(/\u2013/g,'-').replace(/\u2014/g,'--');
-      s=s.replace(/\u2018/g,"'").replace(/\u2019/g,"'");
-      s=s.replace(/\u201c/g,'"').replace(/\u201d/g,'"');
-      s=s.replace(/[^\u0000-\u007E]/g,'');
-      return s;
+      s=s.replace(/\u2018/g,"'").replace(/\u2019/g,"'").replace(/\u201c/g,'"').replace(/\u201d/g,'"');
+      s=s.replace(/[^\u0000-\u007E]/g,'');return s;
     }
-    function sf(bold,fs){ doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(fs); }
-    function gw(t,bold,fs){ sf(bold,fs); return doc.getTextWidth(t); }
-    function txt(t,x,yy,fs,bold,rgb){
-      sf(bold,fs); doc.setTextColor(rgb[0],rgb[1],rgb[2]);
-      doc.text(clean(String(t)),x,yy,{align:'left'});
-    }
-    function splitW(t,fs,w){ sf(false,fs); return doc.splitTextToSize(clean(t),w); }
-    function lhCalc(n,la){ return n>0?(n-1)*la+la*0.85:0; }
+    function sf(bold,fs){doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(fs);}
+    function gw(t,bold,fs){sf(bold,fs);return doc.getTextWidth(t);}
+    function txt(t,x,yy,fs,bold,rgb){sf(bold,fs);doc.setTextColor(rgb[0],rgb[1],rgb[2]);doc.text(clean(String(t)),x,yy,{align:'left'});}
+    function splitW(t,fs,w){sf(false,fs);return doc.splitTextToSize(clean(t),w);}
+    function lhCalc(n,la){return n>0?(n-1)*la+la*0.85:0;}
 
-    // ─── Draw card at forced height, shrink font to fit ───────────────────
     function drawCard(cx,cy,cw,cd,text,forcedH){
-      var BAR=1.2, PAD_V=1.8, PAD_H=1.8;
+      var BAR=1.2,PAD_V=1.8,PAD_H=1.8,labH=4.5;
       var iw=cw-BAR-PAD_H*2;
-      var labH=4.5;
-      var fs=CFS, la=fs*0.3528*1.5;
+      var fs=CFS,la=fs*0.3528*1.5;
+      var tlines=splitW(text,fs,iw);
       if(forcedH){
         var availH=forcedH-PAD_V*2-labH;
-        var tlines=splitW(text,fs,iw);
-        while(lhCalc(tlines.length,la)>availH&&fs>4){
-          fs-=0.5; la=fs*0.3528*1.5;
-          tlines=splitW(text,fs,iw);
-        }
-        var totH=forcedH;
-      } else {
-        var tlines=splitW(text,fs,iw);
-        var totH=PAD_V+labH+lhCalc(tlines.length,la)+PAD_V;
+        while(lhCalc(tlines.length,la)>availH&&fs>4){fs-=0.5;la=fs*0.3528*1.5;tlines=splitW(text,fs,iw);}
       }
-      doc.setFillColor(cd.bg[0],cd.bg[1],cd.bg[2]);
-      doc.roundedRect(cx,cy,cw,totH,1,1,'F');
-      doc.setFillColor(cd.bar[0],cd.bar[1],cd.bar[2]);
-      doc.rect(cx,cy,BAR,totH,'F');
-      txt(cd.ti, cx+BAR+PAD_H, cy+PAD_V+4.5*0.3528*0.82, 4.5, true, cd.lb);
+      var totH=forcedH||(PAD_V+labH+lhCalc(tlines.length,la)+PAD_V);
+      doc.setFillColor(cd.bg[0],cd.bg[1],cd.bg[2]);doc.roundedRect(cx,cy,cw,totH,1,1,'F');
+      doc.setFillColor(cd.bar[0],cd.bar[1],cd.bar[2]);doc.rect(cx,cy,BAR,totH,'F');
+      txt(cd.ti,cx+BAR+PAD_H,cy+PAD_V+4.5*0.3528*0.82,4.5,true,cd.lb);
       var by=cy+PAD_V+labH+fs*0.3528*0.78;
-      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD_H, by+i*la, fs, false, [50,50,50]); });
+      tlines.forEach(function(ln,i){txt(ln,cx+BAR+PAD_H,by+i*la,fs,false,[50,50,50]);});
       return totH;
     }
     function cardH(cw,text){
-      var BAR=1.2, PAD_V=1.8, PAD_H=1.8;
+      var BAR=1.2,PAD_V=1.8,PAD_H=1.8,labH=4.5;
       var tlines=splitW(text,CFS,cw-BAR-PAD_H*2);
-      return PAD_V+4.5+lhCalc(tlines.length,CLA)+PAD_V;
+      return PAD_V+labH+lhCalc(tlines.length,CLA)+PAD_V;
     }
 
-    // ─── Segment builder ─────────────────────────────────────────────────
     function buildSegs(fullText,annotations){
       var cmdAnns=annotations.filter(function(a){return a.term!=='example';});
-      var exAnns =annotations.filter(function(a){return a.term==='example';});
+      var exAnns=annotations.filter(function(a){return a.term==='example';});
       var cmdRanges=[];
       cmdAnns.forEach(function(a){
-        var idx=fullText.indexOf(a.text); if(idx===-1) return;
+        var idx=fullText.indexOf(a.text);if(idx===-1)return;
         var end=idx+a.text.length;
-        if(cmdRanges.some(function(r){return !(end<=r.s||idx>=r.e);})) return;
+        if(cmdRanges.some(function(r){return!(end<=r.s||idx>=r.e);}))return;
         cmdRanges.push({s:idx,e:end,term:a.term});
       });
       cmdRanges.sort(function(a,b){return a.s-b.s;});
       var exRanges=[];
       exAnns.forEach(function(a){
         var re=new RegExp(a.text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
-        var m=re.exec(fullText); if(m) exRanges.push({s:m.index,e:m.index+m[0].length});
+        var m=re.exec(fullText);if(m)exRanges.push({s:m.index,e:m.index+m[0].length});
       });
       var segs=[],cur=0,raw=[];
       cmdRanges.forEach(function(r){
-        if(r.s>cur) raw.push({t:fullText.slice(cur,r.s),term:null,ss:cur});
-        raw.push({t:fullText.slice(r.s,r.e),term:r.term,ss:r.s});
-        cur=r.e;
+        if(r.s>cur)raw.push({t:fullText.slice(cur,r.s),term:null,ss:cur});
+        raw.push({t:fullText.slice(r.s,r.e),term:r.term,ss:r.s});cur=r.e;
       });
-      if(cur<fullText.length) raw.push({t:fullText.slice(cur),term:null,ss:cur});
+      if(cur<fullText.length)raw.push({t:fullText.slice(cur),term:null,ss:cur});
       raw.forEach(function(seg){
         var ss=seg.ss;
         var lEx=exRanges.filter(function(e){return e.s<ss+seg.t.length&&e.e>ss;});
@@ -2811,125 +2770,82 @@ async function downloadPDF(event) {
         var p=0;
         lEx.forEach(function(ex){
           var ls=Math.max(0,ex.s-ss),le=Math.min(seg.t.length,ex.e-ss);
-          if(ls>p) segs.push({t:seg.t.slice(p,ls),term:seg.term,ex:false});
-          if(le>ls) segs.push({t:seg.t.slice(ls,le),term:seg.term,ex:true});
+          if(ls>p)segs.push({t:seg.t.slice(p,ls),term:seg.term,ex:false});
+          if(le>ls)segs.push({t:seg.t.slice(ls,le),term:seg.term,ex:true});
           p=le;
         });
-        if(p<seg.t.length) segs.push({t:seg.t.slice(p),term:seg.term,ex:false});
+        if(p<seg.t.length)segs.push({t:seg.t.slice(p),term:seg.term,ex:false});
       });
       return segs.filter(function(s){return s.t;});
     }
 
-    // ─── Line wrapper ─────────────────────────────────────────────────────
     function wrapSegs(segs){
-      var W=TX_W;
-      var result=[],line=[],lineW=0;
-      function gW(t,bold){ return gw(t,bold,RFS); }
-      function flush(pb){
-        if(line.length) result.push({items:line.slice(),pb:!!pb});
-        line=[];lineW=0;
-      }
+      var W=TX_W,result=[],line=[],lineW=0;
+      function gW(t,bold){return gw(t,bold,RFS);}
+      function flush(pb){if(line.length)result.push({items:line.slice(),pb:!!pb});line=[];lineW=0;}
       function tokens(text){
         var out=[];
         (text.match(/\S+\s*/g)||[]).forEach(function(word){
           var trail=(word.match(/\s+$/)||[''])[0];
           var core=word.slice(0,word.length-trail.length);
           if(core.indexOf('-')>0&&core.indexOf('-')<core.length-1){
-            core.split('-').forEach(function(p,i,arr){
-              out.push(i<arr.length-1?p+'-':p+trail);
-            });
-          } else { out.push(word); }
+            core.split('-').forEach(function(p,i,arr){out.push(i<arr.length-1?p+'-':p+trail);});
+          }else{out.push(word);}
         });
         return out;
       }
       segs.forEach(function(seg){
-        if(!seg.t) return;
+        if(!seg.t)return;
         var hl=!!(seg.term&&COLS[seg.term]);
         if(!hl&&seg.t.indexOf('\n')!==-1){
           seg.t.split('\n').forEach(function(part,pi){
-            if(pi>0) flush(true);
-            if(!part) return;
-            tokens(part).forEach(function(tok){
-              var w=gW(tok,false);
-              if(lineW+w>W&&line.length) flush(false);
-              line.push({t:tok,term:null,ex:seg.ex}); lineW+=w;
-            });
+            if(pi>0)flush(true);if(!part)return;
+            tokens(part).forEach(function(tok){var w=gW(tok,false);if(lineW+w>W&&line.length)flush(false);line.push({t:tok,term:null,ex:seg.ex});lineW+=w;});
           });
           return;
         }
         if(hl){
-          function runRenderedW(runText){
-            var tr=runText.trimEnd(), trail=runText.slice(tr.length);
-            return gW(tr,true)+HP*2+(trail?gW(trail,false):0);
-          }
-          var toks=tokens(seg.t), run='', runW=0;
+          function runW(rt){var tr=rt.trimEnd(),trail=rt.slice(tr.length);return gW(tr,true)+HP*2+(trail?gW(trail,false):0);}
+          var toks=tokens(seg.t),run='',rW=0;
           toks.forEach(function(tok){
-            var nW=runRenderedW(run+tok);
-            if(run!==''&&lineW+nW>W){
-              line.push({t:run,term:seg.term,ex:seg.ex}); lineW+=runW; flush(false);
-              run=tok; runW=runRenderedW(tok);
-            } else { run+=tok; runW=nW; }
+            var nW=runW(run+tok);
+            if(run!==''&&lineW+nW>W){line.push({t:run,term:seg.term,ex:seg.ex});lineW+=rW;flush(false);run=tok;rW=runW(tok);}
+            else{run+=tok;rW=nW;}
           });
-          if(run!==''){
-            if(lineW+runW>W&&line.length) flush(false);
-            line.push({t:run,term:seg.term,ex:seg.ex}); lineW+=runW;
-          }
-        } else {
-          tokens(seg.t).forEach(function(tok){
-            var w=gW(tok,false);
-            if(lineW+w>W&&line.length) flush(false);
-            line.push({t:tok,term:null,ex:seg.ex}); lineW+=w;
-          });
+          if(run!==''){if(lineW+rW>W&&line.length)flush(false);line.push({t:run,term:seg.term,ex:seg.ex});lineW+=rW;}
+        }else{
+          tokens(seg.t).forEach(function(tok){var w=gW(tok,false);if(lineW+w>W&&line.length)flush(false);line.push({t:tok,term:null,ex:seg.ex});lineW+=w;});
         }
       });
-      flush(false);
-      return result;
+      flush(false);return result;
     }
 
-    // ─── Draw response line ───────────────────────────────────────────────
     function drawLine(items,atY){
-      var dx=TX_X, rightEdge=TX_X+TX_W;
+      var dx=TX_X,rightEdge=TX_X+TX_W;
       items.forEach(function(item){
-        if(!item.t||dx>=rightEdge) return;
+        if(!item.t||dx>=rightEdge)return;
         var hl=!!(item.term&&COLS[item.term]);
         sf(hl?'bold':'normal',RFS);
         if(hl){
-          var tr=item.t.trimEnd(), trail=item.t.slice(tr.length);
-          var wTr=doc.getTextWidth(tr);
-          sf(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
-          var c=COLS[item.term];
-          var rectW=Math.min(wTr+HP*2, rightEdge-dx);
-          if(rectW>0){
-            doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-            doc.roundedRect(dx,atY-HA,rectW,HHR,0.5,0.5,'F');
-          }
-          if(dx+HP<rightEdge){
-            sf(true,RFS); doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
-            doc.text(clean(tr),dx+HP,atY,{align:'left'});
-          }
-          if(item.ex&&dx+HP<rightEdge){
-            doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.3);
-            doc.line(dx+HP,atY+0.5,Math.min(dx+HP+wTr,rightEdge),atY+0.5);
-          }
+          var tr=item.t.trimEnd(),trail=item.t.slice(tr.length);
+          var wTr=doc.getTextWidth(tr);sf(false,RFS);var wSp=trail?doc.getTextWidth(trail):0;
+          var c=COLS[item.term],rectW=Math.min(wTr+HP*2,rightEdge-dx);
+          if(rectW>0){doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);doc.roundedRect(dx,atY-HA,rectW,HHR,0.5,0.5,'F');}
+          if(dx+HP<rightEdge){sf(true,RFS);doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);doc.text(clean(tr),dx+HP,atY,{align:'left'});}
+          if(item.ex&&dx+HP<rightEdge){doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.3);doc.line(dx+HP,atY+0.5,Math.min(dx+HP+wTr,rightEdge),atY+0.5);}
           dx+=wTr+HP*2+wSp;
-        } else if(item.ex){
-          sf(false,RFS);
-          var w=doc.getTextWidth(item.t);
-          doc.setTextColor(0,0,0); doc.text(clean(item.t),dx,atY,{align:'left'});
-          doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
-          doc.line(dx,atY+0.5,Math.min(dx+w,rightEdge),atY+0.5);
-          dx+=w;
-        } else {
-          var w=doc.getTextWidth(item.t);
-          doc.setTextColor(0,0,0); doc.text(clean(item.t),dx,atY,{align:'left'});
-          dx+=w;
+        }else if(item.ex){
+          sf(false,RFS);var w=doc.getTextWidth(item.t);
+          doc.setTextColor(0,0,0);doc.text(clean(item.t),dx,atY,{align:'left'});
+          doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);doc.line(dx,atY+0.5,Math.min(dx+w,rightEdge),atY+0.5);dx+=w;
+        }else{
+          var w=doc.getTextWidth(item.t);doc.setTextColor(0,0,0);doc.text(clean(item.t),dx,atY,{align:'left'});dx+=w;
         }
       });
     }
 
-    // ─── Parse feedback ───────────────────────────────────────────────────
     function parseFB(){
-      var box=document.getElementById('feedbackBox'); if(!box) return {};
+      var box=document.getElementById('feedbackBox');if(!box)return{};
       var HEADS=['What Went Well','Areas for Improvement','Command Term Focus','Next Steps'];
       var out={},cur=null;
       box.innerText.split('\n').forEach(function(line){
@@ -2941,18 +2857,18 @@ async function downloadPDF(event) {
       return out;
     }
 
-    // ─── Data ─────────────────────────────────────────────────────────────
-    var question = document.getElementById('questionText').value.trim();
-    var markVal  = document.getElementById('markValue').value.trim();
-    var rawText  = lastText||'';
-    var segs     = buildSegs(rawText,lastAnnotations);
-    var wlines   = wrapSegs(segs);
-    var fb       = parseFB();
-    var www      = fb['What Went Well']        ||[];
-    var aif      = fb['Areas for Improvement'] ||[];
-    var ctf      = fb['Command Term Focus']    ||[];
-    var ns       = fb['Next Steps']            ||[];
-    var ptm      = (document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
+    // ── Data ─────────────────────────────────────────────────────────────
+    var question=document.getElementById('questionText').value.trim();
+    var markVal=document.getElementById('markValue').value.trim();
+    var rawText=lastText||'';
+    var segs=buildSegs(rawText,lastAnnotations);
+    var wlines=wrapSegs(segs);
+    var fb=parseFB();
+    var www=fb['What Went Well']||[];
+    var aif=fb['Areas for Improvement']||[];
+    var ctf=fb['Command Term Focus']||[];
+    var ns=fb['Next Steps']||[];
+    var ptm=(document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
     var proj=(function(){
       var pb=document.getElementById('projectedMarkBox');if(!pb||!pb.innerHTML)return null;
       var m=pb.querySelector('div[style*="font-size:2.2rem"]');
@@ -2961,135 +2877,81 @@ async function downloadPDF(event) {
     })();
 
     var topCards=[];
-    www.slice(0,2).forEach(function(b){ topCards.push({cd:CARD.strength,text:b}); });
-    aif.slice(0,2).forEach(function(b){ topCards.push({cd:CARD.develop, text:b}); });
-    var ttCards=ns.map(function(b){ return {cd:CARD.trythis,text:b}; });
+    www.slice(0,2).forEach(function(b){topCards.push({cd:CARD.strength,text:b});});
+    aif.slice(0,2).forEach(function(b){topCards.push({cd:CARD.develop,text:b});});
+    var ttCards=ns.map(function(b){return{cd:CARD.trythis,text:b};});
 
-    // ═════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════
     // RENDER
-    // ═════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════
     newPage();
 
-    // ── 1. QUESTION ───────────────────────────────────────────────────────
+    // 1. QUESTION
     var qLines=question?splitW(question,QFS,CW-5):[];
-    var qLabelH=4, qBodyH=qLines.length?lhCalc(qLines.length,QLA)+1:0;
-    var qTotH=qLabelH+qBodyH+3;
-    doc.setFillColor(247,247,247); doc.rect(ML,y,CW,qTotH,'F');
-    doc.setFillColor(200,168,75); doc.rect(ML,y,1.5,qTotH,'F');
-    txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),
-        ML+3,y+qLabelH*0.82,4,true,[153,153,144]);
-    if(qLines.length){
-      var qBase=y+qLabelH+QFS*0.3528*0.85;
-      qLines.forEach(function(ln,i){ txt(ln,ML+3,qBase+i*QLA,QFS,false,[51,51,51]); });
-    }
+    var qLabelH=4,qBodyH=qLines.length?lhCalc(qLines.length,QLA)+1:0,qTotH=qLabelH+qBodyH+3;
+    doc.setFillColor(247,247,247);doc.rect(ML,y,CW,qTotH,'F');
+    doc.setFillColor(200,168,75);doc.rect(ML,y,1.5,qTotH,'F');
+    txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),ML+3,y+qLabelH*0.82,4,true,[153,153,144]);
+    if(qLines.length){var qBase=y+qLabelH+QFS*0.3528*0.85;qLines.forEach(function(ln,i){txt(ln,ML+3,qBase+i*QLA,QFS,false,[51,51,51]);});}
     y+=qTotH+2;
 
-    // ── 2. CTF STRIP — colour matches command term colour from key ─────────
-    // Look up term colour from COLS, fallback to gold
-    var ctfColour=[200,168,75]; // default gold
-    var ctfFg=[13,13,13];
-    if(ptm&&COLS[ptm]){
-      ctfColour=COLS[ptm].bg;
-      ctfFg=COLS[ptm].fg;
-    }
+    // 2. CTF STRIP
     var ctfText=ctf.length?ctf.join(' '):'';
-    var ctfLeftW=20, ctfGap=4;
-    var ctfTxtW=CW-ctfLeftW-ctfGap-2;
+    var ctfColour=[200,168,75],ctfFg=[13,13,13];
+    if(ptm&&COLS[ptm]){ctfColour=COLS[ptm].bg;ctfFg=COLS[ptm].fg;}
+    var ctfLeftW=20,ctfGap=4,ctfTxtW=CW-ctfLeftW-ctfGap-2;
     var ctfLines=ctfText?splitW(ctfText,CTF_FS,ctfTxtW):[];
-    var ctfLabelH=3.5, ctfTermFS=10;
-    var ctfLeftColH=ctfLabelH+1.5+ctfTermFS*0.3528;
-    var ctfRightColH=ctfLines.length?lhCalc(ctfLines.length,CTF_LA):0;
-    var ctfPad=2.5;
-    var ctfTotH=Math.max(ctfLeftColH,ctfRightColH)+ctfPad*2;
-    doc.setFillColor(ctfColour[0],ctfColour[1],ctfColour[2]);
-    doc.rect(0,y,PW,ctfTotH,'F');
-    // Left: label + term
+    var ctfLH=3.5+1.5+10*0.3528,ctfRH=ctfLines.length?lhCalc(ctfLines.length,CTF_LA):0;
+    var ctfPad=2.5,ctfTotH=Math.max(ctfLH,ctfRH)+ctfPad*2;
+    doc.setFillColor(ctfColour[0],ctfColour[1],ctfColour[2]);doc.rect(0,y,PW,ctfTotH,'F');
     var ctfMidY=y+ctfTotH/2;
-    txt('COMMAND TERM',ML,ctfMidY-ctfTermFS*0.3528*0.6,3.5,true,ctfFg.map?ctfFg:[ctfFg,ctfFg,ctfFg]);
-    doc.setFont('helvetica','bold');doc.setFontSize(ctfTermFS);
-    doc.setTextColor(ctfFg[0]||ctfFg,ctfFg[1]||ctfFg,ctfFg[2]||ctfFg);
-    doc.text(clean(ptm?ptm.toUpperCase():''),ML,ctfMidY+ctfTermFS*0.3528*0.55,{align:'left'});
-    // Divider
-    doc.setDrawColor(0,0,0);doc.setLineWidth(0.25);
-    if(doc.GState){
-      try{doc.setGState(new doc.GState({opacity:0.2}));}catch(e){}
-    }
-    doc.line(ML+ctfLeftW,y+2,ML+ctfLeftW,y+ctfTotH-2);
-    if(doc.GState){
-      try{doc.setGState(new doc.GState({opacity:1.0}));}catch(e){}
-    }
-    // Right: feedback text centred vertically
+    txt('COMMAND TERM',ML,ctfMidY-10*0.3528*0.6,3.5,true,ctfFg);
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(ctfFg[0],ctfFg[1],ctfFg[2]);
+    doc.text(clean(ptm?ptm.toUpperCase():''),ML,ctfMidY+10*0.3528*0.55,{align:'left'});
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.25);doc.line(ML+ctfLeftW,y+2,ML+ctfLeftW,y+ctfTotH-2);
     if(ctfLines.length){
-      var ctfTextBlockH=lhCalc(ctfLines.length,CTF_LA);
-      var ctfTextStartY=y+(ctfTotH-ctfTextBlockH)/2+CTF_FS*0.3528*0.78;
-      ctfLines.forEach(function(ln,i){
-        txt(ln,ML+ctfLeftW+ctfGap,ctfTextStartY+i*CTF_LA,CTF_FS,false,Array.isArray(ctfFg)?ctfFg:[13,13,13]);
-      });
+      var ctfBH=lhCalc(ctfLines.length,CTF_LA);
+      var ctfSY=y+(ctfTotH-ctfBH)/2+CTF_FS*0.3528*0.78;
+      ctfLines.forEach(function(ln,i){txt(ln,ML+ctfLeftW+ctfGap,ctfSY+i*CTF_LA,CTF_FS,false,ctfFg);});
     }
     y+=ctfTotH+3;
 
-    // ── 3. FOUR CARDS — all same height = tallest card's natural height ──────
+    // 3. FOUR CARDS — same height
     if(topCards.length){
       var n=Math.min(4,topCards.length);
       var cardW=(CW-(n-1)*FC_GAP)/n;
-      // Natural height of each card (no font shrinking yet)
-      var naturalHeights=topCards.slice(0,n).map(function(c){ return cardH(cardW,c.text); });
-      var maxH=Math.max.apply(null,naturalHeights);
-      if(y+maxH>BOT) newPage();
-      // Draw each card: shorter cards get font shrunk to fill maxH exactly
-      topCards.slice(0,n).forEach(function(c,i){
-        drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text,maxH);
-      });
+      var maxH=Math.max.apply(null,topCards.slice(0,n).map(function(c){return cardH(cardW,c.text);}));
+      if(y+maxH>BOT)newPage();
+      topCards.slice(0,n).forEach(function(c,i){drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text,maxH);});
       y+=maxH+3;
     }
 
-    // ── 4. TWO COLUMNS ────────────────────────────────────────────────────
-    var sectionTop=y;
-
-    // Colour key in right column — no border on Example
-    var kx=TX_X, ky=sectionTop+3.5;
+    // 4. TWO COLUMNS
+    // ── STEP A: Draw colour key in right column to find where text starts ──
+    var kx=TX_X,ky=y+3.5;
     Object.keys(COLS).forEach(function(term){
-      var c=COLS[term];
-      sf(true,4); var kw=doc.getTextWidth(cap(term))+3;
-      if(kx+kw>PW-MR){ kx=TX_X; ky+=5; }
-      doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-      doc.roundedRect(kx,ky-2.8,kw,4,0.8,0.8,'F');
-      doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
-      doc.text(cap(term),kx+1.5,ky,{align:'left'});
-      kx+=kw+1.2;
+      var c=COLS[term];sf(true,4);var kw=doc.getTextWidth(cap(term))+3;
+      if(kx+kw>PW-MR){kx=TX_X;ky+=5;}
+      doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);doc.roundedRect(kx,ky-2.8,kw,4,0.8,0.8,'F');
+      doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);doc.text(cap(term),kx+1.5,ky,{align:'left'});kx+=kw+1.2;
     });
-    // Example: no border, white bg, black bold text with underline
-    sf(true,4); var exw=doc.getTextWidth('Example')+3;
-    if(kx+exw>PW-MR){ kx=TX_X; ky+=5; }
-    doc.setFillColor(255,255,255);
-    doc.roundedRect(kx,ky-2.8,exw,4,0.8,0.8,'F'); // fill only, no draw
-    doc.setTextColor(0,0,0);
-    doc.text('Example',kx+1.5,ky,{align:'left'});
-    var exTxtW=doc.getTextWidth('Example');
-    doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);
-    doc.line(kx+1.5,ky+0.7,kx+1.5+exTxtW,ky+0.7);
+    sf(true,4);var exw=doc.getTextWidth('Example')+3;
+    if(kx+exw>PW-MR){kx=TX_X;ky+=5;}
+    doc.setFillColor(255,255,255);doc.roundedRect(kx,ky-2.8,exw,4,0.8,0.8,'F');
+    doc.setTextColor(0,0,0);doc.text('Example',kx+1.5,ky,{align:'left'});
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);doc.line(kx+1.5,ky+0.7,kx+1.5+doc.getTextWidth('Example'),ky+0.7);
     var keyBottomY=ky+2.8;
-
-    // Annotated response header
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.2);
-    doc.line(TX_X,keyBottomY+1,PW-MR,keyBottomY+1);
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.2);doc.line(TX_X,keyBottomY+1,PW-MR,keyBottomY+1);
     txt('ANNOTATED RESPONSE',TX_X,keyBottomY+4.5,4,true,[187,187,187]);
-    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
-    doc.line(TX_X,keyBottomY+5,PW-MR,keyBottomY+5);
+    doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);doc.line(TX_X,keyBottomY+5,PW-MR,keyBottomY+5);
+
+    // ── STEP B: txY = top of annotated text. TT cards start at SAME y ──
     var txY=keyBottomY+7;
-    var ttStart=txY; // Try This cards start at EXACTLY the same y as the annotated text
+    var TT_START=txY; // <-- this is the definitive start for Try This cards
 
-    // Annotated response — draw all lines
-    wlines.forEach(function(wl){
-      if(txY+RLA>BOT){ newPage(); txY=y; }
-      txY+=RLA;
-      drawLine(wl.items,txY);
-      if(wl.pb) txY+=PG;
-    });
-
-    // Try This cards — stacked from ttStart (top of annotated text column)
+    // ── STEP C: Draw Try This cards from TT_START downward ──
     if(ttCards.length){
-      var ttCur=ttStart;
+      var ttCur=TT_START;
       ttCards.forEach(function(c){
         var h=cardH(TT_W,c.text);
         if(ttCur+h<=BOT){
@@ -3099,66 +2961,50 @@ async function downloadPDF(event) {
       });
     }
 
+    // ── STEP D: Draw annotated response text ──
+    wlines.forEach(function(wl){
+      if(txY+RLA>BOT){newPage();txY=y;}
+      txY+=RLA;
+      drawLine(wl.items,txY);
+      if(wl.pb)txY+=PG;
+    });
+
     y=txY+5;
 
-    // ── 5. MARK BAR — mark large left, rationale right, no duplicate denom ──
+    // 5. MARK BAR
     if(proj&&proj.mark){
-      var MFS=22;   // mark range font (large)
-      var DFS=10;   // "out of N" font (smaller than mark, bigger than body)
-      var markStr=clean(proj.mark);
-      var denomStr='/ '+(markVal||'?');
-      // Left column: mark + denom stacked
-      var leftPad=4, markNumH=MFS*0.3528, denomH=DFS*0.3528;
-      var leftColH=leftPad+markNumH+leftPad;
-      // Fixed left column width based on longest possible mark string
-      sf(true,MFS); var markW=doc.getTextWidth(markStr);
-      sf(false,DFS); var denomW=doc.getTextWidth(denomStr);
-      var leftColW=Math.max(markW,denomW)+8; // 4mm padding each side
-      // Right column: label + rationale — strictly within margins
-      var rightX=ML+leftColW+4;
-      var ratW=PW-MR-rightX; // never exceeds right margin
+      var MFS=22,markStr=clean(proj.mark);
+      sf(true,MFS);var markW=doc.getTextWidth(markStr);
+      var leftColW=markW+8;
+      var rightX=ML+leftColW+4,ratW=PW-MR-rightX;
       var ratLines=proj.rat?splitW(proj.rat,BFS,ratW):[];
       var ratH=ratLines.length?lhCalc(ratLines.length,BLA):0;
-      var rightColH=leftPad+5+2+ratH+leftPad;
-      var markTotH=Math.max(22, leftColH, rightColH);
-      if(y+markTotH>BOT) newPage();
-
-      // Dark background
-      doc.setFillColor(13,13,13);
-      doc.rect(0,y,PW,markTotH,'F');
-
-      // Mark range — large gold, vertically centred in left col
+      var markTotH=Math.max(22,4+MFS*0.3528+4,4+6+ratH+4);
+      if(y+markTotH>BOT)newPage();
+      doc.setFillColor(13,13,13);doc.rect(0,y,PW,markTotH,'F');
       var markCY=y+markTotH/2;
       doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
-      doc.text(markStr,ML+(leftColW/2),markCY-denomH/2-1,{align:'center'});
-      // denominator removed — mark range speaks for itself
-
-      // Gold vertical divider
-      doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
-      doc.line(ML+leftColW,y+3,ML+leftColW,y+markTotH-3);
-
-      // Right: label + rationale
-      txt('ESTIMATED MARK',rightX,y+leftPad+4.5*0.3528*0.82,4.5,true,[200,168,75]);
+      doc.text(markStr,ML+(leftColW/2),markCY+MFS*0.3528*0.38,{align:'center'});
+      doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);doc.line(ML+leftColW,y+3,ML+leftColW,y+markTotH-3);
+      txt('ESTIMATED MARK',rightX,y+4+4.5*0.3528*0.82,4.5,true,[200,168,75]);
       if(ratLines.length){
-        var rBase=y+leftPad+6+BFS*0.3528*0.78;
-        ratLines.forEach(function(ln,i){ txt(ln,rightX,rBase+i*BLA,BFS,false,[160,160,160]); });
+        var rBase=y+4+6+BFS*0.3528*0.78;
+        ratLines.forEach(function(ln,i){txt(ln,rightX,rBase+i*BLA,BFS,false,[160,160,160]);});
       }
       y+=markTotH+2;
     }
 
-    // ── Save ──────────────────────────────────────────────────────────────
+    // Save
     var blob=doc.output('blob'),url=URL.createObjectURL(blob);
     var a=document.createElement('a');
     a.href=url;a.download='CommandoHSC-'+new Date().toISOString().slice(0,10)+'.pdf';
     document.body.appendChild(a);a.click();
     setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},2000);
 
-  } catch(e){
-    alert('PDF generation failed: '+e.message);
-    console.error(e);
-  } finally {
-    btn.innerHTML=origHTML;
-    btn.disabled=false;
+  }catch(e){
+    alert('PDF generation failed: '+e.message);console.error(e);
+  }finally{
+    btn.innerHTML=origHTML;btn.disabled=false;
   }
 }
 // ══════════════════════════════════════════════════════════════
