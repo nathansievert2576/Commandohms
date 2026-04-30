@@ -2306,7 +2306,7 @@ Write feedback in clear, direct language — specific and honest, but still easy
   (markValue === 4 ? '• 4 marks: Clear understanding, relationships between ideas evident, specific examples applied to context\n• 3 marks: Sound understanding with some relationships and an example\n• 2 marks: Some understanding, limited links\n• 1 mark: Some relevant information' : '') +
   (markValue >= 5 && markValue <= 6 ? '• ' + markValue + ' marks: Comprehensive understanding, all relationships evident, multiple specific examples, command term sustained throughout\n• ' + (markValue-1) + ' marks: Sound understanding, most relationships evident, relevant examples\n• ' + (markValue-2) + ' marks: Some understanding, limited links\n• 1 mark: Some relevant information' : '') +
   (markValue >= 7 ? '• ' + markValue + '–' + (markValue-1) + ' marks: Sustained, logical and cohesive — comprehensive understanding, all relationships clearly evident, specific examples demonstrate relationships\n• ' + (markValue-2) + '–' + (markValue-3) + ' marks: Logical — sound understanding, most relationships evident\n• ' + (markValue-4) + '–' + Math.max(1,markValue-5) + ' marks: Coherent — some understanding, general relationships\n• 1–' + Math.max(1,markValue-6) + ' marks: Some relevant information' : '')
-) : 'Mark value not provided — assess quality and depth against HMS expectations without specifying marks.'}\n\nPDHPE/HMS MARKER FEEDBACK PATTERNS (2022–2024, applicable to HMS):\nRewarded: providing characteristics and features with specific examples; making relationships between concepts and outcomes evident; demonstrating understanding AND applying it to a specific HMS context; integrating examples directly linked to the key idea; sustaining the command term throughout.\nFlagged: generic statements without specific examples; listing features without linking them; not addressing all parts of the question; only demonstrating the command term at the start.\n\nUsing ONLY the tagged sentences above as evidence, write feedback using EXACTLY these four headings. No text before the first heading. Write every bullet in plain, direct language as if talking to the student — no academic jargon, no teacher language.\n\nWhat Went Well\n• [name a specific thing the student did well, using their actual words — say what it shows and why it helps their answer]\n• [name another specific strength from their response]\n\nAreas for Improvement\n• [name a specific thing that is missing or weak — say clearly what the student needs to add or fix, and why it matters. Use plain language at the STUDENT LEVEL above.]\n• [name another gap — be specific, not general. Written at the STUDENT LEVEL above.]\n\nCommand Term Focus\n• [in plain language, say whether the student answered the question in the right way — ${termHitByAnnotations ? 'they DID use the required approach: say where it was strongest and where it faded or could be pushed further' : 'they did NOT use the required approach: say in simple terms what was missing and what they should have done differently'}. Written at the STUDENT LEVEL above.]\n\nNext Steps\n• [COMMAND TERM step: identify a specific sentence in the response where the command term is weak, absent or not sustained — tell the student exactly what to add or change in that sentence, and show them what a stronger version would look like]\n• [CONTENT DEPTH step: identify a specific sentence where more detail, a stronger connection between ideas, or a clearer relationship between concepts would improve the response — tell the student precisely what to add and why it would earn more marks]\n• [EXAMPLE, APPLICATION or STIMULUS step: if no example was used or the example was weak, tell the student exactly what named example to add and where to insert it in their response; if a stimulus was provided and the student has not referenced it, tell them specifically how they could use it to support their answer; if a good example is already present, identify where a stronger link between the example and the key concept would lift the response]\n\nRULES:\n- Exact headings only — no colons, bold, or extra characters before the heading\n- Each bullet starts with •\n- Second person ("you"), written strictly at the STUDENT LEVEL specified above\n- Every Next Steps bullet must name a specific sentence or gap from the tagged sentences — no generic advice\n- Next Steps must tell the student WHAT to do, WHERE to do it, and WHY it will improve their mark\n- Do NOT reference mark bands or say "to access full marks"\n- Maximum 300 words total\n\nReturn ONLY the four sections. No preamble, no JSON.`;
+) : 'Mark value not provided — assess quality and depth against HMS expectations without specifying marks.'}\n\nPDHPE/HMS MARKER FEEDBACK PATTERNS (2022–2024, applicable to HMS):\nRewarded: providing characteristics and features with specific examples; making relationships between concepts and outcomes evident; demonstrating understanding AND applying it to a specific HMS context; integrating examples directly linked to the key idea; sustaining the command term throughout.\nFlagged: generic statements without specific examples; listing features without linking them; not addressing all parts of the question; only demonstrating the command term at the start.\n\nUsing ONLY the tagged sentences above as evidence, write feedback using EXACTLY these four headings. No text before the first heading. Write every bullet in plain, direct language as if talking to the student — no academic jargon, no teacher language.\n\nWhat Went Well\n• [name a specific thing the student did well, using their actual words — say what it shows and why it helps their answer]\n• [name another specific strength from their response]\n\nAreas for Improvement\n• [name a specific thing that is missing or weak — say clearly what the student needs to add or fix, and why it matters. Use plain language at the STUDENT LEVEL above.]\n• [name another gap — be specific, not general. Written at the STUDENT LEVEL above.]\n\nCommand Term Focus\n• [in plain language, say whether the student answered the question in the right way — ${termHitByAnnotations ? 'they DID use the required approach: say where it was strongest and where it faded or could be pushed further' : 'they did NOT use the required approach: say in simple terms what was missing and what they should have done differently'}. Written at the STUDENT LEVEL above.]\n\nNext Steps\n• [COMMAND TERM step: identify a specific sentence in the response where the command term is weak, absent or not sustained — tell the student exactly what to add or change in that sentence, and show them what a stronger version would look like]\n• [CONTENT DEPTH step: identify a specific sentence where more detail, a stronger connection between ideas, or a clearer relationship between concepts would improve the response — tell the student precisely what to add and why it would earn more marks]\n• [EXAMPLE, APPLICATION or STIMULUS step: if no example was used or the example was weak, tell the student exactly what named example to add and where to insert it in their response; if a stimulus was provided and the student has not referenced it, tell them specifically how they could use it to support their answer; if a good example is already present, identify where a stronger link between the example and the key concept would lift the response]\n• [STRUCTURE or CONCLUSION step: identify a structural weakness in the overall response — this could be a missing introduction, a conclusion that summarises instead of evaluating, a paragraph that lacks a topic sentence, or an argument that loses its thread midway. Tell the student exactly what to add or rewrite, and explain how it would strengthen the overall coherence of their response]\n\nRULES:\n- Exact headings only — no colons, bold, or extra characters before the heading\n- Each bullet starts with •\n- Second person ("you"), written strictly at the STUDENT LEVEL specified above\n- Every Next Steps bullet must name a specific sentence or gap from the tagged sentences — no generic advice\n- Next Steps must tell the student WHAT to do, WHERE to do it, and WHY it will improve their mark\n- Do NOT reference mark bands or say "to access full marks"\n- Maximum 380 words total\n\nReturn ONLY the four sections. No preamble, no JSON.`;
 
     const resp3 = await fetch('/.netlify/functions/analyse', {
       method: 'POST',
@@ -2657,19 +2657,23 @@ async function downloadPDF(event) {
     // ─── Page geometry ────────────────────────────────────────────────────
     var PW=210, PH=297, ML=12, MR=12, HDR=16, FTR=10;
     var TOP=HDR+5, BOT=PH-FTR-6;
-    var CW=PW-ML-MR;           // full content width 186mm
-    var PW_PILL=52;             // feedback pill width (right side)
-    var GAP_PILL=4;             // gap between response text and pill
-    var RW=CW-PW_PILL-GAP_PILL; // response text width
+    var CW=PW-ML-MR;          // 186mm full content width
+
+    // Layout columns (v7)
+    var FC_W=50;              // feedback card width (each of 4 cards)
+    var FC_GAP=3;             // gap between cards
+    var TT_W=54;              // Try This column width
+    var TT_GAP=4;             // gap between Try This col and text col
+    var TX_W=CW-TT_W-TT_GAP; // annotated text column width
 
     // ─── Typography ───────────────────────────────────────────────────────
-    var RFS=7.5, RLA=5.8;      // response font + double-spaced line advance
-    var PFS=6.5, PLA=3.0;      // pill body font + line advance
-    var BFS=7.5, BLA=3.4;      // body sections font
-    var HP=1.2;                 // highlight rect horizontal padding
-    var HA=RFS*0.3528*0.80;    // highlight ascender
-    var HHR=RFS*0.3528*1.15;   // highlight row height
-    var PG=2.5;                 // paragraph gap
+    var RFS=7,   RLA=3.4;     // response font + line advance
+    var SFS=6,   SLA=2.8;     // small font (feedback cards, pills)
+    var BFS=7,   BLA=3.2;     // body sections (CTF, mark rationale)
+    var HP=1.2;               // highlight rect horizontal padding
+    var HA=RFS*0.3528*0.80;   // highlight ascender
+    var HHR=RFS*0.3528*1.15;  // highlight row height
+    var PG=2.2;               // paragraph gap
 
     // ─── Colours ─────────────────────────────────────────────────────────
     var COLS={
@@ -2689,11 +2693,10 @@ async function downloadPDF(event) {
       evaluate:    {bg:[232,69,69],  fg:[255,255,255]}
     };
 
-    // Pill styles: Strength → Develop → Try This
-    var PILLS={
-      strength:{ bg:[241,248,241], lb:[46,125,50],  lw:0.4, bc:[165,214,167], ti:'STRENGTH'  },
-      develop: { bg:[255,253,231], lb:[122,78,0],   lw:0.4, bc:[255,224,130], ti:'DEVELOP'   },
-      trythis: { bg:[232,244,253], lb:[21,101,192], lw:0.4, bc:[144,202,249], ti:'TRY THIS'  }
+    var CARD={
+      strength:{ bg:[241,248,241], bar:[46,125,50],  lb:[46,125,50],  ti:'STRENGTH' },
+      develop: { bg:[255,253,231], bar:[255,193,7],  lb:[122,78,0],   ti:'DEVELOP'  },
+      trythis: { bg:[232,244,253], bar:[21,101,192], lb:[21,101,192], ti:'TRY THIS' }
     };
 
     // ─── Page state ───────────────────────────────────────────────────────
@@ -2707,13 +2710,13 @@ async function downloadPDF(event) {
         var lh=8,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,52);
         try{doc.addImage(logo.src,'PNG',ML,4,lw,lh);}catch(e){}
       }
-      doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(136,136,128);
+      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(136,136,128);
       var sb=document.querySelector('.subject-btn.active');
       var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
       doc.text(sn+' \xb7 Response Analysis',PW/2,10,{align:'center'});
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,10,{align:'right'});
       doc.setFillColor(17,17,17); doc.rect(0,PH-FTR,PW,FTR,'F');
-      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(200,168,75);
+      doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(200,168,75);
       doc.text('CommandoHSC \xa9 2026',PW/2,PH-4,{align:'center'});
     }
 
@@ -2724,7 +2727,7 @@ async function downloadPDF(event) {
       y=TOP;
     }
 
-    // ─── Text helpers ─────────────────────────────────────────────────────
+    // ─── Helpers ─────────────────────────────────────────────────────────
     function clean(s){
       if(!s) return '';
       s=String(s);
@@ -2734,14 +2737,40 @@ async function downloadPDF(event) {
       s=s.replace(/[^\u0000-\u007E]/g,'');
       return s;
     }
-    function setFont(bold,fs){ doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(fs); }
-    function gw(text,bold,fs){ setFont(bold,fs); return doc.getTextWidth(text); }
-    function txt(text,x,yy,fs,bold,rgb){
-      setFont(bold,fs); doc.setTextColor(rgb[0],rgb[1],rgb[2]);
-      doc.text(clean(String(text)),x,yy,{align:'left'});
+    function sf(bold,fs){ doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(fs); }
+    function gw(t,bold,fs){ sf(bold,fs); return doc.getTextWidth(t); }
+    function txt(t,x,yy,fs,bold,rgb){
+      sf(bold,fs); doc.setTextColor(rgb[0],rgb[1],rgb[2]);
+      doc.text(clean(String(t)),x,yy,{align:'left'});
     }
-    function splitW(text,fs,w){ setFont(false,fs); return doc.splitTextToSize(clean(text),w); }
+    function splitW(t,fs,w){ sf(false,fs); return doc.splitTextToSize(clean(t),w); }
     function lhCalc(n,la){ return n>0?(n-1)*la+la*0.85:0; }
+
+    // ─── Draw a feedback card, returns height ─────────────────────────────
+    function drawCard(cx,cy,cw,cd,text){
+      var BAR=3, PAD=2.5;
+      var tlines=splitW(text,SFS,cw-BAR-PAD*2);
+      var labH=4.5;
+      var bodyH=lhCalc(tlines.length,SLA);
+      var totH=PAD+labH+bodyH+PAD;
+      // bg
+      doc.setFillColor(cd.bg[0],cd.bg[1],cd.bg[2]);
+      doc.roundedRect(cx,cy,cw,totH,1.5,1.5,'F');
+      // left bar
+      doc.setFillColor(cd.bar[0],cd.bar[1],cd.bar[2]);
+      doc.rect(cx,cy,BAR,totH,'F');
+      // label
+      txt(cd.ti, cx+BAR+PAD, cy+PAD+4.5*0.3528*0.75, 4.5, true, cd.lb);
+      // body
+      var by=cy+PAD+labH+SFS*0.3528*0.75;
+      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD, by+i*SLA, SFS, false, [60,60,60]); });
+      return totH;
+    }
+    function cardH(cw,text){
+      var BAR=3, PAD=2.5;
+      var tlines=splitW(text,SFS,cw-BAR-PAD*2);
+      return PAD+4.5+lhCalc(tlines.length,SLA)+PAD;
+    }
 
     // ─── Segment builder (unchanged) ─────────────────────────────────────
     function buildSegs(fullText,annotations){
@@ -2783,11 +2812,11 @@ async function downloadPDF(event) {
       return segs.filter(function(s){return s.t;});
     }
 
-    // ─── Line wrapper — wraps to RW (response text width) ────────────────
+    // ─── Line wrapper (wraps to TX_W) ────────────────────────────────────
     function wrapSegs(segs){
-      var W=RW;
+      var W=TX_W;
       var result=[],line=[],lineW=0;
-      function gW(text,bold){ return gw(text,bold,RFS); }
+      function gW(t,bold){ return gw(t,bold,RFS); }
       function flush(pb){
         if(line.length) result.push({items:line.slice(),pb:!!pb});
         line=[];lineW=0;
@@ -2824,23 +2853,19 @@ async function downloadPDF(event) {
           function runRenderedW(runText){
             var tr=runText.trimEnd();
             var trail=runText.slice(tr.length);
-            var wTr=gW(tr,true);
-            var wSp=trail?gW(trail,false):0;
-            return wTr+HP*2+wSp;
+            return gW(tr,true)+HP*2+(trail?gW(trail,false):0);
           }
           var toks=tokens(seg.t), run='', runW=0;
           toks.forEach(function(tok){
-            var newRunW=runRenderedW(run+tok);
-            if(run!==''&&lineW+newRunW>W){
-              line.push({t:run,term:seg.term,ex:seg.ex});
-              lineW+=runW; flush(false);
+            var nW=runRenderedW(run+tok);
+            if(run!==''&&lineW+nW>W){
+              line.push({t:run,term:seg.term,ex:seg.ex}); lineW+=runW; flush(false);
               run=tok; runW=runRenderedW(tok);
-            } else { run+=tok; runW=newRunW; }
+            } else { run+=tok; runW=nW; }
           });
           if(run!==''){
             if(lineW+runW>W&&line.length) flush(false);
-            line.push({t:run,term:seg.term,ex:seg.ex});
-            lineW+=runW;
+            line.push({t:run,term:seg.term,ex:seg.ex}); lineW+=runW;
           }
         } else {
           tokens(seg.t).forEach(function(tok){
@@ -2854,24 +2879,24 @@ async function downloadPDF(event) {
       return result;
     }
 
-    // ─── Draw one response line at x=ML ──────────────────────────────────
-    function drawLine(items,atY){
-      var dx=ML;
+    // ─── Draw one response line at x=TX_X ────────────────────────────────
+    function drawLine(items,atY,TX_X){
+      var dx=TX_X;
       items.forEach(function(item){
         if(!item.t) return;
         var hl=!!(item.term&&COLS[item.term]);
-        setFont(hl?'bold':'normal',RFS);
+        sf(hl?'bold':'normal',RFS);
         if(hl){
           var tr=item.t.trimEnd(), trail=item.t.slice(tr.length);
           var wTr=doc.getTextWidth(tr);
-          setFont(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
+          sf(false,RFS); var wSp=trail?doc.getTextWidth(trail):0;
           var c=COLS[item.term];
-          var rectW=Math.min(wTr+HP*2, ML+RW-dx);
+          var rectW=Math.min(wTr+HP*2, TX_X+TX_W-dx);
           if(rectW>0){
             doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
             doc.roundedRect(dx,atY-HA,rectW,HHR,0.7,0.7,'F');
           }
-          setFont(true,RFS);
+          sf(true,RFS);
           doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
           doc.text(clean(tr),dx+HP,atY,{align:'left'});
           if(item.ex){
@@ -2880,7 +2905,7 @@ async function downloadPDF(event) {
           }
           dx+=wTr+HP*2+wSp;
         } else if(item.ex){
-          setFont(false,RFS);
+          sf(false,RFS);
           var w=doc.getTextWidth(item.t);
           doc.setTextColor(0,0,0);
           doc.text(clean(item.t),dx,atY,{align:'left'});
@@ -2894,45 +2919,6 @@ async function downloadPDF(event) {
           dx+=w;
         }
       });
-    }
-
-    // ─── Draw ruled writing line below a response row ─────────────────────
-    // Draws a light dotted baseline for student handwriting
-    function drawRuledLine(atY){
-      doc.setDrawColor(220,220,220);
-      doc.setLineWidth(0.2);
-      doc.setLineDashPattern([0.5,1.5],0);
-      doc.line(ML, atY+1.8, ML+RW, atY+1.8);
-      doc.setLineDashPattern([],0);
-    }
-
-    // ─── Draw a feedback pill ─────────────────────────────────────────────
-    // Returns the height drawn
-    function drawPill(px, topY, pst, text){
-      var PAD=2.5, LW=3.5;
-      var lines=splitW(text,PFS,PW_PILL-PAD*2-LW);
-      var labelH=5.5;
-      var bodyH=lhCalc(lines.length,PLA);
-      var totH=PAD+labelH+bodyH+PAD;
-      // background
-      doc.setFillColor(pst.bg[0],pst.bg[1],pst.bg[2]);
-      doc.setDrawColor(pst.bc[0],pst.bc[1],pst.bc[2]);
-      doc.setLineWidth(pst.lw);
-      doc.roundedRect(px,topY,PW_PILL,totH,1.5,1.5,'FD');
-      // left accent bar
-      doc.setFillColor(pst.lb[0],pst.lb[1],pst.lb[2]);
-      doc.rect(px,topY,LW,totH,'F');
-      // label
-      txt(pst.ti, px+LW+2, topY+PAD+5.5*0.3528*0.75, 5.5, true, pst.lb);
-      // body text
-      var by=topY+PAD+labelH+PFS*0.3528*0.75;
-      lines.forEach(function(ln,i){ txt(ln, px+LW+2, by+i*PLA, PFS, false, [60,60,60]); });
-      return totH;
-    }
-    function pillH(text){
-      var PAD=2.5, LW=3.5;
-      var lines=splitW(text,PFS,PW_PILL-PAD*2-LW);
-      return PAD+5.5+lhCalc(lines.length,PLA)+PAD;
     }
 
     // ─── Parse feedback ───────────────────────────────────────────────────
@@ -2962,7 +2948,6 @@ async function downloadPDF(event) {
     var ns       = fb['Next Steps']            ||[];
     var ptm      = (document.getElementById('termPill')||{innerText:''}).innerText.replace(/\u2605.*/,'').trim().toLowerCase();
 
-    // Projected mark
     var proj=(function(){
       var pb=document.getElementById('projectedMarkBox');if(!pb||!pb.innerHTML)return null;
       var m=pb.querySelector('div[style*="font-size:2.2rem"]');
@@ -2970,199 +2955,188 @@ async function downloadPDF(event) {
       return{mark:m?m.innerText.trim():'',rat:r?r.innerText.trim():''};
     })();
 
-    // Build ordered pill list: Strength → Develop → Try This
-    var pillList=[];
-    www.forEach(function(b){ pillList.push({pst:PILLS.strength, text:b}); });
-    aif.forEach(function(b){ pillList.push({pst:PILLS.develop,  text:b}); });
-    ns.forEach(function(b){  pillList.push({pst:PILLS.trythis,  text:b}); });
-
-    // Pill x position
-    var PX = ML+RW+GAP_PILL;
+    // Build card lists
+    // Top row: 2 strength + 2 develop (4 cards across full width)
+    var topCards=[];
+    (www.slice(0,2)).forEach(function(b){ topCards.push({cd:CARD.strength,text:b}); });
+    (aif.slice(0,2)).forEach(function(b){ topCards.push({cd:CARD.develop, text:b}); });
+    // Left column: Try This (all next steps)
+    var ttCards=ns.map(function(b){ return {cd:CARD.trythis,text:b}; });
 
     // ═════════════════════════════════════════════════════════════════════
     // RENDER — strictly sequential, single Y cursor
     // ═════════════════════════════════════════════════════════════════════
     newPage();
 
-    // ── Question block ────────────────────────────────────────────────────
+    // ── 1. QUESTION BLOCK ─────────────────────────────────────────────────
+    var qLines=question?splitW(question,8,CW-8):[];
     var qLabelH=4;
-    var qLines=question?splitW(question,9,CW):[];
-    var qBodyH=qLines.length?lhCalc(qLines.length,9*0.3528*1.2)+2:0;
-    var qTotH=qLabelH+qBodyH+3;
+    var qBodyH=qLines.length?lhCalc(qLines.length,8*0.3528*1.3)+1:0;
+    var qTotH=qLabelH+qBodyH+4;
     doc.setFillColor(247,247,247);
     doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
-    doc.rect(ML,y,CW,qTotH,'FD');
-    doc.setFillColor(200,168,75);
-    doc.rect(ML,y,2,qTotH,'F');
+    doc.rect(ML,y,CW,qTotH,'F');
+    doc.setFillColor(200,168,75); doc.rect(ML,y,2,qTotH,'F');
     txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),
-        ML+4,y+qLabelH*0.75,6,true,[153,153,144]);
+        ML+4,y+qLabelH*0.8,5.5,true,[153,153,144]);
     if(qLines.length){
-      var qBase=y+qLabelH+9*0.3528*0.85;
-      qLines.forEach(function(ln,i){txt(ln,ML+4,qBase+i*9*0.3528*1.2,9,false,[51,51,51]);});
+      var qBase=y+qLabelH+8*0.3528*0.85;
+      qLines.forEach(function(ln,i){ txt(ln,ML+4,qBase+i*8*0.3528*1.3,8,false,[51,51,51]); });
     }
-    y+=qTotH+3;
+    y+=qTotH+2;
 
-    // ── Command Term bar — full width gold ────────────────────────────────
+    // ── 2. CTF STRIP (gold, full width) ──────────────────────────────────
     var ctfText=ctf.length?ctf.join(' '):'';
-    var ctfColW=18; // narrow left column for label+term
-    var ctfTxtW=CW-ctfColW-6; // remaining width for feedback text
-    var ctfLines=ctfText?splitW(ctfText,6.5,ctfTxtW):[];
-    var ctfBodyH=ctfLines.length?lhCalc(ctfLines.length,BLA*0.9)+2:0;
-    var ctfTotH=Math.max(10, 4+5+ctfBodyH+4); // min 10mm
+    var ctfLeftW=38, ctfGap=6;
+    var ctfTxtW=CW-ctfLeftW-ctfGap-4;
+    var ctfLines=ctfText?splitW(ctfText,6,ctfTxtW):[];
+    var ctfBodyH=ctfLines.length?lhCalc(ctfLines.length,BLA*0.88)+1:0;
+    var ctfTotH=Math.max(10, 3+5+ctfBodyH+3);
     doc.setFillColor(200,168,75);
     doc.rect(0,y,PW,ctfTotH,'F');
-    // Left column: label + term
-    txt('COMMAND TERM',ML,y+4+5*0.3528*0.75,5,true,[0,0,0]);
-    setFont(false,5);
-    var termDisplay=(ptm?ptm.toUpperCase():'');
-    doc.setTextColor(0,0,0);
-    doc.setFontSize(10);doc.setFont('helvetica','bold');
-    doc.text(termDisplay,ML,y+4+5+10*0.3528*0.82,{align:'left'});
-    // Divider
-    doc.setDrawColor(80,80,60);doc.setLineWidth(0.3);
-    doc.line(ML+ctfColW,y+3,ML+ctfColW,y+ctfTotH-3);
-    // Right column: feedback text
+    // label + term
+    txt('COMMAND TERM',ML,y+3+4.5*0.3528*0.75,4.5,true,[0,0,0]);
+    doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(0,0,0);
+    doc.text(clean(ptm?ptm.toUpperCase():''),ML,y+3+5+9.5*0.3528*0.82,{align:'left'});
+    // divider
+    doc.setDrawColor(80,60,0);doc.setLineWidth(0.3);
+    doc.line(ML+ctfLeftW,y+2,ML+ctfLeftW,y+ctfTotH-2);
+    // feedback text
     if(ctfLines.length){
-      var ctfBase=y+4+6.5*0.3528*0.75;
+      var ctfBase=y+3+6*0.3528*0.75;
       ctfLines.forEach(function(ln,i){
-        txt(ln,ML+ctfColW+4,ctfBase+i*BLA*0.9,6.5,false,[0,0,0]);
+        txt(ln,ML+ctfLeftW+ctfGap,ctfBase+i*BLA*0.88,6,false,[0,0,0]);
       });
     }
     y+=ctfTotH+4;
 
-    // ── Colour key ────────────────────────────────────────────────────────
-    txt('COLOUR KEY',ML,y,6,true,[153,153,144]);y+=3.5;
-    var kx=ML;
-    Object.keys(COLS).forEach(function(term){
-      var c=COLS[term];
-      setFont(true,6.5);var kw=doc.getTextWidth(cap(term))+4;
-      if(kx+kw>PW-MR){kx=ML;y+=5;}
-      doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-      doc.roundedRect(kx,y-3,kw,4.5,1,1,'F');
-      doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
-      doc.text(cap(term),kx+2,y,{align:'left'});
-      kx+=kw+2;
-    });
-    setFont(false,6.5);var exw=doc.getTextWidth('Example')+4;
-    if(kx+exw>PW-MR){kx=ML;y+=5;}
-    doc.setFillColor(245,242,235);doc.setLineWidth(0.3);
-    doc.roundedRect(kx,y-3,exw,4.5,1,1,'F');
-    doc.setTextColor(107,80,50);doc.text('Example',kx+2,y,{align:'left'});
-    y+=6;
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.25);
-    doc.line(ML,y,PW-MR,y);y+=4;
-
-    // ── Section header ────────────────────────────────────────────────────
-    txt('ANNOTATED RESPONSE  \u2014  write your revisions on the lines below each sentence',
-        ML,y,5.5,false,[153,153,144]);
-    y+=4;
-
-    // ── Response rows with inline feedback pills ──────────────────────────
-    // Strategy: for each wrapped line, draw the line then the ruled writing
-    // line. Pill is placed alongside — aligned to top of its paragraph block.
-    // A paragraph is a group of wlines ending with pb:true or the last line.
-    // The pill for a paragraph block is drawn starting at the top of that block.
-
-    var pillIdx=0; // index into pillList
-
-    // Group wlines into paragraph blocks
-    var blocks=[];
-    var cur=[];
-    wlines.forEach(function(wl,i){
-      cur.push(wl);
-      if(wl.pb || i===wlines.length-1){
-        blocks.push(cur.slice());
-        cur=[];
-      }
-    });
-
-    blocks.forEach(function(block){
-      // Calculate total height this block needs
-      // Each line = RLA (response advance) + writing line gap
-      var writingGap=3.5; // mm below each text line for handwriting
-      var blockH = block.length*(RLA+writingGap);
-
-      // Check if block fits on current page
-      if(y+blockH>BOT) newPage();
-
-      var blockTop=y;
-
-      // Draw each line in block
-      block.forEach(function(wl,li){
-        y+=RLA;
-        drawLine(wl.items,y);
-        // Draw ruled writing line below
-        drawRuledLine(y);
-        if(wl.pb&&li===block.length-1) y+=PG;
-        else y+=writingGap;
+    // ── 3. TOP FEEDBACK CARDS (4 across) ─────────────────────────────────
+    if(topCards.length){
+      // Calculate max card height so all 4 are equal height
+      var n=Math.min(4,topCards.length);
+      var totalGaps=(n-1)*FC_GAP;
+      var cardW=(CW-totalGaps)/n;
+      var maxCardH=0;
+      topCards.slice(0,n).forEach(function(c){
+        maxCardH=Math.max(maxCardH,cardH(cardW,c.text));
       });
-
-      // Draw pill for this block alongside (starting at blockTop)
-      if(pillIdx<pillList.length){
-        var p=pillList[pillIdx];
-        var pH=pillH(p.text);
-        // Only draw if pill fits vertically alongside the block
-        // (pill will never exceed block height — if block is short, pill may be taller,
-        //  but we still draw it; it extends below the block which is fine)
-        drawPill(PX, blockTop, p.pst, p.text);
-        pillIdx++;
-      }
-
-      // Add gap between paragraph blocks
-      y+=2;
-    });
-
-    // Draw any remaining pills that didn't get placed (more pills than blocks)
-    while(pillIdx<pillList.length){
-      var p=pillList[pillIdx];
-      var pH=pillH(p.text);
-      if(y+pH>BOT) newPage();
-      drawPill(PX,y,p.pst,p.text);
-      y+=pH+3;
-      pillIdx++;
+      if(y+maxCardH>BOT) newPage();
+      topCards.slice(0,n).forEach(function(c,i){
+        drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text);
+      });
+      y+=maxCardH+5;
     }
 
+    // ── 4. COLOUR KEY (above annotated text, right-aligned to text col) ───
+    var TX_X=ML+TT_W+TT_GAP;
+    // Key label
+    sf(true,5); doc.setTextColor(153,153,144);
+    doc.text('COLOUR KEY',TX_X,y,{align:'left'});
+    y+=3;
+    var kx=TX_X;
+    Object.keys(COLS).forEach(function(term){
+      var c=COLS[term];
+      sf(true,5.5); var kw=doc.getTextWidth(cap(term))+3;
+      if(kx+kw>PW-MR){kx=TX_X;y+=4.5;}
+      doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
+      doc.roundedRect(kx,y-3,kw,4,1,1,'F');
+      doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
+      doc.text(cap(term),kx+1.5,y,{align:'left'});
+      kx+=kw+1.5;
+    });
+    sf(false,5.5);var exw=doc.getTextWidth('Example')+3;
+    if(kx+exw>PW-MR){kx=TX_X;y+=4.5;}
+    doc.setFillColor(245,242,235);
+    doc.roundedRect(kx,y-3,exw,4,1,1,'F');
+    doc.setTextColor(107,80,50);doc.text('Example',kx+1.5,y,{align:'left'});
     y+=4;
+    // thin gold divider under key
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.2);
+    doc.line(TX_X,y,PW-MR,y);
+    y+=2;
 
-    // ── Estimated mark bar — full width black ─────────────────────────────
+    // ── 5. TWO-COLUMN SECTION: Try This LEFT | Annotated Text RIGHT ───────
+    var twoColTop=y;
+    var ttY=twoColTop;  // Try This column cursor
+    var txY=twoColTop;  // Text column cursor
+
+    // Draw "Try This" column header
+    sf(true,5); doc.setTextColor(187,187,187);
+    doc.text('TRY THIS',ML,ttY,{align:'left'});
+    ttY+=3;
+    // Divider under header
+    doc.setDrawColor(220,220,220);doc.setLineWidth(0.2);
+    doc.line(ML,ttY,ML+TT_W,ttY);
+    ttY+=2;
+
+    // Draw "Annotated Response" column header
+    sf(true,5); doc.setTextColor(187,187,187);
+    doc.text('ANNOTATED RESPONSE',TX_X,txY,{align:'left'});
+    txY+=3;
+    doc.setDrawColor(220,220,220);doc.setLineWidth(0.2);
+    doc.line(TX_X,txY,PW-MR,txY);
+    txY+=2;
+
+    // Draw Try This cards stacked in left column
+    ttCards.forEach(function(c){
+      var h=cardH(TT_W,c.text);
+      if(ttY+h>BOT){
+        // overflow — skip to avoid going off page (cards rendered before text)
+        return;
+      }
+      drawCard(ML,ttY,TT_W,c.cd,c.text);
+      ttY+=h+3;
+    });
+
+    // Draw annotated response text in right column
+    // Use txY as cursor, advance line by line
+    wlines.forEach(function(wl){
+      if(txY+RLA>BOT){
+        // Start new page — reset both column cursors
+        newPage();
+        ttY=y; txY=y;
+      }
+      txY+=RLA;
+      drawLine(wl.items,txY,TX_X);
+      if(wl.pb) txY+=PG;
+    });
+
+    // Advance main y past whichever column ended lower
+    y=Math.max(ttY,txY)+5;
+
+    // ── 6. ESTIMATED MARK BAR (full width black) ──────────────────────────
     if(proj&&proj.mark){
       var MFS=18, MH=MFS*0.3528*1.0;
-      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-28):[];
-      var markTotH=Math.max(14, 4+MH+(ratLines.length?BLA*0.4+lhCalc(ratLines.length,BLA):0)+4);
+      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-30):[];
+      var markTotH=Math.max(14,4+MH+(ratLines.length?BLA*0.4+lhCalc(ratLines.length,BLA):0)+4);
       if(y+markTotH>BOT) newPage();
       doc.setFillColor(0,0,0);
       doc.rect(0,y,PW,markTotH,'F');
-      // Mark number
-      doc.setFont('helvetica','bold');doc.setFontSize(MFS);
-      doc.setTextColor(200,168,75);
+      doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
       doc.text(clean(proj.mark),ML,y+4+MH*0.88,{align:'left'});
-      // "/ N" denominator
       var mw=doc.getTextWidth(clean(proj.mark));
-      doc.setFont('helvetica','normal');doc.setFontSize(8);
-      doc.setTextColor(80,80,80);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,80,80);
       doc.text('/ '+(markVal||'?'),ML+mw+2,y+4+MH*0.88,{align:'left'});
-      // Vertical divider
-      var divX=ML+26;
+      var divX=ML+28;
       doc.setDrawColor(50,50,50);doc.setLineWidth(0.4);
       doc.line(divX,y+3,divX,y+markTotH-3);
-      // Label + rationale
       txt('ESTIMATED MARK',divX+4,y+4+5.5*0.3528*0.75,5.5,true,[200,168,75]);
       if(ratLines.length){
         var rBase=y+4+5.5+BFS*0.3528*0.75+0.5;
-        ratLines.forEach(function(ln,i){txt(ln,divX+4,rBase+i*BLA,BFS,false,[150,150,150]);});
+        ratLines.forEach(function(ln,i){ txt(ln,divX+4,rBase+i*BLA,BFS,false,[150,150,150]); });
       }
       y+=markTotH;
     }
 
-    // ── Disclaimer ────────────────────────────────────────────────────────
+    // ── 7. DISCLAIMER ─────────────────────────────────────────────────────
     var dt='AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
-    var dls=splitW(dt,6,CW-6);
-    var dH=3+lhCalc(dls.length,6*0.3528*1.3)+3;
+    var dls=splitW(dt,5.5,CW-6);
+    var dH=3+lhCalc(dls.length,5.5*0.3528*1.3)+3;
     if(y+dH>BOT) newPage();
-    doc.setFillColor(245,242,235);doc.setDrawColor(200,184,122);doc.setLineWidth(0.25);
+    doc.setFillColor(245,242,235);doc.setDrawColor(200,184,122);doc.setLineWidth(0.2);
     doc.roundedRect(ML,y,CW,dH,1.5,1.5,'FD');
-    var dBase=y+3+6*0.3528*0.72;
-    dls.forEach(function(ln,i){txt(ln,ML+3,dBase+i*6*0.3528*1.3,6,false,[107,115,88]);});
+    var dBase=y+3+5.5*0.3528*0.72;
+    dls.forEach(function(ln,i){ txt(ln,ML+3,dBase+i*5.5*0.3528*1.3,5.5,false,[107,115,88]); });
 
     // ── Save ──────────────────────────────────────────────────────────────
     var blob=doc.output('blob'),url=URL.createObjectURL(blob);
