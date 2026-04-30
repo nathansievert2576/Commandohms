@@ -2655,8 +2655,8 @@ async function downloadPDF(event) {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // ─── Page geometry ────────────────────────────────────────────────────
-    var PW=210, PH=297, ML=6, MR=6, HDR=14, FTR=9;
-    var TOP=HDR+4, BOT=PH-FTR-4;
+    var PW=210, PH=297, ML=6, MR=6, HDR=14, FTR=12;
+    var TOP=HDR+4, BOT=PH-FTR-2;
     var CW=PW-ML-MR;
 
     // Two-column: Try This = 1/3, Text = 2/3
@@ -2669,9 +2669,9 @@ async function downloadPDF(event) {
     // ─── Typography ───────────────────────────────────────────────────────
     var QFS=10,  QLA=10*0.3528*1.35;
     var CTF_FS=7, CTF_LA=7*0.3528*1.6;
-    var CFS=6.5, CLA=6.5*0.3528*1.5;
-    var RFS=8,   RLA=8*0.3528*1.75;
-    var BFS=7,   BLA=7*0.3528*1.55;
+    var CFS=6.5, CLA=6.5*0.3528*1.5;  // card body — same as response text
+    var RFS=8,   RLA=8*0.3528*1.75;   // response text
+    var BFS=7,   BLA=7*0.3528*1.55;   // mark rationale
     var HP=1.2;
     var HA=RFS*0.3528*0.80;
     var HHR=RFS*0.3528*1.15;
@@ -2703,6 +2703,7 @@ async function downloadPDF(event) {
     var pageNum=0, y=TOP;
 
     function drawPageFurniture(){
+      // Header
       doc.setFillColor(13,13,13); doc.rect(0,0,PW,HDR,'F');
       doc.setFillColor(200,168,75); doc.rect(0,HDR-1,PW,1,'F');
       var logo=document.querySelector('.nav-logo img');
@@ -2715,9 +2716,12 @@ async function downloadPDF(event) {
       var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
       doc.text(sn+' \xb7 Response Analysis',PW/2,HDR/2+1,{align:'center'});
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,HDR/2+1,{align:'right'});
+      // Footer — AI disclaimer + copyright
       doc.setFillColor(17,17,17); doc.rect(0,PH-FTR,PW,FTR,'F');
-      doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(200,168,75);
-      doc.text('CommandoHSC \xa9 2026',PW/2,PH-3,{align:'center'});
+      doc.setFont('helvetica','italic');doc.setFontSize(4.5);doc.setTextColor(120,120,110);
+      doc.text('AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.',PW/2,PH-FTR+4,{align:'center',maxWidth:PW-20});
+      doc.setFont('helvetica','normal');doc.setFontSize(4.5);doc.setTextColor(200,168,75);
+      doc.text('CommandoHSC \xa9 2026',PW/2,PH-2.5,{align:'center'});
     }
 
     function newPage(){
@@ -2743,36 +2747,37 @@ async function downloadPDF(event) {
     function splitW(t,fs,w){ sf(false,fs); return doc.splitTextToSize(clean(t),w); }
     function lhCalc(n,la){ return n>0?(n-1)*la+la*0.85:0; }
 
-    // ─── FIX 2: Cards all same height — pre-calculate max height across all 4 ─
-    // drawCard now accepts a forced height parameter
+    // ─── Draw card at forced height, shrink font to fit ───────────────────
     function drawCard(cx,cy,cw,cd,text,forcedH){
       var BAR=1.2, PAD_V=1.8, PAD_H=1.8;
       var iw=cw-BAR-PAD_H*2;
-      // Shrink font until text fits in forcedH if needed
-      var fs=CFS;
-      var la=fs*0.3528*1.5;
-      var labH=4;
-      var availH=forcedH-PAD_V*2-labH;
-      var tlines=splitW(text,fs,iw);
-      // If too tall, reduce font step by step
-      while(lhCalc(tlines.length,la)>availH&&fs>4){
-        fs-=0.5; la=fs*0.3528*1.5;
-        tlines=splitW(text,fs,iw);
+      var labH=4.5;
+      var fs=CFS, la=fs*0.3528*1.5;
+      if(forcedH){
+        var availH=forcedH-PAD_V*2-labH;
+        var tlines=splitW(text,fs,iw);
+        while(lhCalc(tlines.length,la)>availH&&fs>4){
+          fs-=0.5; la=fs*0.3528*1.5;
+          tlines=splitW(text,fs,iw);
+        }
+        var totH=forcedH;
+      } else {
+        var tlines=splitW(text,fs,iw);
+        var totH=PAD_V+labH+lhCalc(tlines.length,la)+PAD_V;
       }
-      var totH=forcedH||PAD_V+labH+lhCalc(tlines.length,la)+PAD_V;
       doc.setFillColor(cd.bg[0],cd.bg[1],cd.bg[2]);
       doc.roundedRect(cx,cy,cw,totH,1,1,'F');
       doc.setFillColor(cd.bar[0],cd.bar[1],cd.bar[2]);
       doc.rect(cx,cy,BAR,totH,'F');
-      txt(cd.ti, cx+BAR+PAD_H, cy+PAD_V+4*0.3528*0.8, 4, true, cd.lb);
+      txt(cd.ti, cx+BAR+PAD_H, cy+PAD_V+4.5*0.3528*0.82, 4.5, true, cd.lb);
       var by=cy+PAD_V+labH+fs*0.3528*0.78;
-      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD_H, by+i*la, fs, false, [60,60,60]); });
+      tlines.forEach(function(ln,i){ txt(ln, cx+BAR+PAD_H, by+i*la, fs, false, [50,50,50]); });
       return totH;
     }
     function cardH(cw,text){
       var BAR=1.2, PAD_V=1.8, PAD_H=1.8;
       var tlines=splitW(text,CFS,cw-BAR-PAD_H*2);
-      return PAD_V+4+lhCalc(tlines.length,CLA)+PAD_V;
+      return PAD_V+4.5+lhCalc(tlines.length,CLA)+PAD_V;
     }
 
     // ─── Segment builder ─────────────────────────────────────────────────
@@ -2881,10 +2886,9 @@ async function downloadPDF(event) {
       return result;
     }
 
-    // ─── Draw response line clipped to TX column ──────────────────────────
+    // ─── Draw response line ───────────────────────────────────────────────
     function drawLine(items,atY){
-      var dx=TX_X;
-      var rightEdge=TX_X+TX_W;
+      var dx=TX_X, rightEdge=TX_X+TX_W;
       items.forEach(function(item){
         if(!item.t||dx>=rightEdge) return;
         var hl=!!(item.term&&COLS[item.term]);
@@ -2911,15 +2915,13 @@ async function downloadPDF(event) {
         } else if(item.ex){
           sf(false,RFS);
           var w=doc.getTextWidth(item.t);
-          doc.setTextColor(0,0,0);
-          doc.text(clean(item.t),dx,atY,{align:'left'});
+          doc.setTextColor(0,0,0); doc.text(clean(item.t),dx,atY,{align:'left'});
           doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
           doc.line(dx,atY+0.5,Math.min(dx+w,rightEdge),atY+0.5);
           dx+=w;
         } else {
           var w=doc.getTextWidth(item.t);
-          doc.setTextColor(0,0,0);
-          doc.text(clean(item.t),dx,atY,{align:'left'});
+          doc.setTextColor(0,0,0); doc.text(clean(item.t),dx,atY,{align:'left'});
           dx+=w;
         }
       });
@@ -2972,8 +2974,7 @@ async function downloadPDF(event) {
     var qLines=question?splitW(question,QFS,CW-5):[];
     var qLabelH=4, qBodyH=qLines.length?lhCalc(qLines.length,QLA)+1:0;
     var qTotH=qLabelH+qBodyH+3;
-    doc.setFillColor(247,247,247);
-    doc.rect(ML,y,CW,qTotH,'F');
+    doc.setFillColor(247,247,247); doc.rect(ML,y,CW,qTotH,'F');
     doc.setFillColor(200,168,75); doc.rect(ML,y,1.5,qTotH,'F');
     txt('QUESTION \xb7 '+(ptm?ptm.toUpperCase():'')+(markVal?' \xb7 '+markVal+' MARKS':''),
         ML+3,y+qLabelH*0.82,4,true,[153,153,144]);
@@ -2983,81 +2984,85 @@ async function downloadPDF(event) {
     }
     y+=qTotH+2;
 
-    // ── 2. CTF STRIP — FIX: tight height, no divider overlap ─────────────
+    // ── 2. CTF STRIP — colour matches command term colour from key ─────────
+    // Look up term colour from COLS, fallback to gold
+    var ctfColour=[200,168,75]; // default gold
+    var ctfFg=[13,13,13];
+    if(ptm&&COLS[ptm]){
+      ctfColour=COLS[ptm].bg;
+      ctfFg=COLS[ptm].fg;
+    }
     var ctfText=ctf.length?ctf.join(' '):'';
     var ctfLeftW=20, ctfGap=4;
     var ctfTxtW=CW-ctfLeftW-ctfGap-2;
     var ctfLines=ctfText?splitW(ctfText,CTF_FS,ctfTxtW):[];
-    // Calculate left column height (label + term)
     var ctfLabelH=3.5, ctfTermFS=10;
     var ctfLeftColH=ctfLabelH+1.5+ctfTermFS*0.3528;
-    // Calculate right column height (text only)
     var ctfRightColH=ctfLines.length?lhCalc(ctfLines.length,CTF_LA):0;
-    // Height = whichever column is taller + equal top/bottom padding
     var ctfPad=2.5;
-    var ctfTotH=Math.max(ctfLeftColH, ctfRightColH)+ctfPad*2;
-    doc.setFillColor(200,168,75);
+    var ctfTotH=Math.max(ctfLeftColH,ctfRightColH)+ctfPad*2;
+    doc.setFillColor(ctfColour[0],ctfColour[1],ctfColour[2]);
     doc.rect(0,y,PW,ctfTotH,'F');
-    // Left: label + term, vertically centred
+    // Left: label + term
     var ctfMidY=y+ctfTotH/2;
-    txt('COMMAND TERM',ML,ctfMidY-ctfTermFS*0.3528*0.6,3.5,true,[0,0,0]);
-    doc.setFont('helvetica','bold');doc.setFontSize(ctfTermFS);doc.setTextColor(13,13,13);
+    txt('COMMAND TERM',ML,ctfMidY-ctfTermFS*0.3528*0.6,3.5,true,ctfFg.map?ctfFg:[ctfFg,ctfFg,ctfFg]);
+    doc.setFont('helvetica','bold');doc.setFontSize(ctfTermFS);
+    doc.setTextColor(ctfFg[0]||ctfFg,ctfFg[1]||ctfFg,ctfFg[2]||ctfFg);
     doc.text(clean(ptm?ptm.toUpperCase():''),ML,ctfMidY+ctfTermFS*0.3528*0.55,{align:'left'});
-    // Divider — spans full height of box
-    doc.setDrawColor(0,0,0);doc.setLineWidth(0.25);doc.setGState(new doc.GState({opacity:0.2}));
+    // Divider
+    doc.setDrawColor(0,0,0);doc.setLineWidth(0.25);
+    if(doc.GState){
+      try{doc.setGState(new doc.GState({opacity:0.2}));}catch(e){}
+    }
     doc.line(ML+ctfLeftW,y+2,ML+ctfLeftW,y+ctfTotH-2);
-    doc.setGState(new doc.GState({opacity:1.0}));
-    // Right: feedback text, vertically centred
+    if(doc.GState){
+      try{doc.setGState(new doc.GState({opacity:1.0}));}catch(e){}
+    }
+    // Right: feedback text centred vertically
     if(ctfLines.length){
       var ctfTextBlockH=lhCalc(ctfLines.length,CTF_LA);
       var ctfTextStartY=y+(ctfTotH-ctfTextBlockH)/2+CTF_FS*0.3528*0.78;
       ctfLines.forEach(function(ln,i){
-        txt(ln,ML+ctfLeftW+ctfGap,ctfTextStartY+i*CTF_LA,CTF_FS,false,[13,13,13]);
+        txt(ln,ML+ctfLeftW+ctfGap,ctfTextStartY+i*CTF_LA,CTF_FS,false,Array.isArray(ctfFg)?ctfFg:[13,13,13]);
       });
     }
     y+=ctfTotH+3;
 
-    // ── 3. FOUR CARDS — FIX: all same height (max of all 4) ──────────────
+    // ── 3. FOUR CARDS — same height, no empty space ───────────────────────
     if(topCards.length){
       var n=Math.min(4,topCards.length);
       var cardW=(CW-(n-1)*FC_GAP)/n;
-      // Pre-calculate max height across all cards
       var maxH=0;
       topCards.slice(0,n).forEach(function(c){ maxH=Math.max(maxH,cardH(cardW,c.text)); });
       if(y+maxH>BOT) newPage();
-      // Draw all cards at the same forced height
       topCards.slice(0,n).forEach(function(c,i){
         drawCard(ML+i*(cardW+FC_GAP),y,cardW,c.cd,c.text,maxH);
       });
       y+=maxH+3;
     }
 
-    // ── 4. TWO COLUMNS: Try This (1/3) | Key + Response (2/3) ────────────
-    // FIX: Remove "Try This" header. Both columns start at the same Y.
+    // ── 4. TWO COLUMNS ────────────────────────────────────────────────────
     var sectionTop=y;
 
-    // ── Right column: colour key ──────────────────────────────────────────
-    // All rows start at TX_X — no offset for "Key:" label, consistent left edge
+    // Colour key in right column — no border on Example
     var kx=TX_X, ky=sectionTop+3.5;
     Object.keys(COLS).forEach(function(term){
       var c=COLS[term];
       sf(true,4); var kw=doc.getTextWidth(cap(term))+3;
-      if(kx+kw>PW-MR){ kx=TX_X; ky+=5; } // wrap to TX_X — same start point every row
+      if(kx+kw>PW-MR){ kx=TX_X; ky+=5; }
       doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
       doc.roundedRect(kx,ky-2.8,kw,4,0.8,0.8,'F');
       doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
       doc.text(cap(term),kx+1.5,ky,{align:'left'});
       kx+=kw+1.2;
     });
-    // Example pill: white background, black bold text, solid black underline
+    // Example: no border, white bg, black bold text with underline
     sf(true,4); var exw=doc.getTextWidth('Example')+3;
     if(kx+exw>PW-MR){ kx=TX_X; ky+=5; }
     doc.setFillColor(255,255,255);
-    doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
-    doc.roundedRect(kx,ky-2.8,exw,4,0.8,0.8,'FD');
+    doc.roundedRect(kx,ky-2.8,exw,4,0.8,0.8,'F'); // fill only, no draw
     doc.setTextColor(0,0,0);
     doc.text('Example',kx+1.5,ky,{align:'left'});
-    // Bold underline under the text
     var exTxtW=doc.getTextWidth('Example');
     doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);
     doc.line(kx+1.5,ky+0.7,kx+1.5+exTxtW,ky+0.7);
@@ -3070,20 +3075,15 @@ async function downloadPDF(event) {
     doc.setDrawColor(220,220,220);doc.setLineWidth(0.15);
     doc.line(TX_X,keyBottomY+5,PW-MR,keyBottomY+5);
     var txY=keyBottomY+7;
+    var ttY=txY; // Try This starts at same level
 
-    // Try This column starts at same Y as annotated response text
-    var ttY=txY;
-
-    // Draw Try This cards
+    // Try This cards
     ttCards.forEach(function(c){
       var h=cardH(TT_W,c.text);
-      if(ttY+h<=BOT){
-        drawCard(ML,ttY,TT_W,c.cd,c.text,null);
-        ttY+=h+2;
-      }
+      if(ttY+h<=BOT){ drawCard(ML,ttY,TT_W,c.cd,c.text,null); ttY+=h+2; }
     });
 
-    // Draw annotated response
+    // Annotated response
     wlines.forEach(function(wl){
       if(txY+RLA>BOT){ newPage(); txY=y; }
       txY+=RLA;
@@ -3093,56 +3093,47 @@ async function downloadPDF(event) {
 
     y=Math.max(ttY,txY)+5;
 
-    // ── 5. MARK BAR — FIX: redesigned, no overlap ────────────────────────
-    // New design: left side = gold accent panel with mark, right = dark with rationale
+    // ── 5. MARK BAR — redesigned: dark bg, large gold mark left, rationale right ──
     if(proj&&proj.mark){
-      var MFS=22;
+      var MFS=20;
       var markStr=clean(proj.mark);
-      var denomStr='/ '+(markVal||'?');
-      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-38):[];
+      var denomStr='out of '+(markVal||'?');
+      var ratLines=proj.rat?splitW(proj.rat,BFS,CW-42):[];
       var ratH=ratLines.length?lhCalc(ratLines.length,BLA):0;
-      // Height driven by rationale text + padding
       var markPad=4;
-      var markTotH=Math.max(18, markPad+MFS*0.3528+markPad, markPad+5+ratH+markPad);
+      // Height = enough for mark + denom on left, label + rationale on right
+      var leftH=markPad+MFS*0.3528+3+7*0.3528+markPad;
+      var rightH=markPad+5+ratH+markPad;
+      var markTotH=Math.max(20, leftH, rightH);
       if(y+markTotH>BOT) newPage();
 
-      // Full width dark background
+      // Dark background full width
       doc.setFillColor(13,13,13);
       doc.rect(0,y,PW,markTotH,'F');
 
-      // Left gold accent panel
-      var accentW=34;
-      doc.setFillColor(200,168,75);
-      doc.rect(0,y,accentW,markTotH,'F');
-
-      // Mark number centred vertically in gold panel
+      // Mark number — large, gold, left side
       var markCY=y+markTotH/2;
-      doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(13,13,13);
-      doc.text(markStr,accentW/2,markCY+MFS*0.3528*0.38,{align:'center'});
+      doc.setFont('helvetica','bold');doc.setFontSize(MFS);doc.setTextColor(200,168,75);
+      doc.text(markStr,ML,markCY+MFS*0.3528*0.35,{align:'left'});
+      var markW=doc.getTextWidth(markStr);
+      // "out of N" below mark in smaller gold
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(150,120,50);
+      doc.text(denomStr,ML,markCY+MFS*0.3528*0.35+5,{align:'left'});
 
-      // Denominator below mark number
-      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0,0,0);
-      doc.text(denomStr,accentW/2,markCY+MFS*0.3528*0.38+6,{align:'center'});
+      // Thin gold vertical divider
+      var divX=ML+markW+8;
+      doc.setDrawColor(200,168,75);doc.setLineWidth(0.3);
+      doc.line(divX,y+4,divX,y+markTotH-4);
 
-      // Right side: label + rationale
-      var rightX=accentW+4;
-      txt('ESTIMATED MARK',rightX,y+markPad+4*0.3528*0.8,4,true,[200,168,75]);
+      // Right side: ESTIMATED MARK label + rationale
+      var rightX=divX+4;
+      txt('ESTIMATED MARK',rightX,y+markPad+4.5*0.3528*0.82,4.5,true,[200,168,75]);
       if(ratLines.length){
-        var rBase=y+markPad+5+BFS*0.3528*0.78;
+        var rBase=y+markPad+6+BFS*0.3528*0.78;
         ratLines.forEach(function(ln,i){ txt(ln,rightX,rBase+i*BLA,BFS,false,[160,160,160]); });
       }
-      y+=markTotH;
+      y+=markTotH+2;
     }
-
-    // ── 6. DISCLAIMER ─────────────────────────────────────────────────────
-    var dt='AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.';
-    var dls=splitW(dt,5,CW-4);
-    var dH=2.5+lhCalc(dls.length,5*0.3528*1.5)+2.5;
-    if(y+dH>BOT) newPage();
-    doc.setFillColor(245,242,235);doc.setDrawColor(200,184,122);doc.setLineWidth(0.2);
-    doc.roundedRect(ML,y,CW,dH,1,1,'FD');
-    var dBase=y+2.5+5*0.3528*0.75;
-    dls.forEach(function(ln,i){ txt(ln,ML+2,dBase+i*5*0.3528*1.5,5,false,[107,115,88]); });
 
     // ── Save ──────────────────────────────────────────────────────────────
     var blob=doc.output('blob'),url=URL.createObjectURL(blob);
