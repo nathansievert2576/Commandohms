@@ -3079,43 +3079,44 @@ async function downloadPDF(event) {
     var txY=keyBottomY+7;
     var ttY=txY; // Try This starts at same level
 
-    // Annotated response — draw first to know total height
+    // Annotated response — draw all lines, tracking page 1 bottom boundary
     var txStart=txY;
+    var page1Bot=BOT; // bottom of usable area on page 1
+    var txPage1End=txStart; // how far text got on page 1 before overflow
+    var overflowed=false;
     wlines.forEach(function(wl){
-      if(txY+RLA>BOT){ newPage(); txY=y; }
+      if(txY+RLA>BOT){
+        if(!overflowed){ txPage1End=txY; overflowed=true; }
+        newPage(); txY=y;
+      }
       txY+=RLA;
       drawLine(wl.items,txY);
       if(wl.pb) txY+=PG;
     });
-    var txEnd=txY;
-    var txTotalH=txEnd-txStart;
+    if(!overflowed) txPage1End=txY; // all text fit on page 1
 
-    // Try This: evenly distribute cards across EXACTLY the annotated text height
-    // Cards must not extend below txEnd
+    // Try This cards: evenly distributed across page 1 text height only
+    // Cards sit in the left column alongside the response text
     if(ttCards.length){
       var cardHeights=ttCards.map(function(c){ return cardH(TT_W,c.text); });
       var totalCardH=cardHeights.reduce(function(a,b){return a+b;},0);
+      var availH=txPage1End-txStart; // height of text column on page 1
       var n=ttCards.length;
-      // Available space for gaps = total height minus all card heights
-      var gapSpace=txTotalH-totalCardH;
-      // Distribute gaps evenly: gap before first card + between cards + after last card = n+1 slots
-      var gap=gapSpace/(n+1);
-      gap=Math.max(gap,1.5); // floor at 1.5mm
-      // If cards would overflow txEnd, scale gap down
-      var needed=totalCardH+gap*(n+1);
-      if(needed>txTotalH) gap=Math.max((txTotalH-totalCardH)/(n+1),1);
+      var gap=(availH-totalCardH)/(n+1);
+      gap=Math.max(gap,2); // minimum 2mm gap between cards
+      // If cards + gaps exceed available height, reduce gap to minimum
+      if(totalCardH+gap*(n+1)>availH) gap=Math.max((availH-totalCardH)/(n+1),1.5);
       var ttCur=txStart+gap;
       ttCards.forEach(function(c,i){
         var h=cardHeights[i];
-        // Only draw if card fits before txEnd
-        if(ttCur+h<=txEnd+2){
+        if(ttCur+h<=page1Bot){ // never render off the page
           drawCard(ML,ttCur,TT_W,c.cd,c.text,null);
         }
         ttCur+=h+gap;
       });
     }
 
-    y=Math.max(ttY,txY)+5;
+    y=Math.max(txPage1End,txY)+5;
 
     // ── 5. MARK BAR — mark large left, rationale right, no duplicate denom ──
     if(proj&&proj.mark){
