@@ -3045,6 +3045,7 @@ async function downloadPDF(event) {
 
     // ── 4. TWO COLUMNS ────────────────────────────────────────────────────
     var sectionTop=y;
+    var ttStart=y; // Try This cards start here — same y as the two-col section top
 
     // Colour key in right column — no border on Example
     var kx=TX_X, ky=sectionTop+3.5;
@@ -3088,9 +3089,9 @@ async function downloadPDF(event) {
       if(wl.pb) txY+=PG;
     });
 
-    // Try This cards — stacked from txStart downward with even gaps
+    // Try This cards — stacked from sectionTop (right after 4 feedback cards)
     if(ttCards.length){
-      var ttCur=txStart;
+      var ttCur=ttStart;
       ttCards.forEach(function(c){
         var h=cardH(TT_W,c.text);
         if(ttCur+h<=BOT){
