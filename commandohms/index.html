@@ -2813,9 +2813,13 @@ async function downloadPDF(event) {
       var dx = TX_X;             // current x position on the line
       var lineHasContent = false; // tracks whether we've written anything on this line
 
-      // Advance to a new line and reset x cursor
+      // Advance to a new line and reset x cursor.
+      // Page-break check accounts for the rect descender below curY (HHR-HA).
       function newLine(paraGap) {
-        if (curY + RLA > BOT) { newPage(); curY = y; }
+        // After advancing, the rect bottom would be at: (curY+RLA) - HA + HHR
+        // We need that <= BOT
+        var nextRectBottom = curY + RLA - HA + HHR;
+        if (nextRectBottom > BOT) { newPage(); curY = y; }
         curY += RLA;
         if (paraGap) curY += PG;
         dx = TX_X;
@@ -2984,7 +2988,7 @@ async function downloadPDF(event) {
 
       segs.forEach(processSeg);
 
-      return curY;
+      return { y: curY, page: pageNum };
     }
 
     // ── Parse feedback ────────────────────────────────────────────────────
@@ -3101,11 +3105,28 @@ async function downloadPDF(event) {
       });
     }
 
-    // Draw annotated response text — uses new bulletproof renderer
-    var txEndY = renderAnnotatedText(segs, colStartY);
+    // Capture what page the Try This cards ended on (always page 1 unless
+    // the section started on a later page — colStartY tracks this).
+    var ttEndPage = pageNum;
 
-    // Mark bar starts after whichever column ended lower
-    y = Math.max(txEndY, ttEnd) + 5;
+    // Draw annotated response text — uses bulletproof renderer
+    var txResult = renderAnnotatedText(segs, colStartY);
+    var txEndY = txResult.y;
+    var txEndPage = txResult.page;
+
+    // Mark bar starts after whichever column ended lower — but only compare
+    // Y values when both columns ended on the SAME page. If text ran onto a
+    // later page, follow the text (Try This is irrelevant on previous pages).
+    if (txEndPage > ttEndPage) {
+      // Text overflowed to a later page. Mark bar follows text on that page.
+      y = txEndY + 5;
+    } else if (ttEndPage > txEndPage) {
+      // Try This cards ran onto a later page (shouldn't happen normally).
+      y = ttEnd + 5;
+    } else {
+      // Same page — use whichever finished lower.
+      y = Math.max(txEndY, ttEnd) + 5;
+    }
 
     // 5. MARK BAR
     if(proj&&proj.mark){
