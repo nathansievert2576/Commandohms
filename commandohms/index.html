@@ -2797,106 +2797,194 @@ async function downloadPDF(event) {
       return segs.filter(function(s){return s.t;});
     }
 
-    // ── REBUILT: Render annotated text using splitTextToSize per segment ──
-    // Strategy: convert all segments to a flat list of {text, term, ex} tokens.
-    // Use jsPDF splitTextToSize on the full plain text to get correct line breaks.
-    // Then replay the segments token-by-token onto those lines.
-    // This guarantees text NEVER exceeds TX_W because splitTextToSize is authoritative.
+    // ── Render annotated text — sentence-level continuous highlights ──────
+    // Walks segs in order. Maintains an x cursor and current y. For each
+    // segment, attempts to pack as many words as possible onto the current
+    // line. Highlighted segments draw ONE rectangle per line-segment, never
+    // per word. If a single word is wider than the column, it is broken
+    // mid-word at the character that fits.
+    //
+    // A segment that crosses N lines produces N rectangles, each covering
+    // exactly the words on that line — clean continuous highlights.
 
     function renderAnnotatedText(segs, startY) {
-      var rightBound = TX_X + TX_W; // hard right boundary — never exceeded
+      var rightBound = TX_X + TX_W;
       var curY = startY;
+      var dx = TX_X;             // current x position on the line
+      var lineHasContent = false; // tracks whether we've written anything on this line
 
-      // Flatten all segments into word-level tokens
-      var tokens = [];
-      segs.forEach(function(seg) {
-        if (!seg.t) return;
-        // Split on whitespace, preserving spaces as separate tokens
-        var parts = seg.t.split(/(\s+)/);
-        parts.forEach(function(p) {
-          if (p === '') return;
-          tokens.push({ t: p, term: seg.term, ex: seg.ex, isSpace: /^\s+$/.test(p) });
-        });
-      });
-
-      // Build lines by measuring each token with jsPDF
-      var lines = []; // array of arrays of tokens
-      var currentLine = [];
-      var currentLineW = 0;
-      var maxW = TX_W; // no safety margin needed — splitTextToSize is exact
-
-      tokens.forEach(function(tok) {
-        if (tok.t === '\n') {
-          lines.push(currentLine); currentLine = []; currentLineW = 0; return;
-        }
-        var isHL = !!(tok.term && COLS[tok.term]);
-        var tokW = isHL
-          ? gw(tok.t.trimEnd(), true, RFS) + (tok.isSpace ? gw(tok.t, false, RFS) : HP * 2)
-          : gw(tok.t, false, RFS);
-
-        if (currentLineW + tokW > maxW && currentLine.length > 0 && !tok.isSpace) {
-          lines.push(currentLine); currentLine = []; currentLineW = 0;
-        }
-        currentLine.push({ tok: tok, w: tokW });
-        currentLineW += tokW;
-      });
-      if (currentLine.length > 0) lines.push(currentLine);
-
-      // Render each line
-      lines.forEach(function(line) {
+      // Advance to a new line and reset x cursor
+      function newLine(paraGap) {
         if (curY + RLA > BOT) { newPage(); curY = y; }
         curY += RLA;
+        if (paraGap) curY += PG;
+        dx = TX_X;
+        lineHasContent = false;
+      }
 
-        var dx = TX_X;
-        line.forEach(function(entry) {
-          var tok = entry.tok;
-          if (dx >= rightBound) return;
-          if (tok.isSpace) { dx += entry.w; return; }
+      // Force-break a single word at the character that fits
+      function breakWordToFit(text, bold, availW) {
+        sf(bold, RFS);
+        // Binary-search the longest prefix that fits in availW
+        var lo = 1, hi = text.length, fit = 1;
+        while (lo <= hi) {
+          var mid = (lo + hi) >> 1;
+          if (doc.getTextWidth(text.slice(0, mid)) <= availW) { fit = mid; lo = mid + 1; }
+          else hi = mid - 1;
+        }
+        return fit;
+      }
 
-          var isHL = !!(tok.term && COLS[tok.term]);
-          var c = isHL ? COLS[tok.term] : null;
-          var textClean = clean(tok.t);
+      // Draw a continuous run of text on the current line.
+      // For highlighted runs: one rectangle covering all the words.
+      // Returns nothing — advances dx.
+      function drawRun(text, term, ex) {
+        if (!text) return;
+        var isHL = !!(term && COLS[term]);
+        var c = isHL ? COLS[term] : null;
+        var textClean = clean(text);
 
-          if (isHL) {
-            sf(true, RFS);
-            var wTxt = gw(tok.t, true, RFS);
-            var rectW = Math.min(wTxt + HP * 2, rightBound - dx);
-            if (rectW > 0) {
-              doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-              doc.roundedRect(dx, curY - HA, rectW, HHR, 0.5, 0.5, 'F');
-            }
-            var textX = dx + HP;
-            var availW = rightBound - textX;
-            if (availW > 0) {
-              doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
-              doc.text(textClean, textX, curY, {align:'left', maxWidth: availW});
-            }
-            if (tok.ex) {
-              doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.3);
-              doc.line(textX, curY+0.5, Math.min(textX+wTxt, rightBound), curY+0.5);
-            }
-            dx += wTxt + HP * 2;
-          } else {
-            sf(false, RFS);
-            var wTxt = gw(tok.t, false, RFS);
-            var availW = rightBound - dx;
-            if (availW > 0) {
-              doc.setTextColor(0,0,0);
-              doc.text(textClean, dx, curY, {align:'left', maxWidth: availW});
-            }
-            if (tok.ex) {
-              doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
-              doc.line(dx, curY+0.5, Math.min(dx+wTxt, rightBound), curY+0.5);
-            }
-            dx += wTxt;
+        if (isHL) {
+          sf(true, RFS);
+          var wTxt = doc.getTextWidth(textClean);
+          // Rectangle: from dx, width = wTxt + horizontal padding on both sides
+          // Height = HHR, vertically centred on baseline (curY)
+          doc.setFillColor(c.bg[0], c.bg[1], c.bg[2]);
+          doc.roundedRect(dx, curY - HA, wTxt + HP * 2, HHR, 0.5, 0.5, 'F');
+          doc.setTextColor(c.fg[0], c.fg[1], c.fg[2]);
+          doc.text(textClean, dx + HP, curY, { align: 'left' });
+          if (ex) {
+            doc.setDrawColor(c.fg[0], c.fg[1], c.fg[2]); doc.setLineWidth(0.3);
+            doc.line(dx + HP, curY + 0.5, dx + HP + wTxt, curY + 0.5);
           }
+          dx += wTxt + HP * 2;
+        } else {
+          sf(false, RFS);
+          var wTxt = doc.getTextWidth(textClean);
+          doc.setTextColor(0, 0, 0);
+          doc.text(textClean, dx, curY, { align: 'left' });
+          if (ex) {
+            doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
+            doc.line(dx, curY + 0.5, dx + wTxt, curY + 0.5);
+          }
+          dx += wTxt;
+        }
+        lineHasContent = true;
+      }
+
+      // Process one segment — fits words greedily, breaking lines as needed.
+      // Highlighted segments produce ONE rectangle per line segment.
+      function processSeg(seg) {
+        if (!seg.t) return;
+
+        // Handle explicit newlines within the segment
+        var parts = seg.t.split('\n');
+        parts.forEach(function(part, pi) {
+          if (pi > 0) {
+            // Paragraph break — flush any pending run, advance line with extra gap
+            if (lineHasContent) newLine(true);
+            else { curY += PG; }
+          }
+          if (!part) return;
+
+          var isHL = !!(seg.term && COLS[seg.term]);
+          var ex = seg.ex;
+          // Bold/normal width measurement matches the eventual render
+          sf(isHL ? true : false, RFS);
+
+          // Tokenise into words+spaces (preserve spaces so we can re-assemble)
+          var words = part.match(/\S+\s*|\s+/g) || [];
+
+          // Greedy pack: build up `pending` (text accumulating for current line run)
+          // and flush as a single drawRun() call when we hit a line break.
+          var pending = '';
+
+          function pendingWidth() {
+            if (!pending) return 0;
+            sf(isHL, RFS);
+            return doc.getTextWidth(pending) + (isHL ? HP * 2 : 0);
+          }
+
+          function flushPending() {
+            if (pending) {
+              // Trim trailing whitespace before drawing — highlights look cleaner without it
+              var draw = pending.replace(/\s+$/, '');
+              if (draw) drawRun(draw, seg.term, ex);
+              // Add back any trailing space in the dx cursor (so next non-HL text aligns)
+              var trail = pending.length - draw.length;
+              if (trail > 0 && !isHL) {
+                sf(false, RFS);
+                dx += doc.getTextWidth(pending.slice(draw.length));
+              } else if (trail > 0 && isHL) {
+                // For HL runs, add a single space-width gap after the rect
+                sf(false, RFS);
+                dx += doc.getTextWidth(' ');
+              }
+              pending = '';
+            }
+          }
+
+          words.forEach(function(word) {
+            // Width of pending + this word, in the segment's font weight
+            sf(isHL, RFS);
+            var combinedW = doc.getTextWidth(pending + word) + (isHL ? HP * 2 : 0);
+            var availW = rightBound - dx;
+
+            if (combinedW <= availW) {
+              pending += word;
+              return;
+            }
+
+            // Doesn't fit — flush pending, then handle the word
+            flushPending();
+
+            // Now dx is updated. Recompute available width.
+            availW = rightBound - dx;
+            sf(isHL, RFS);
+            var wordW = doc.getTextWidth(word) + (isHL ? HP * 2 : 0);
+
+            if (wordW <= availW) {
+              // Word fits on current line as start of new pending
+              pending = word;
+            } else {
+              // Word doesn't fit at all on this line. Move to next line.
+              if (lineHasContent) newLine(false);
+              availW = rightBound - dx;
+              sf(isHL, RFS);
+              wordW = doc.getTextWidth(word) + (isHL ? HP * 2 : 0);
+
+              if (wordW <= availW) {
+                pending = word;
+              } else {
+                // Word is wider than the column itself — force break mid-word
+                var trimmed = word.replace(/\s+$/, '');
+                var trail = word.slice(trimmed.length);
+                while (trimmed.length > 0) {
+                  sf(isHL, RFS);
+                  var fit = breakWordToFit(trimmed, isHL, (rightBound - dx) - (isHL ? HP * 2 : 0));
+                  if (fit < 1) fit = 1;
+                  drawRun(trimmed.slice(0, fit), seg.term, ex);
+                  trimmed = trimmed.slice(fit);
+                  if (trimmed.length > 0) newLine(false);
+                }
+                pending = trail; // any trailing whitespace becomes pending
+              }
+            }
+          });
+
+          flushPending();
         });
+      }
 
-        // Check for paragraph break (line ends with newline token)
-        // We handle this via the \n splitting above
-      });
+      // Advance to the first line — startY is top of column, baseline goes one RLA down
+      curY = startY;
+      curY += RLA;
+      dx = TX_X;
+      lineHasContent = false;
 
-      return curY; // return final Y position
+      segs.forEach(processSeg);
+
+      return curY;
     }
 
     // ── Parse feedback ────────────────────────────────────────────────────
