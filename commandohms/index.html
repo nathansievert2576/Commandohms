@@ -686,6 +686,9 @@
     line-height: 1.85;
     white-space: pre-wrap;
     word-break: break-word;
+    overflow-wrap: break-word;
+    overflow-x: hidden;
+    max-width: 100%;
     color: #f0ece4;
     box-shadow: 0 0 30px rgba(200,168,75,.06) inset;
   }
@@ -699,6 +702,9 @@
     font-weight: 600;
     position: relative;
     cursor: default;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    display: inline;
   }
   .hl.outline   { color: #0d0d0d; background: var(--outline); }
   .hl.example {
@@ -2780,7 +2786,7 @@ async function downloadPDF(event) {
     }
 
     function wrapSegs(segs){
-      var W=TX_W-4,result=[],line=[],lineW=0; // -4mm safety margin prevents right-edge overflow
+      var W=TX_W-6,result=[],line=[],lineW=0; // -6mm safety margin prevents right-edge overflow
       function gW(t,bold){return gw(t,bold,RFS);}
       function flush(pb){if(line.length)result.push({items:line.slice(),pb:!!pb});line=[];lineW=0;}
       function tokens(text){
@@ -2821,7 +2827,7 @@ async function downloadPDF(event) {
     }
 
     function drawLine(items,atY){
-      var dx=TX_X,rightEdge=TX_X+TX_W-4; // matches wrap safety margin
+      var dx=TX_X,rightEdge=TX_X+TX_W-6; // matches wrap safety margin
       items.forEach(function(item){
         if(!item.t||dx>=rightEdge)return;
         var hl=!!(item.term&&COLS[item.term]);
