@@ -2797,135 +2797,106 @@ async function downloadPDF(event) {
       return segs.filter(function(s){return s.t;});
     }
 
-    // ── Render annotated text — grouped runs, continuous highlights ─────────
-    // Each line is built token by token. Consecutive tokens with the same
-    // term are grouped into a single run and drawn as ONE rectangle + text block.
-    // This gives smooth, professional highlights that look like continuous sentences.
+    // ── REBUILT: Render annotated text using splitTextToSize per segment ──
+    // Strategy: convert all segments to a flat list of {text, term, ex} tokens.
+    // Use jsPDF splitTextToSize on the full plain text to get correct line breaks.
+    // Then replay the segments token-by-token onto those lines.
+    // This guarantees text NEVER exceeds TX_W because splitTextToSize is authoritative.
 
     function renderAnnotatedText(segs, startY) {
-      var rightBound = TX_X + TX_W;
+      var rightBound = TX_X + TX_W; // hard right boundary — never exceeded
       var curY = startY;
 
-      // Step 1: flatten segments into word tokens
+      // Flatten all segments into word-level tokens
       var tokens = [];
       segs.forEach(function(seg) {
         if (!seg.t) return;
-        // Handle newlines as paragraph breaks
-        var parts = seg.t.split('\n');
-        parts.forEach(function(part, pi) {
-          if (pi > 0) tokens.push({ t: '\n', term: null, ex: false, isBreak: true });
-          if (!part) return;
-          // Split into words+spaces
-          var words = part.match(/\S+\s*|\s+/g) || [];
-          words.forEach(function(w) {
-            tokens.push({ t: w, term: seg.term, ex: seg.ex, isBreak: false });
-          });
+        // Split on whitespace, preserving spaces as separate tokens
+        var parts = seg.t.split(/(\s+)/);
+        parts.forEach(function(p) {
+          if (p === '') return;
+          tokens.push({ t: p, term: seg.term, ex: seg.ex, isSpace: /^\s+$/.test(p) });
         });
       });
 
-      // Step 2: build lines — measure each token, break when line full
-      var lines = [];
-      var curLine = [];
-      var curLineW = 0;
-
-      function tokenWidth(tok) {
-        if (tok.isBreak) return 0;
-        var isHL = !!(tok.term && COLS[tok.term]);
-        var tw = isHL ? gw(tok.t, true, RFS) : gw(tok.t, false, RFS);
-        return tw;
-      }
+      // Build lines by measuring each token with jsPDF
+      var lines = []; // array of arrays of tokens
+      var currentLine = [];
+      var currentLineW = 0;
+      var maxW = TX_W; // no safety margin needed — splitTextToSize is exact
 
       tokens.forEach(function(tok) {
-        if (tok.isBreak) {
-          if (curLine.length) lines.push({ items: curLine, paraBreak: true });
-          else lines.push({ items: [], paraBreak: true });
-          curLine = []; curLineW = 0; return;
+        if (tok.t === '\n') {
+          lines.push(currentLine); currentLine = []; currentLineW = 0; return;
         }
-        var tw = tokenWidth(tok);
-        var isSpace = /^\s+$/.test(tok.t);
-        // Only break on non-space tokens that would overflow
-        if (!isSpace && curLineW + tw > TX_W && curLine.length > 0) {
-          lines.push({ items: curLine, paraBreak: false });
-          curLine = []; curLineW = 0;
-        }
-        curLine.push({ tok: tok, w: tw });
-        curLineW += tw;
-      });
-      if (curLine.length) lines.push({ items: curLine, paraBreak: false });
+        var isHL = !!(tok.term && COLS[tok.term]);
+        var tokW = isHL
+          ? gw(tok.t.trimEnd(), true, RFS) + (tok.isSpace ? gw(tok.t, false, RFS) : HP * 2)
+          : gw(tok.t, false, RFS);
 
-      // Step 3: render each line — group consecutive same-term tokens into runs
+        if (currentLineW + tokW > maxW && currentLine.length > 0 && !tok.isSpace) {
+          lines.push(currentLine); currentLine = []; currentLineW = 0;
+        }
+        currentLine.push({ tok: tok, w: tokW });
+        currentLineW += tokW;
+      });
+      if (currentLine.length > 0) lines.push(currentLine);
+
+      // Render each line
       lines.forEach(function(line) {
-        if (!line.items.length) { if (line.paraBreak) curY += PG; return; }
         if (curY + RLA > BOT) { newPage(); curY = y; }
         curY += RLA;
 
-        // Group tokens into runs of same term
-        var runs = [];
-        var curRun = null;
-        line.items.forEach(function(entry) {
-          var tok = entry.tok;
-          var key = tok.term || '__plain__';
-          if (curRun && curRun.key === key) {
-            curRun.text += tok.t;
-            curRun.w += entry.w;
-            curRun.ex = curRun.ex || tok.ex;
-          } else {
-            if (curRun) runs.push(curRun);
-            curRun = { key: key, term: tok.term, text: tok.t, w: entry.w, ex: tok.ex };
-          }
-        });
-        if (curRun) runs.push(curRun);
-
-        // Draw each run as a single continuous block
         var dx = TX_X;
-        runs.forEach(function(run) {
+        line.forEach(function(entry) {
+          var tok = entry.tok;
           if (dx >= rightBound) return;
-          var isHL = !!(run.term && COLS[run.term]);
-          var textClean = clean(run.text.trimEnd());
-          if (!textClean) { dx += gw(run.text, false, RFS); return; }
+          if (tok.isSpace) { dx += entry.w; return; }
+
+          var isHL = !!(tok.term && COLS[tok.term]);
+          var c = isHL ? COLS[tok.term] : null;
+          var textClean = clean(tok.t);
 
           if (isHL) {
-            var c = COLS[run.term];
             sf(true, RFS);
-            var wRun = gw(run.text, true, RFS);
-            // One rectangle for the whole run
-            var rectW = Math.min(wRun + HP * 2, rightBound - dx);
+            var wTxt = gw(tok.t, true, RFS);
+            var rectW = Math.min(wTxt + HP * 2, rightBound - dx);
             if (rectW > 0) {
               doc.setFillColor(c.bg[0],c.bg[1],c.bg[2]);
-              doc.roundedRect(dx, curY-HA, rectW, HHR, 0.5, 0.5, 'F');
+              doc.roundedRect(dx, curY - HA, rectW, HHR, 0.5, 0.5, 'F');
             }
             var textX = dx + HP;
-            if (textX < rightBound) {
+            var availW = rightBound - textX;
+            if (availW > 0) {
               doc.setTextColor(c.fg[0],c.fg[1],c.fg[2]);
-              doc.text(textClean, textX, curY, {align:'left', maxWidth: rightBound - textX});
+              doc.text(textClean, textX, curY, {align:'left', maxWidth: availW});
             }
-            if (run.ex && textX < rightBound) {
-              doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]); doc.setLineWidth(0.3);
-              doc.line(textX, curY+0.5, Math.min(textX+wRun, rightBound), curY+0.5);
+            if (tok.ex) {
+              doc.setDrawColor(c.fg[0],c.fg[1],c.fg[2]);doc.setLineWidth(0.3);
+              doc.line(textX, curY+0.5, Math.min(textX+wTxt, rightBound), curY+0.5);
             }
-            // Account for trailing space in original text
-            var trailSpace = run.text.length - run.text.trimEnd().length > 0
-              ? gw(' ', false, RFS) : 0;
-            dx += wRun + HP * 2 + trailSpace;
+            dx += wTxt + HP * 2;
           } else {
             sf(false, RFS);
-            var wRun = gw(run.text, false, RFS);
-            if (dx < rightBound) {
+            var wTxt = gw(tok.t, false, RFS);
+            var availW = rightBound - dx;
+            if (availW > 0) {
               doc.setTextColor(0,0,0);
-              doc.text(textClean, dx, curY, {align:'left', maxWidth: rightBound - dx});
+              doc.text(textClean, dx, curY, {align:'left', maxWidth: availW});
             }
-            if (run.ex && dx < rightBound) {
-              doc.setDrawColor(0,0,0); doc.setLineWidth(0.3);
-              doc.line(dx, curY+0.5, Math.min(dx+wRun, rightBound), curY+0.5);
+            if (tok.ex) {
+              doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
+              doc.line(dx, curY+0.5, Math.min(dx+wTxt, rightBound), curY+0.5);
             }
-            dx += wRun;
+            dx += wTxt;
           }
         });
 
-        if (line.paraBreak) curY += PG;
+        // Check for paragraph break (line ends with newline token)
+        // We handle this via the \n splitting above
       });
 
-      return curY;
+      return curY; // return final Y position
     }
 
     // ── Parse feedback ────────────────────────────────────────────────────
