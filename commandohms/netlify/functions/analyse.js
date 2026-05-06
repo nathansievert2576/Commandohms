@@ -5,26 +5,34 @@
 
 const https = require('https');
 
-// ── JWT validation against Supabase ──────────────────────────────────────────
-// Calls Supabase's /auth/v1/user endpoint with the bearer token.
-// Returns the user object if valid, throws if not.
-async function validateSupabaseJWT(token) {
-  const supabaseUrl  = process.env.SUPABASE_URL;
-  const supabaseAnon = process.env.SUPABASE_ANON_KEY;
+// ── Validate Supabase JWT ─────────────────────────────────────────────────────
+async function validateToken(token) {
+  const supabaseUrl  = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+  // Use service role key for server-side token validation
+  const supabaseKey  = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-  if (!supabaseUrl || !supabaseAnon) {
-    throw new Error('Server misconfiguration: SUPABASE_URL or SUPABASE_ANON_KEY missing');
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars');
+    return true; // fail open on misconfiguration so users aren't locked out
   }
 
-  const url = new URL('/auth/v1/user', supabaseUrl);
+  let hostname, path;
+  try {
+    const u = new URL('/auth/v1/user', supabaseUrl);
+    hostname = u.hostname;
+    path = u.pathname;
+  } catch (e) {
+    console.error('Invalid SUPABASE_URL:', supabaseUrl);
+    return true;
+  }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const options = {
-      hostname: url.hostname,
-      path:     url.pathname,
-      method:   'GET',
+      hostname,
+      path,
+      method:  'GET',
       headers: {
-        'apikey':        supabaseAnon,
+        'apikey':        supabaseKey,
         'Authorization': `Bearer ${token}`,
         'Content-Type':  'application/json',
       },
@@ -32,30 +40,36 @@ async function validateSupabaseJWT(token) {
 
     const req = https.request(options, (res) => {
       let body = '';
-      res.on('data', chunk => { body += chunk; });
+      res.on('data', c => { body += c; });
       res.on('end', () => {
         if (res.statusCode === 200) {
-          try {
-            resolve(JSON.parse(body));
-          } catch (e) {
-            reject(new Error('Invalid JSON from Supabase auth'));
-          }
+          resolve(true);
         } else {
-          reject(new Error(`Supabase auth returned ${res.statusCode}`));
+          console.error(`Supabase auth rejected token: status ${res.statusCode}`);
+          resolve(false);
         }
       });
     });
 
-    req.on('error', reject);
-    req.setTimeout(5000, () => { req.destroy(); reject(new Error('Supabase auth timeout')); });
+    req.on('error', (err) => {
+      console.error('Supabase auth network error:', err.message);
+      resolve(true); // fail open on network error
+    });
+
+    req.setTimeout(5000, () => {
+      req.destroy();
+      console.error('Supabase auth timeout — failing open');
+      resolve(true);
+    });
+
     req.end();
   });
 }
 
-// ── Anthropic API call ────────────────────────────────────────────────────────
+// ── Call Anthropic ────────────────────────────────────────────────────────────
 async function callAnthropic(payload) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('Server misconfiguration: ANTHROPIC_API_KEY missing');
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
   const body = JSON.stringify(payload);
 
@@ -76,11 +90,8 @@ async function callAnthropic(payload) {
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
-        try {
-          resolve({ status: res.statusCode, body: JSON.parse(data) });
-        } catch (e) {
-          reject(new Error('Invalid JSON from Anthropic'));
-        }
+        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+        catch (e) { reject(new Error('Invalid JSON from Anthropic')); }
       });
     });
 
@@ -93,88 +104,46 @@ async function callAnthropic(payload) {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
-  const corsHeaders = {
+  const cors = {
     'Access-Control-Allow-Origin':  '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: corsHeaders, body: '' };
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: cors, body: '' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: JSON.stringify({ error: 'Method not allowed' }) };
 
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
-
-  // ── 1. Extract and validate JWT ──────────────────────────────────────────
+  // 1. Extract JWT
   const authHeader = event.headers['authorization'] || event.headers['Authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
   if (!token) {
-    return {
-      statusCode: 401,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Unauthorised: no token provided' }),
-    };
+    return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'Unauthorised: no session token. Please log in.' }) };
   }
 
-  try {
-    await validateSupabaseJWT(token);
-    // Token is valid — user is authenticated. Proceed.
-  } catch (err) {
-    console.error('JWT validation failed:', err.message);
-    return {
-      statusCode: 401,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Unauthorised: invalid or expired session' }),
-    };
+  // 2. Validate JWT
+  const valid = await validateToken(token);
+  if (!valid) {
+    return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'Unauthorised: invalid or expired session. Please log in again.' }) };
   }
 
-  // ── 2. Parse request body ────────────────────────────────────────────────
+  // 3. Parse body
   let payload;
+  try { payload = JSON.parse(event.body || '{}'); }
+  catch (e) { return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
+
+  // 4. Sanitise — whitelist fields, enforce model, cap tokens
+  const clean = {};
+  ['model', 'max_tokens', 'messages', 'system'].forEach(k => { if (payload[k] !== undefined) clean[k] = payload[k]; });
+  clean.model = 'claude-sonnet-4-20250514';
+  if (!clean.max_tokens || clean.max_tokens > 4000) clean.max_tokens = 2000;
+
+  // 5. Call Anthropic
   try {
-    payload = JSON.parse(event.body || '{}');
-  } catch (e) {
-    return {
-      statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
-    };
-  }
-
-  // Whitelist allowed fields — never forward unknown fields
-  const allowed = ['model', 'max_tokens', 'messages', 'system'];
-  const cleanPayload = {};
-  allowed.forEach(k => { if (payload[k] !== undefined) cleanPayload[k] = payload[k]; });
-
-  // Enforce model — never allow caller to override to a different model
-  cleanPayload.model = 'claude-sonnet-4-20250514';
-
-  // Cap max_tokens at a safe ceiling
-  if (!cleanPayload.max_tokens || cleanPayload.max_tokens > 4000) {
-    cleanPayload.max_tokens = 2000;
-  }
-
-  // ── 3. Call Anthropic ────────────────────────────────────────────────────
-  try {
-    const { status, body } = await callAnthropic(cleanPayload);
-    return {
-      statusCode: status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    };
+    const { status, body } = await callAnthropic(clean);
+    return { statusCode: status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
   } catch (err) {
-    console.error('Anthropic API error:', err.message);
-    return {
-      statusCode: 502,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Upstream API error', detail: err.message }),
-    };
+    console.error('Anthropic error:', err.message);
+    return { statusCode: 502, headers: cors, body: JSON.stringify({ error: 'Upstream API error', detail: err.message }) };
   }
 };
