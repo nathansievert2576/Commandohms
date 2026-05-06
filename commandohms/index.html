@@ -2571,7 +2571,32 @@ function copyOutput() {
     }
   });
 
-  const htmlForClipboard = `<html><body><p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;">${clone.innerHTML}</p></body></html>`;
+  const htmlForClipboard = `<html><body><p style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;">${clone.innerHTML}</p>
+  <!-- EMAIL CONFIRMATION MODAL -->
+  <div id="emailConfirmOverlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeEmailConfirm()">
+    <div style="background:#1a1a1a;border:1.5px solid rgba(200,168,75,0.4);border-radius:14px;padding:32px 28px;max-width:420px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.7);">
+      <div style="font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;color:#C8A84B;margin-bottom:8px;">Before you continue</div>
+      <div style="font-size:0.9rem;color:#c8c4bc;line-height:1.6;margin-bottom:20px;">
+        Your credits will be sent to your <strong style="color:#f0ece4;">CommandoHSC account email</strong>. To make sure your credits arrive, please use the <strong style="color:#f0ece4;">same email at checkout</strong>.
+      </div>
+      <div style="background:#111;border:1px solid rgba(200,168,75,0.3);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1rem;">📧</span>
+        <div>
+          <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;">Your CommandoHSC email</div>
+          <div id="emailConfirmAddress" style="font-size:0.95rem;font-weight:600;color:#C8A84B;"></div>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;color:#888;margin-bottom:22px;line-height:1.5;">
+        Using Klarna, Afterpay, or another payment method? Make sure to enter <strong style="color:#c8c4bc;">this email</strong> — not your Klarna or Afterpay email — in the checkout form.
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeEmailConfirm()" style="flex:1;padding:11px;background:transparent;border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;color:#888;font-size:0.88rem;cursor:pointer;">Cancel</button>
+        <button id="emailConfirmProceed" onclick="proceedToStripe()" style="flex:2;padding:11px;background:#C8A84B;border:none;border-radius:8px;color:#0d0d0d;font-size:0.88rem;font-weight:700;cursor:pointer;">Yes, my email is correct — continue</button>
+      </div>
+    </div>
+  </div>
+
+</body></html>`;
   const plainText = box.innerText || box.textContent || '';
 
   if (navigator.clipboard && window.ClipboardItem) {
@@ -3182,6 +3207,31 @@ async function downloadPDF(event) {
     btn.innerHTML=origHTML;btn.disabled=false;
   }
 }
+// ── Email confirmation before Stripe ─────────────────────────────────────────
+var _pendingStripeUrl = null;
+
+function confirmEmail(event, stripeUrl) {
+  event.preventDefault();
+  if (!currentUser) { showAuth(); return false; }
+  _pendingStripeUrl = stripeUrl;
+  document.getElementById('emailConfirmAddress').textContent = currentUser.email;
+  document.getElementById('emailConfirmOverlay').style.display = 'flex';
+  hideBuy();
+  return false;
+}
+
+function closeEmailConfirm() {
+  document.getElementById('emailConfirmOverlay').style.display = 'none';
+  _pendingStripeUrl = null;
+}
+
+function proceedToStripe() {
+  if (_pendingStripeUrl) {
+    window.open(_pendingStripeUrl, '_blank');
+  }
+  closeEmailConfirm();
+}
+
 // ══════════════════════════════════════════════════════════════
 // SUPABASE AUTH + CREDIT SYSTEM
 // ══════════════════════════════════════════════════════════════
@@ -3622,17 +3672,17 @@ document.addEventListener('keydown', function(e) {
       <h2>Top up your credits</h2>
       <p>Buy once, use anytime. One credit = one full analysis (colour-coding + mark + feedback + PDF).</p>
       <div class="buy-tiers">
-        <a href="https://buy.stripe.com/8x200k4sb1HlbQw5yoeZ200" target="_blank" class="buy-tier" onclick="hideBuy()">
+        <a href="https://buy.stripe.com/8x200k4sb1HlbQw5yoeZ200" target="_blank" class="buy-tier" onclick="return confirmEmail(event, 'https://buy.stripe.com/8x200k4sb1HlbQw5yoeZ200')">
           <div class="buy-tier-name">Starter</div>
           <div class="buy-tier-price">$3.99</div>
           <div class="buy-tier-credits">10 analyses</div>
         </a>
-        <a href="https://buy.stripe.com/5kQbJ22k3gCfaMsgd2eZ201" target="_blank" class="buy-tier featured" onclick="hideBuy()">
+        <a href="https://buy.stripe.com/5kQbJ22k3gCfaMsgd2eZ201" target="_blank" class="buy-tier featured" onclick="return confirmEmail(event, 'https://buy.stripe.com/5kQbJ22k3gCfaMsgd2eZ201')">
           <div class="buy-tier-name">Standard</div>
           <div class="buy-tier-price">$9.99</div>
           <div class="buy-tier-credits">30 analyses</div>
         </a>
-        <a href="https://buy.stripe.com/bJedRa6AjclZ3k0e4UeZ202" target="_blank" class="buy-tier" onclick="hideBuy()">
+        <a href="https://buy.stripe.com/bJedRa6AjclZ3k0e4UeZ202" target="_blank" class="buy-tier" onclick="return confirmEmail(event, 'https://buy.stripe.com/bJedRa6AjclZ3k0e4UeZ202')">
           <div class="buy-tier-name">Intensive</div>
           <div class="buy-tier-price">$14.99</div>
           <div class="buy-tier-credits">60 analyses</div>
