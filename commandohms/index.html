@@ -2006,7 +2006,10 @@ async function extractAll() {
 
       const resp = await fetch('/.netlify/functions/analyse', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + ((await sb.auth.getSession()).data.session?.access_token || '')
+        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 2000,
@@ -2113,7 +2116,10 @@ async function _runAnalysis() {
     // ── Step 1: Annotation ──
     const resp1 = await fetch('/.netlify/functions/analyse', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + ((await sb.auth.getSession()).data.session?.access_token || '')
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
@@ -2147,7 +2153,10 @@ async function _runAnalysis() {
     try {
       const respEx = await fetch('/.netlify/functions/analyse', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + ((await sb.auth.getSession()).data.session?.access_token || '')
+        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 500,
@@ -2233,7 +2242,10 @@ async function _runAnalysis() {
       try {
         const resp2 = await fetch('/.netlify/functions/analyse', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + ((await sb.auth.getSession()).data.session?.access_token || '')
+        },
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
             max_tokens: 200,
@@ -2319,7 +2331,10 @@ Write feedback in clear, direct language — specific and honest, but still easy
 
     const resp3 = await fetch('/.netlify/functions/analyse', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + ((await sb.auth.getSession()).data.session?.access_token || '')
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
