@@ -3367,7 +3367,7 @@ async function buyCredits(tier) {
 
   } catch (error) {
     console.error('Checkout error:', error);
-    showNotification('Checkout error: ' + error.message, 'error');
+    alert('Checkout error: ' + error.message);
     resetBtn();
   }
 }
