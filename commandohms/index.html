@@ -3335,7 +3335,7 @@ async function buyCredits(tier) {
   }
 
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) { showAuth(); return; }
 
     const response = await fetch('/.netlify/functions/create-checkout-session', {
