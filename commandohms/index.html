@@ -3328,6 +3328,15 @@ async function buyCredits(tier) {
   // Find the clicked button and show loading state
   const btn = document.querySelector(`[data-tier="${tier}"]`);
   const originalHTML = btn ? btn.innerHTML : '';
+
+  function resetBtn() {
+    if (btn) {
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+      btn.innerHTML = originalHTML;
+    }
+  }
+
   if (btn) {
     btn.style.pointerEvents = 'none';
     btn.style.opacity = '0.6';
@@ -3336,7 +3345,7 @@ async function buyCredits(tier) {
 
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) { showAuth(); return; }
+    if (!session) { resetBtn(); showAuth(); return; }
 
     const response = await fetch('/.netlify/functions/create-checkout-session', {
       method: 'POST',
@@ -3358,12 +3367,8 @@ async function buyCredits(tier) {
 
   } catch (error) {
     console.error('Checkout error:', error);
-    showNotification('Could not start checkout. Please try again or contact support.', 'error');
-    if (btn) {
-      btn.style.pointerEvents = '';
-      btn.style.opacity = '';
-      btn.innerHTML = originalHTML;
-    }
+    showNotification('Checkout error: ' + error.message, 'error');
+    resetBtn();
   }
 }
 
