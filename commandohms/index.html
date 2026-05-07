@@ -1832,6 +1832,22 @@ function updateTermPill() {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('questionText').addEventListener('input', updateTermPill);
+
+  // ── Detect Stripe redirect back to the app ─────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const paymentStatus = params.get('payment');
+  const paymentTier = params.get('tier');
+  if (paymentStatus === 'success') {
+    const tierCredits = { starter: '10', standard: '30', intensive: '60' };
+    const c = tierCredits[paymentTier] || '';
+    showNotification(c ? `Payment successful! ${c} credits have been added to your account.` : 'Payment successful! Your credits have been added.', 'success');
+    window.history.replaceState({}, '', window.location.pathname);
+    if (typeof loadUserCredits === 'function') loadUserCredits();
+  }
+  if (paymentStatus === 'cancelled') {
+    showNotification('Payment cancelled — no charge was made.', 'info');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 });
 
 // ── Tab switching ──
@@ -3207,29 +3223,50 @@ async function downloadPDF(event) {
     btn.innerHTML=origHTML;btn.disabled=false;
   }
 }
-// ── Email confirmation before Stripe ─────────────────────────────────────────
-var _pendingStripeUrl = null;
+// ── Dynamic Stripe Checkout ───────────────────────────────────────────────────
+async function buyCredits(tier) {
+  if (!currentUser) { showAuth(); return; }
 
-function confirmEmail(event, stripeUrl) {
-  event.preventDefault();
-  if (!currentUser) { showAuth(); return false; }
-  _pendingStripeUrl = stripeUrl;
-  document.getElementById('emailConfirmAddress').textContent = currentUser.email;
-  document.getElementById('emailConfirmOverlay').style.display = 'flex';
-  hideBuy();
-  return false;
-}
-
-function closeEmailConfirm() {
-  document.getElementById('emailConfirmOverlay').style.display = 'none';
-  _pendingStripeUrl = null;
-}
-
-function proceedToStripe() {
-  if (_pendingStripeUrl) {
-    window.open(_pendingStripeUrl, '_blank');
+  // Find the clicked button and show loading state
+  const btn = document.querySelector(`[data-tier="${tier}"]`);
+  const originalHTML = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.6';
+    btn.innerHTML = '<div class="buy-tier-name">Please wait…</div>';
   }
-  closeEmailConfirm();
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) { showAuth(); return; }
+
+    const response = await fetch('/.netlify/functions/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ tier }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Server error ${response.status}`);
+    }
+
+    const { url } = await response.json();
+    hideBuy();
+    window.location.href = url;
+
+  } catch (error) {
+    console.error('Checkout error:', error);
+    showNotification('Could not start checkout. Please try again or contact support.', 'error');
+    if (btn) {
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+      btn.innerHTML = originalHTML;
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3672,21 +3709,21 @@ document.addEventListener('keydown', function(e) {
       <h2>Top up your credits</h2>
       <p>Buy once, use anytime. One credit = one full analysis (colour-coding + mark + feedback + PDF).</p>
       <div class="buy-tiers">
-        <a href="https://buy.stripe.com/8x200k4sb1HlbQw5yoeZ200" target="_blank" class="buy-tier" onclick="return confirmEmail(event, 'https://buy.stripe.com/8x200k4sb1HlbQw5yoeZ200')">
+        <div data-tier="starter" class="buy-tier" onclick="buyCredits('starter')" style="cursor:pointer;">
           <div class="buy-tier-name">Starter</div>
           <div class="buy-tier-price">$3.99</div>
           <div class="buy-tier-credits">10 analyses</div>
-        </a>
-        <a href="https://buy.stripe.com/5kQbJ22k3gCfaMsgd2eZ201" target="_blank" class="buy-tier featured" onclick="return confirmEmail(event, 'https://buy.stripe.com/5kQbJ22k3gCfaMsgd2eZ201')">
+        </div>
+        <div data-tier="standard" class="buy-tier featured" onclick="buyCredits('standard')" style="cursor:pointer;">
           <div class="buy-tier-name">Standard</div>
           <div class="buy-tier-price">$9.99</div>
           <div class="buy-tier-credits">30 analyses</div>
-        </a>
-        <a href="https://buy.stripe.com/bJedRa6AjclZ3k0e4UeZ202" target="_blank" class="buy-tier" onclick="return confirmEmail(event, 'https://buy.stripe.com/bJedRa6AjclZ3k0e4UeZ202')">
+        </div>
+        <div data-tier="intensive" class="buy-tier" onclick="buyCredits('intensive')" style="cursor:pointer;">
           <div class="buy-tier-name">Intensive</div>
           <div class="buy-tier-price">$14.99</div>
           <div class="buy-tier-credits">60 analyses</div>
-        </a>
+        </div>
       </div>
       <p style="font-size:0.75rem;color:var(--muted);text-align:center;margin-bottom:1rem;">After payment, refresh this page to see your updated credits.</p>
       <button class="buy-close" onclick="hideBuy()">Cancel</button>
