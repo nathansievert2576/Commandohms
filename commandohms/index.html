@@ -1391,26 +1391,124 @@
   }
   .confirm-btn:hover { opacity: 0.88; }
 
-  /* ── PAYMENT TOAST ── */
-  .payment-toast {
-    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(120%);
-    z-index: 9999;
-    display: flex; align-items: center; gap: 0.75rem;
-    background: #111; border: 1.5px solid rgba(200,168,75,0.5);
-    border-radius: 12px; padding: 0.9rem 1.4rem;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(200,168,75,0.1);
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 0.9rem; color: #f0ece4;
-    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
-    opacity: 0; pointer-events: none; white-space: nowrap;
+  /* ── PAYMENT SUCCESS MODAL ── */
+  .pay-modal-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
   }
-  .payment-toast.show {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1; pointer-events: auto;
+  .pay-modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .pay-modal {
+    background: #111; border: 1.5px solid rgba(200,168,75,0.35);
+    border-radius: 20px; padding: 2.5rem 2rem 2rem;
+    width: 320px; max-width: 90vw; text-align: center;
+    position: relative; overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+    transform: scale(0.92); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
   }
-  .payment-toast-icon { font-size: 1.3rem; flex-shrink: 0; }
-  .payment-toast-text strong { color: var(--gold); }
-  .payment-toast.error { border-color: rgba(232,69,69,0.5); }
+  .pay-modal-overlay.show .pay-modal { transform: scale(1); }
+  .pay-modal-confetti { position: absolute; inset: 0; pointer-events: none; }
+  .pay-modal-ring {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(200,168,75,0.12); border: 2px solid rgba(200,168,75,0.5);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem; position: relative; z-index: 2;
+  }
+  .pay-modal-ring svg { width: 32px; height: 32px; }
+  .pay-modal-tag {
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(200,168,75,0.6);
+    margin: 0 0 0.4rem; position: relative; z-index: 2;
+  }
+  .pay-modal-title {
+    font-size: 1.3rem; font-weight: 800; color: #f0ece4;
+    margin: 0 0 0.3rem; position: relative; z-index: 2;
+  }
+  .pay-modal-credits {
+    font-size: 1.9rem; font-weight: 800; color: #c8a84b;
+    margin: 0 0 0.2rem; position: relative; z-index: 2;
+  }
+  .pay-modal-sub {
+    font-size: 0.78rem; color: rgba(240,236,228,0.45);
+    margin: 0 0 0.75rem; line-height: 1.5; position: relative; z-index: 2;
+  }
+  .pay-modal-note {
+    font-size: 0.74rem; color: rgba(200,168,75,0.8);
+    background: rgba(200,168,75,0.07); border: 1px solid rgba(200,168,75,0.2);
+    border-radius: 8px; padding: 0.5rem 0.75rem;
+    margin: 0 0 1.25rem; line-height: 1.45; position: relative; z-index: 2;
+  }
+  .pay-modal-btn {
+    display: block; width: 100%; background: #c8a84b; color: #111;
+    border: none; border-radius: 10px; padding: 0.8rem;
+    font-size: 0.88rem; font-weight: 700; letter-spacing: 0.02em;
+    cursor: pointer; position: relative; z-index: 2; box-sizing: border-box;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .pay-modal-btn:hover { background: #d9b95c; transform: translateY(-1px); }
+  .pay-modal-btn:active { transform: translateY(0); }
+
+  /* ── SIGN-IN REMINDER MODAL ── */
+  .tip-modal-overlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.65);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .tip-modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .tip-modal {
+    background: #111; border: 1.5px solid rgba(200,168,75,0.3);
+    border-radius: 20px; padding: 2.25rem 2rem 2rem;
+    width: 320px; max-width: 90vw; text-align: center;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+    transform: scale(0.92); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .tip-modal-overlay.show .tip-modal { transform: scale(1); }
+  .tip-modal-ring {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(200,168,75,0.08); border: 2px solid rgba(200,168,75,0.3);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.1rem;
+  }
+  .tip-modal-ring svg { width: 28px; height: 28px; }
+  .tip-modal-tag {
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(200,168,75,0.55); margin: 0 0 0.4rem;
+  }
+  .tip-modal-title {
+    font-size: 1.2rem; font-weight: 800; color: #f0ece4; margin: 0 0 0.6rem;
+  }
+  .tip-modal-body {
+    font-size: 0.8rem; color: rgba(240,236,228,0.5);
+    line-height: 1.6; margin: 0 0 0.75rem;
+  }
+  .tip-modal-body strong { color: #f0ece4; }
+  .tip-modal-note {
+    font-size: 0.74rem; color: rgba(200,168,75,0.8);
+    background: rgba(200,168,75,0.07); border: 1px solid rgba(200,168,75,0.2);
+    border-radius: 8px; padding: 0.5rem 0.75rem;
+    margin: 0 0 1.25rem; line-height: 1.45;
+  }
+  .tip-modal-btn {
+    display: block; width: 100%; background: #c8a84b; color: #111;
+    border: none; border-radius: 10px; padding: 0.8rem;
+    font-size: 0.88rem; font-weight: 700; letter-spacing: 0.02em;
+    cursor: pointer; box-sizing: border-box;
+    transition: background 0.15s, transform 0.1s; margin-bottom: 0.5rem;
+  }
+  .tip-modal-btn:hover { background: #d9b95c; transform: translateY(-1px); }
+  .tip-modal-btn:active { transform: translateY(0); }
+  .tip-modal-btn-skip {
+    display: block; width: 100%; background: transparent;
+    color: rgba(240,236,228,0.4); border: 1px solid rgba(240,236,228,0.1);
+    border-radius: 10px; padding: 0.65rem;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; box-sizing: border-box;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .tip-modal-btn-skip:hover { border-color: rgba(240,236,228,0.25); color: rgba(240,236,228,0.6); }
 
 </style>
 </head>
@@ -1840,8 +1938,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (paymentStatus === 'success') {
     const tierCredits = { starter: '10', standard: '30', intensive: '60' };
     const c = tierCredits[paymentTier] || '';
-    showNotification(c ? `Payment successful! ${c} credits have been added to your account.` : 'Payment successful! Your credits have been added.', 'success');
     window.history.replaceState({}, '', window.location.pathname);
+    showPaymentModal(c);
     if (typeof loadUserCredits === 'function') loadUserCredits();
   }
   if (paymentStatus === 'cancelled') {
@@ -3598,6 +3696,9 @@ document.addEventListener('keydown', function(e) {
     if (session?.user) {
       currentUser = session.user;
       userCredits = await fetchCredits(currentUser.id);
+      if (event === 'SIGNED_IN') {
+        showSignInTipModal();
+      }
     } else {
       currentUser = null;
       userCredits = 0;
@@ -3619,7 +3720,7 @@ document.addEventListener('keydown', function(e) {
         if (latest > creditsBefore || attempts >= 10) {
           userCredits = latest;
           renderNav();
-          showPaymentToast(latest > creditsBefore);
+          showPaymentModal(latest > creditsBefore ? '' : null);
         } else {
           setTimeout(poll, 2000);
         }
@@ -3996,28 +4097,103 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 
-  <!-- PAYMENT SUCCESS TOAST -->
-  <div class="payment-toast" id="paymentToast">
-    <span class="payment-toast-icon" id="paymentToastIcon">🎯</span>
-    <span class="payment-toast-text" id="paymentToastText"></span>
+  <!-- PAYMENT SUCCESS MODAL -->
+  <div class="pay-modal-overlay" id="payModalOverlay">
+    <div class="pay-modal">
+      <canvas class="pay-modal-confetti" id="payModalConfetti"></canvas>
+      <div class="pay-modal-ring">
+        <svg viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" stroke="#c8a84b" stroke-width="1.8"/>
+          <path d="M9 16l5.5 5.5 9-11" stroke="#c8a84b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="pay-modal-tag">Payment successful</div>
+      <div class="pay-modal-title">You're all set!</div>
+      <div class="pay-modal-credits" id="payModalCredits">Credits added</div>
+      <div class="pay-modal-sub">added to your account and ready to use</div>
+      <div class="pay-modal-note">↻ Please refresh your browser to see your updated credit balance.</div>
+      <button class="pay-modal-btn" onclick="location.reload()">Refresh now →</button>
+    </div>
+  </div>
+
+  <!-- SIGN-IN TIP MODAL -->
+  <div class="tip-modal-overlay" id="tipModalOverlay">
+    <div class="tip-modal">
+      <div class="tip-modal-ring">
+        <svg viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" stroke="#c8a84b" stroke-width="1.6"/>
+          <path d="M14 8v8" stroke="#c8a84b" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="14" cy="20" r="1.1" fill="#c8a84b"/>
+        </svg>
+      </div>
+      <div class="tip-modal-tag">Quick tip</div>
+      <div class="tip-modal-title">Before you start</div>
+      <div class="tip-modal-body">This tool works best when you <strong>refresh the page</strong> before every new analysis — it ensures your latest credits are loaded and results are accurate.</div>
+      <div class="tip-modal-note">↻ Get into the habit of refreshing before each use — it only takes a second.</div>
+      <button class="tip-modal-btn" onclick="closeTipModal(false)">Got it — let's go →</button>
+      <button class="tip-modal-btn-skip" onclick="closeTipModal(true)">Don't show this again</button>
+    </div>
   </div>
 
 <script>
-function showPaymentToast(success) {
-  const toast = document.getElementById('paymentToast');
-  const icon  = document.getElementById('paymentToastIcon');
-  const text  = document.getElementById('paymentToastText');
-  if (success) {
-    toast.classList.remove('error');
-    icon.textContent = '🎯';
-    text.innerHTML = '<strong>Payment successful!</strong> Your credits have been added.';
+// ── Payment success modal ─────────────────────────────────────────────────────
+function showPaymentModal(credits) {
+  const overlay = document.getElementById('payModalOverlay');
+  const creditsEl = document.getElementById('payModalCredits');
+  if (credits) {
+    creditsEl.textContent = credits + ' credits';
   } else {
-    toast.classList.add('error');
-    icon.textContent = '⚠️';
-    text.innerHTML = 'Payment received — credits may take a moment to appear. <strong>Refresh if needed.</strong>';
+    creditsEl.textContent = 'Credits added';
   }
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 6000);
+  overlay.classList.add('show');
+  startPayModalConfetti();
+}
+
+function startPayModalConfetti() {
+  const canvas = document.getElementById('payModalConfetti');
+  const modal = canvas.parentElement;
+  canvas.width = modal.offsetWidth;
+  canvas.height = modal.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  const COLORS = ['#c8a84b','#d9b95c','#f0ece4','#8a7535','#ffe08a','#ffffff'];
+  const pieces = Array.from({length:55},()=>({
+    x:Math.random()*canvas.width, y:Math.random()*-canvas.height,
+    w:4+Math.random()*7, h:3+Math.random()*4,
+    r:Math.random()*Math.PI*2, dr:(Math.random()-0.5)*0.15,
+    dy:1.5+Math.random()*2.5, dx:(Math.random()-0.5)*1.2,
+    color:COLORS[Math.floor(Math.random()*COLORS.length)],
+    opacity:0.7+Math.random()*0.3
+  }));
+  let frame=0;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p=>{
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.globalAlpha=p.opacity; ctx.fillStyle=p.color;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+      p.y+=p.dy; p.x+=p.dx; p.r+=p.dr;
+      if(p.y>canvas.height+10){p.y=-10;p.x=Math.random()*canvas.width;}
+    });
+    frame++;
+    if(frame<300) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+// ── Sign-in tip modal ─────────────────────────────────────────────────────────
+function showSignInTipModal() {
+  if (localStorage.getItem('commandoHideTip') === '1') return;
+  setTimeout(() => {
+    document.getElementById('tipModalOverlay').classList.add('show');
+  }, 600);
+}
+
+function closeTipModal(dontShowAgain) {
+  document.getElementById('tipModalOverlay').classList.remove('show');
+  if (dontShowAgain) {
+    localStorage.setItem('commandoHideTip', '1');
+  }
 }
 </script>
 
