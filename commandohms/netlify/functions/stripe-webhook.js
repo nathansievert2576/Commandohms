@@ -113,18 +113,62 @@ async function addCredits(email, credits, stripeSessionId) {
     }
   }
 
+  // ── Look up user UUID from email ─────────────────────────────────────────
+  const uidResult = await supabaseRequest(
+    'POST',
+    '/rest/v1/rpc/get_user_id_by_email',
+    { user_email: email },
+    serviceKey,
+    supabaseHost
+  );
+
+  if (uidResult.status !== 200) {
+    await supabaseRequest(
+      'POST',
+      '/rest/v1/payments',
+      {
+        stripe_session_id: stripeSessionId,
+        email,
+        credits,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      },
+      serviceKey,
+      supabaseHost
+    );
+    console.error(`[webhook] get_user_id_by_email failed (${uidResult.status}) for ${email} — recorded as pending`);
+    return 'pending';
+  }
+
+  const userUid = JSON.parse(uidResult.body);
+  if (!userUid) {
+    await supabaseRequest(
+      'POST',
+      '/rest/v1/payments',
+      {
+        stripe_session_id: stripeSessionId,
+        email,
+        credits,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      },
+      serviceKey,
+      supabaseHost
+    );
+    console.error(`[webhook] No user found for email ${email} — recorded as pending`);
+    return 'pending';
+  }
+
   // ── Credit the account ───────────────────────────────────────────────────
-  const rpcPath = '/rest/v1/rpc/add_credits';
   const rpcResult = await supabaseRequest(
     'POST',
-    rpcPath,
-    { user_email: email, amount: credits },
+    '/rest/v1/rpc/add_credits',
+    { uid: userUid, amount: credits },
     serviceKey,
     supabaseHost
   );
 
   if (rpcResult.status !== 200 && rpcResult.status !== 204) {
-    // User not found or RPC error — record as pending for manual review
     await supabaseRequest(
       'POST',
       '/rest/v1/payments',
