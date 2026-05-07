@@ -25,7 +25,7 @@ const corsHeaders = {
 const TIERS = {
   starter:  { credits: 10,  amount_aud_cents: 399,  label: 'Starter – 10 credits'  },
   standard: { credits: 30,  amount_aud_cents: 999,  label: 'Standard – 30 credits' },
-  value:    { credits: 100, amount_aud_cents: 1999, label: 'Value – 100 credits'    },
+  intensive: { credits: 60,  amount_aud_cents: 1499, label: 'Intensive – 60 credits' },
 };
 
 // ── Validate Supabase JWT ────────────────────────────────────────────────────
