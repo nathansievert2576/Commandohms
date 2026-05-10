@@ -175,13 +175,13 @@
 
   /* ── NAV ── */
   nav {
-    position: sticky; top: 0; z-index: 100;
+    position: sticky; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 2rem;
     background: #000000;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-    padding: 0 clamp(1rem,3vw,2rem);
-    height: 64px;
-    display: flex; align-items: center;
-    width: 100%; box-sizing: border-box;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    box-sizing: border-box;
+    width: 100%;
   }
   .nav-left {
     display: flex; align-items: center; gap: 0.75rem;
