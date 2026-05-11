@@ -3752,11 +3752,18 @@ document.addEventListener('keydown', function(e) {
   await refreshUser();
 
   // Listen for auth state changes
+  // Track if we've already shown the tip this page load, so it doesn't
+  // re-fire when the session re-hydrates after tab switches.
+  let _tipShownThisLoad = false;
   sb.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
+      const wasSignedOut = !currentUser;
       currentUser = session.user;
       userCredits = await fetchCredits(currentUser.id);
-      if (event === 'SIGNED_IN') {
+      // Only show the tip on a genuine new sign-in (was logged out, now logged in)
+      // and only once per page load
+      if (event === 'SIGNED_IN' && wasSignedOut && !_tipShownThisLoad) {
+        _tipShownThisLoad = true;
         showSignInTipModal();
       }
     } else {
