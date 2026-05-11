@@ -3547,14 +3547,30 @@ async function doSignOut() {
 
 // ── Fetch credits from Supabase ──
 async function fetchCredits(userId) {
-  const { data, error } = await sb
+  // Race the Supabase call against a timeout. After tab inactivity, the
+  // Supabase HTTP connection can go stale and hang indefinitely, never
+  // resolving or rejecting. We give it 3 seconds, then fall back to the
+  // cached userCredits value. spendCredit() does its own server-side check,
+  // so a stale cached value is safe — the analysis will still be properly
+  // gated server-side.
+  const supabaseCall = sb
     .from('user_credits')
     .select('credits')
     .eq('user_id', userId)
     .single();
+
+  const timeout = new Promise(resolve => setTimeout(() => resolve({ _timedOut: true }), 3000));
+
+  const result = await Promise.race([supabaseCall, timeout]);
+
+  if (result._timedOut) {
+    console.warn('[DIAG] fetchCredits timed out — using cached value:', userCredits);
+    return userCredits;
+  }
+  const { data, error } = result;
   if (error) {
     console.error('[DIAG] fetchCredits error:', error.message, error);
-    return 0;
+    return userCredits; // fall back to cached value on error too
   }
   console.log('[DIAG] fetchCredits success:', data?.credits);
   return data?.credits ?? 0;
