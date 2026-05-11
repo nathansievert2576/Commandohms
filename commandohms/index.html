@@ -3630,24 +3630,6 @@ async function checkGate() {
     showAuth();
     return false;
   }
-  // Refresh the session in case it has gone stale after tab inactivity.
-  // This prevents fetchCredits from silently returning 0 due to an expired token.
-  try {
-    const { data: refreshData } = await sb.auth.refreshSession();
-    if (refreshData?.session) {
-      currentUser = refreshData.session.user;
-    } else {
-      // Refresh failed — session is truly gone, ask user to sign in again
-      currentUser = null;
-      userCredits = 0;
-      renderNav();
-      showAuth();
-      return false;
-    }
-  } catch (e) {
-    // Network error during refresh — still try to proceed with cached session
-    console.warn('Session refresh failed:', e);
-  }
   // Must have credits
   const latest = await fetchCredits(currentUser.id);
   userCredits = latest;
@@ -3746,6 +3728,21 @@ document.addEventListener('keydown', function(e) {
       userCredits = 0;
     }
     renderNav();
+  });
+
+  // When the user returns to this tab (e.g. from Word or another browser tab),
+  // proactively re-hydrate the Supabase session so it's fresh before they
+  // click Check My Response. This prevents the brief SIGNED_OUT flash that
+  // causes the button to appear unresponsive.
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+      const { data } = await sb.auth.getSession();
+      if (data?.session?.user) {
+        currentUser = data.session.user;
+        userCredits = await fetchCredits(currentUser.id);
+        renderNav();
+      }
+    }
   });
 
   // Check if returning from Stripe payment
