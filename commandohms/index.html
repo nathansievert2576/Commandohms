@@ -3564,15 +3564,12 @@ async function fetchCredits(userId) {
   const result = await Promise.race([supabaseCall, timeout]);
 
   if (result._timedOut) {
-    console.warn('[DIAG] fetchCredits timed out — using cached value:', userCredits);
     return userCredits;
   }
   const { data, error } = result;
   if (error) {
-    console.error('[DIAG] fetchCredits error:', error.message, error);
-    return userCredits; // fall back to cached value on error too
+    return userCredits;
   }
-  console.log('[DIAG] fetchCredits success:', data?.credits);
   return data?.credits ?? 0;
 }
 
@@ -3645,21 +3642,16 @@ async function refundCredit() {
 
 // Returns true if analysis can proceed
 async function checkGate() {
-  console.log('[DIAG] checkGate: currentUser=', currentUser?.id);
   // Must be signed in
   if (!currentUser) {
-    console.warn('[DIAG] checkGate: no currentUser, showing auth');
     showAuth();
     return false;
   }
   // Must have credits
-  console.log('[DIAG] checkGate: fetching credits...');
   const latest = await fetchCredits(currentUser.id);
-  console.log('[DIAG] checkGate: fetched credits =', latest);
   userCredits = latest;
   renderNav();
   if (userCredits <= 0) {
-    console.warn('[DIAG] checkGate: 0 credits, showing gate');
     showGate();
     return false;
   }
@@ -3692,30 +3684,19 @@ function confirmProceed() {
 
 // ── analyseText — gate, confirm, spend, run, refund on error ──
 async function analyseText() {
-  console.log('[DIAG] analyseText called. currentUser:', currentUser?.id, 'userCredits:', userCredits, 'visibility:', document.visibilityState);
-  try {
-    const ok = await checkGate();
-    console.log('[DIAG] checkGate returned:', ok);
-    if (!ok) return;
-    console.log('[DIAG] calling showConfirm');
-    showConfirm(async () => {
-      console.log('[DIAG] confirm proceed clicked, calling spendCredit');
-      const spent = await spendCredit();
-      console.log('[DIAG] spendCredit returned:', spent);
-      if (!spent) { showGate(); return; }
-      try {
-        await _runAnalysis();
-      } catch(e) {
-        console.error('[DIAG] _runAnalysis threw:', e);
-        await refundCredit();
-        const out = document.getElementById('outputBox');
-        if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
-      }
-    });
-  } catch(e) {
-    console.error('[DIAG] analyseText outer error:', e);
-    alert('Something went wrong. Check console (F12) for details: ' + e.message);
-  }
+  const ok = await checkGate();
+  if (!ok) return;
+  showConfirm(async () => {
+    const spent = await spendCredit();
+    if (!spent) { showGate(); return; }
+    try {
+      await _runAnalysis();
+    } catch(e) {
+      await refundCredit();
+      const out = document.getElementById('outputBox');
+      if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+    }
+  });
 }
 
 // ── Terms of Service Modal ──
