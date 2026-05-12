@@ -3359,7 +3359,7 @@ async function buyCredits(tier) {
   }
 
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if (!session) { showAuth(); return; }
 
     const response = await fetch('/.netlify/functions/create-checkout-session', {
@@ -3382,7 +3382,7 @@ async function buyCredits(tier) {
 
   } catch (error) {
     console.error('Checkout error:', error);
-    showNotification('Could not start checkout. Please try again or contact support.', 'error');
+    alert('Could not start checkout. Please try again or contact support.');
     if (btn) {
       btn.style.pointerEvents = '';
       btn.style.opacity = '';
