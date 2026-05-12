@@ -3889,11 +3889,10 @@ async function shareReferralLink() {
   try {
     await navigator.share({
       title: 'CommandoHSC — HSC Response Analyser',
-      text: 'Get instant AI feedback on your HSC responses. Sign up with my link and get 3 bonus analyses free:',
+      text: "Hey! I've been using CommandoHSC to get instant AI feedback on my HSC responses — it colour-codes your writing by command term, gives you a mark estimate, and detailed feedback on exactly what to improve. Sign up with my link and get a total of 6 free analyses. Worth trying as a study tool before your exams 👇",
       url: link
     });
   } catch(e) {
-    // User cancelled share or API unavailable — fall back to copy
     copyReferralLink();
   }
 }
