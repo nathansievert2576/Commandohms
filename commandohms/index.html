@@ -1675,8 +1675,8 @@
     line-height: 1.4;
   }
   .referral-how-step:last-child { margin-bottom: 0; color: #000; font-weight: 700; }
-  .referral-how-step i { font-size: 16px; color: rgba(0,0,0,0.45); flex-shrink: 0; }
-  .referral-how-step:last-child i { color: #000; }
+  .referral-how-step span { color: rgba(0,0,0,0.45); font-weight: 700; }
+  .referral-how-step:last-child span { color: #000; }
   .referral-close-btn {
     width: 100%;
     background: rgba(255,255,255,0.05);
@@ -4545,7 +4545,7 @@ function closeTipModal(dontShowAgain) {
       </div>
 
       <button class="referral-share-btn" id="shareReferralBtn" onclick="shareReferralLink()">
-        <i class="ti ti-share"></i>
+        <span style="flex-shrink:0;">↑</span>
         Share
       </button>
 
@@ -4562,10 +4562,10 @@ function closeTipModal(dontShowAgain) {
 
       <div class="referral-how">
         <div class="referral-how-title">How it works</div>
-        <div class="referral-how-step"><i class="ti ti-link"></i>Share your unique link</div>
-        <div class="referral-how-step"><i class="ti ti-user-plus"></i>Friend signs up — gets 3 bonus analyses</div>
-        <div class="referral-how-step"><i class="ti ti-credit-card"></i>Friend makes their first purchase</div>
-        <div class="referral-how-step"><i class="ti ti-check"></i>You get 10 free analyses, automatically</div>
+        <div class="referral-how-step"><span style="flex-shrink:0;">→</span>Share your unique link</div>
+        <div class="referral-how-step"><span style="flex-shrink:0;">→</span>Friend signs up — gets 3 bonus analyses</div>
+        <div class="referral-how-step"><span style="flex-shrink:0;">→</span>Friend makes their first purchase</div>
+        <div class="referral-how-step"><span style="flex-shrink:0;">✓</span>You get 10 free analyses, automatically</div>
       </div>
 
       <button class="referral-close-btn" onclick="hideReferral()">Close</button>
