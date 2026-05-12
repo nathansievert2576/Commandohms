@@ -1517,109 +1517,129 @@
   }
   .referral-modal-overlay.visible { opacity: 1; pointer-events: all; }
   .referral-modal {
-    background: linear-gradient(145deg, #c8a84b 0%, #e8cc6e 40%, #b8943b 100%);
+    background: #000;
+    border: 1px solid rgba(200,168,75,0.3);
     border-radius: 22px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 440px;
-    box-shadow: 0 20px 80px rgba(200,168,75,0.4), 0 0 0 1px rgba(255,255,255,0.2) inset;
-    position: relative;
     overflow: hidden;
+    width: 100%;
+    max-width: 420px;
   }
-  .referral-modal::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.12);
-    pointer-events: none;
+  .referral-modal-header {
+    background: linear-gradient(135deg, #c8a84b 0%, #e8cc6e 50%, #b8943b 100%);
+    padding: 1.75rem 1.75rem 1.5rem;
+  }
+  .referral-modal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.18);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 0.75rem;
   }
   .referral-modal-title {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 1.5rem;
     font-weight: 900;
     color: #000;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.35rem;
+    line-height: 1.15;
     letter-spacing: -0.02em;
   }
   .referral-modal-sub {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: rgba(0,0,0,0.6);
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
+    line-height: 1.55;
+    margin: 0;
   }
   .referral-modal-sub strong { color: #000; font-weight: 700; }
+  .referral-modal-body { padding: 1.5rem 1.75rem; }
   .referral-link-row {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.85rem;
   }
   .referral-link-input {
     flex: 1;
-    background: rgba(0,0,0,0.12);
-    border: 1.5px solid rgba(0,0,0,0.2);
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(200,168,75,0.25);
     border-radius: 10px;
-    padding: 0.65rem 0.85rem;
+    padding: 0.6rem 0.8rem;
     font-family: 'DM Mono', monospace;
     font-size: 0.7rem;
-    color: #000;
+    color: #c8a84b;
     outline: none;
     min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .referral-copy-btn {
-    background: #000;
-    color: #c8a84b;
+    background: #c8a84b;
+    color: #000;
     border: none;
     border-radius: 10px;
-    padding: 0.65rem 1rem;
+    padding: 0.6rem 1rem;
     font-family: 'DM Mono', monospace;
     font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
     transition: opacity 0.15s;
   }
-  .referral-copy-btn:hover { opacity: 0.8; }
-  /* Share button — shown on mobile when Web Share API is available */
+  .referral-copy-btn:hover { opacity: 0.85; }
+  /* Share button */
   .referral-share-btn {
     width: 100%;
-    background: #000;
-    color: #c8a84b;
-    border: none;
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    background: #1a1a1a;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
     display: none;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    transition: opacity 0.15s;
+    gap: 10px;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    box-sizing: border-box;
   }
-  .referral-share-btn:hover { opacity: 0.8; }
+  .referral-share-btn:hover {
+    background: linear-gradient(90deg, #F7941D 0%, #E8405A 50%, #9B27B0 100%);
+    border-color: transparent;
+  }
+  .referral-share-btn i { font-size: 20px; }
   .referral-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.6rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
     margin-bottom: 1.25rem;
   }
   .referral-stat {
-    background: rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
     border-radius: 12px;
-    padding: 0.85rem 0.5rem;
+    padding: 0.85rem 1rem;
     text-align: center;
-    border: 1px solid rgba(0,0,0,0.1);
   }
   .referral-stat-num {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
-    color: #000;
+    color: #c8a84b;
     line-height: 1;
     margin-bottom: 0.2rem;
   }
@@ -1628,45 +1648,48 @@
     font-size: 0.58rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: rgba(0,0,0,0.5);
+    color: rgba(255,255,255,0.35);
     line-height: 1.3;
   }
   .referral-how {
-    background: rgba(0,0,0,0.1);
-    border-radius: 12px;
-    padding: 1rem 1.1rem;
-    margin-bottom: 1.25rem;
-    border: 1px solid rgba(0,0,0,0.08);
+    background: linear-gradient(135deg, #c8a84b 0%, #e8cc6e 50%, #b8943b 100%);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
   }
   .referral-how-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
+    font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(0,0,0,0.5);
-    margin-bottom: 0.6rem;
+    color: rgba(0,0,0,0.45);
+    margin-bottom: 0.75rem;
     font-weight: 700;
   }
   .referral-how-step {
-    font-size: 0.8rem;
-    color: rgba(0,0,0,0.65);
-    line-height: 1.75;
-    padding-left: 1.1rem;
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    color: rgba(0,0,0,0.7);
+    line-height: 1.4;
   }
-  .referral-how-step::before { content: "→"; position: absolute; left: 0; color: #000; font-weight: 700; }
+  .referral-how-step:last-child { margin-bottom: 0; color: #000; font-weight: 700; }
+  .referral-how-step i { font-size: 16px; color: rgba(0,0,0,0.45); flex-shrink: 0; }
+  .referral-how-step:last-child i { color: #000; }
   .referral-close-btn {
     width: 100%;
-    background: rgba(0,0,0,0.1);
-    border: 1.5px solid rgba(0,0,0,0.15);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 10px;
     padding: 0.75rem;
-    color: rgba(0,0,0,0.55);
+    color: rgba(255,255,255,0.35);
     font-size: 0.82rem;
     cursor: pointer;
     transition: background 0.15s;
+    text-align: center;
   }
-  .referral-close-btn:hover { background: rgba(0,0,0,0.18); }
+  .referral-close-btn:hover { background: rgba(255,255,255,0.1); }
 </style>
 </head>
 <body>
@@ -3835,7 +3858,6 @@ async function showReferral() {
     const { data: stats } = await sb.rpc('get_referral_stats', { uid: currentUser.id });
     if (stats) {
       document.getElementById('referralTotal').textContent = stats.total_referrals;
-      document.getElementById('referralPaid').textContent  = stats.paid_referrals;
       document.getElementById('referralEarned').textContent = stats.total_credits_earned;
     }
   } catch(e) {
@@ -4511,45 +4533,43 @@ function closeTipModal(dontShowAgain) {
 <!-- REFERRAL MODAL -->
 <div class="referral-modal-overlay" id="referralModal" onclick="if(event.target===this)hideReferral()">
   <div class="referral-modal">
-    <div class="referral-modal-title">🔗 Refer a friend</div>
-    <div class="referral-modal-sub">
-      Share your link. When a friend signs up and makes their <strong>first purchase</strong>, you get <strong>10 free analyses</strong> — and they get a <strong>bonus 3</strong> on signup just for joining.
+    <div class="referral-modal-header">
+      <div class="referral-modal-badge">🔗 Refer &amp; earn</div>
+      <div class="referral-modal-title">Share CommandoHSC.<br>Both of you win.</div>
+      <p class="referral-modal-sub">Your friend gets <strong>3 bonus analyses</strong> on signup. When they make their first purchase, you get <strong>10 free analyses</strong>.</p>
     </div>
-
-    <div class="referral-link-row">
-      <input class="referral-link-input" id="referralLink" type="text" readonly placeholder="Generating your link…">
-      <button class="referral-copy-btn" id="copyReferralBtn" onclick="copyReferralLink()">Copy</button>
-    </div>
-
-    <!-- Share button — only shown on mobile when Web Share API is available -->
-    <button class="referral-share-btn" id="shareReferralBtn" onclick="shareReferralLink()">
-      ↑ Share via Messages, WhatsApp, Email…
-    </button>
-
-    <div class="referral-stats">
-      <div class="referral-stat">
-        <div class="referral-stat-num" id="referralTotal">—</div>
-        <div class="referral-stat-label">Friends referred</div>
+    <div class="referral-modal-body">
+      <div class="referral-link-row">
+        <input class="referral-link-input" id="referralLink" type="text" readonly placeholder="Generating your link…">
+        <button class="referral-copy-btn" id="copyReferralBtn" onclick="copyReferralLink()">Copy</button>
       </div>
-      <div class="referral-stat">
-        <div class="referral-stat-num" id="referralPaid">—</div>
-        <div class="referral-stat-label">Rewards earned</div>
-      </div>
-      <div class="referral-stat">
-        <div class="referral-stat-num" id="referralEarned">—</div>
-        <div class="referral-stat-label">Free analyses</div>
-      </div>
-    </div>
 
-    <div class="referral-how">
-      <div class="referral-how-title">How it works</div>
-      <div class="referral-how-step">Share your link with a friend</div>
-      <div class="referral-how-step">They sign up — and get 3 bonus analyses</div>
-      <div class="referral-how-step">They make their first purchase</div>
-      <div class="referral-how-step">You get 10 free analyses — automatically</div>
-    </div>
+      <button class="referral-share-btn" id="shareReferralBtn" onclick="shareReferralLink()">
+        <i class="ti ti-share"></i>
+        Share
+      </button>
 
-    <button class="referral-close-btn" onclick="hideReferral()">Close</button>
+      <div class="referral-stats">
+        <div class="referral-stat">
+          <div class="referral-stat-num" id="referralTotal">—</div>
+          <div class="referral-stat-label">Friends referred</div>
+        </div>
+        <div class="referral-stat">
+          <div class="referral-stat-num" id="referralEarned">—</div>
+          <div class="referral-stat-label">Free analyses earned</div>
+        </div>
+      </div>
+
+      <div class="referral-how">
+        <div class="referral-how-title">How it works</div>
+        <div class="referral-how-step"><i class="ti ti-link"></i>Share your unique link</div>
+        <div class="referral-how-step"><i class="ti ti-user-plus"></i>Friend signs up — gets 3 bonus analyses</div>
+        <div class="referral-how-step"><i class="ti ti-credit-card"></i>Friend makes their first purchase</div>
+        <div class="referral-how-step"><i class="ti ti-check"></i>You get 10 free analyses, automatically</div>
+      </div>
+
+      <button class="referral-close-btn" onclick="hideReferral()">Close</button>
+    </div>
   </div>
 </div>
 </body>
