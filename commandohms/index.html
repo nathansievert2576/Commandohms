@@ -1509,60 +1509,69 @@
   /* ── REFERRAL MODAL ── */
   .referral-modal-overlay {
     position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,0.75);
+    background: rgba(0,0,0,0.8);
     display: flex; align-items: center; justify-content: center;
     padding: 1rem;
     opacity: 0; pointer-events: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.25s;
   }
-  .referral-modal-overlay.visible {
-    opacity: 1; pointer-events: all;
-  }
+  .referral-modal-overlay.visible { opacity: 1; pointer-events: all; }
   .referral-modal {
-    background: #141414;
-    border: 1px solid rgba(200,168,75,0.3);
-    border-radius: 18px;
+    background: linear-gradient(145deg, #c8a84b 0%, #e8cc6e 40%, #b8943b 100%);
+    border-radius: 22px;
     padding: 2rem;
     width: 100%;
     max-width: 440px;
-    box-shadow: 0 0 60px rgba(200,168,75,0.1);
+    box-shadow: 0 20px 80px rgba(200,168,75,0.4), 0 0 0 1px rgba(255,255,255,0.2) inset;
+    position: relative;
+    overflow: hidden;
+  }
+  .referral-modal::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    pointer-events: none;
   }
   .referral-modal-title {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: #f5f5f0;
-    margin-bottom: 0.4rem;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #000;
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.02em;
   }
   .referral-modal-sub {
     font-size: 0.82rem;
-    color: rgba(255,255,255,0.45);
+    color: rgba(0,0,0,0.6);
     line-height: 1.6;
     margin-bottom: 1.5rem;
   }
-  .referral-modal-sub strong { color: #c8a84b; }
+  .referral-modal-sub strong { color: #000; font-weight: 700; }
   .referral-link-row {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   .referral-link-input {
     flex: 1;
-    background: #0a0a0a;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
+    background: rgba(0,0,0,0.12);
+    border: 1.5px solid rgba(0,0,0,0.2);
+    border-radius: 10px;
     padding: 0.65rem 0.85rem;
     font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    color: #c8a84b;
+    font-size: 0.7rem;
+    color: #000;
     outline: none;
     min-width: 0;
   }
   .referral-copy-btn {
-    background: #c8a84b;
-    color: #000;
+    background: #000;
+    color: #c8a84b;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 0.65rem 1rem;
     font-family: 'DM Mono', monospace;
     font-size: 0.72rem;
@@ -1572,75 +1581,92 @@
     flex-shrink: 0;
     transition: opacity 0.15s;
   }
-  .referral-copy-btn:hover { opacity: 0.85; }
+  .referral-copy-btn:hover { opacity: 0.8; }
+  /* Share button — shown on mobile when Web Share API is available */
+  .referral-share-btn {
+    width: 100%;
+    background: #000;
+    color: #c8a84b;
+    border: none;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: opacity 0.15s;
+  }
+  .referral-share-btn:hover { opacity: 0.8; }
   .referral-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
   }
   .referral-stat {
-    background: #0a0a0a;
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 10px;
-    padding: 0.85rem 0.75rem;
+    background: rgba(0,0,0,0.12);
+    border-radius: 12px;
+    padding: 0.85rem 0.5rem;
     text-align: center;
+    border: 1px solid rgba(0,0,0,0.1);
   }
   .referral-stat-num {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.8rem;
-    color: #c8a84b;
+    font-size: 2rem;
+    color: #000;
     line-height: 1;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
   }
   .referral-stat-label {
     font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.08em;
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.35);
+    color: rgba(0,0,0,0.5);
     line-height: 1.3;
   }
   .referral-how {
-    background: rgba(200,168,75,0.06);
-    border: 1px solid rgba(200,168,75,0.15);
-    border-radius: 10px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 12px;
     padding: 1rem 1.1rem;
     margin-bottom: 1.25rem;
+    border: 1px solid rgba(0,0,0,0.08);
   }
   .referral-how-title {
     font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #c8a84b;
+    color: rgba(0,0,0,0.5);
     margin-bottom: 0.6rem;
+    font-weight: 700;
   }
   .referral-how-step {
     font-size: 0.8rem;
-    color: rgba(255,255,255,0.55);
-    line-height: 1.7;
+    color: rgba(0,0,0,0.65);
+    line-height: 1.75;
     padding-left: 1.1rem;
     position: relative;
   }
-  .referral-how-step::before {
-    content: "→";
-    position: absolute;
-    left: 0;
-    color: #c8a84b;
-  }
+  .referral-how-step::before { content: "→"; position: absolute; left: 0; color: #000; font-weight: 700; }
   .referral-close-btn {
     width: 100%;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.1);
+    border: 1.5px solid rgba(0,0,0,0.15);
     border-radius: 10px;
     padding: 0.75rem;
-    color: rgba(255,255,255,0.5);
+    color: rgba(0,0,0,0.55);
     font-size: 0.82rem;
     cursor: pointer;
     transition: background 0.15s;
   }
-  .referral-close-btn:hover { background: rgba(255,255,255,0.1); }
+  .referral-close-btn:hover { background: rgba(0,0,0,0.18); }
 </style>
 </head>
 <body>
@@ -3648,13 +3674,18 @@ async function doSignUp() {
   // Trigger handle_new_user creates credits row automatically
 
   // Register referral if a ref code was stored on the landing page
+  // Also adds 3 bonus analyses to the new user's account if referred
   try {
     const refCode = localStorage.getItem('commandoRef');
     if (refCode && data.user) {
-      await sb.rpc('register_referral', {
+      const { error: refErr } = await sb.rpc('register_referral', {
         referred_uid: data.user.id,
         ref_code: refCode
       });
+      if (!refErr) {
+        // Give the new user 3 bonus analyses for signing up via a referral
+        await sb.rpc('add_credits', { uid: data.user.id, amount: 3 });
+      }
       localStorage.removeItem('commandoRef'); // only register once
     }
   } catch(e) {
@@ -3787,6 +3818,13 @@ function renderNav() {
 async function showReferral() {
   if (!currentUser) { showAuth(); return; }
   document.getElementById('referralModal').classList.add('visible');
+
+  // Show native share button on mobile if Web Share API is available
+  const shareBtn = document.getElementById('shareReferralBtn');
+  if (shareBtn && navigator.share) {
+    shareBtn.style.display = 'flex';
+  }
+
   // Load code and stats
   try {
     const { data: code, error: codeErr } = await sb.rpc('get_or_create_referral_code', { uid: currentUser.id });
@@ -3815,11 +3853,26 @@ async function copyReferralLink() {
   try {
     await navigator.clipboard.writeText(link);
     const btn = document.getElementById('copyReferralBtn');
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
   } catch(e) {
     document.getElementById('referralLink').select();
     document.execCommand('copy');
+  }
+}
+
+async function shareReferralLink() {
+  const link = document.getElementById('referralLink').value;
+  if (!link) return;
+  try {
+    await navigator.share({
+      title: 'CommandoHSC — HSC Response Analyser',
+      text: 'Get instant AI feedback on your HSC responses. Sign up with my link and get 3 bonus analyses free:',
+      url: link
+    });
+  } catch(e) {
+    // User cancelled share or API unavailable — fall back to copy
+    copyReferralLink();
   }
 }
 
@@ -4460,13 +4513,18 @@ function closeTipModal(dontShowAgain) {
   <div class="referral-modal">
     <div class="referral-modal-title">🔗 Refer a friend</div>
     <div class="referral-modal-sub">
-      Share your unique link. When a friend signs up and makes their <strong>first purchase</strong>, you both benefit — you get <strong>10 free analyses</strong>.
+      Share your link. When a friend signs up and makes their <strong>first purchase</strong>, you get <strong>10 free analyses</strong> — and they get a <strong>bonus 3</strong> on signup just for joining.
     </div>
 
     <div class="referral-link-row">
       <input class="referral-link-input" id="referralLink" type="text" readonly placeholder="Generating your link…">
-      <button class="referral-copy-btn" id="copyReferralBtn" onclick="copyReferralLink()">Copy link</button>
+      <button class="referral-copy-btn" id="copyReferralBtn" onclick="copyReferralLink()">Copy</button>
     </div>
+
+    <!-- Share button — only shown on mobile when Web Share API is available -->
+    <button class="referral-share-btn" id="shareReferralBtn" onclick="shareReferralLink()">
+      ↑ Share via Messages, WhatsApp, Email…
+    </button>
 
     <div class="referral-stats">
       <div class="referral-stat">
@@ -4486,7 +4544,7 @@ function closeTipModal(dontShowAgain) {
     <div class="referral-how">
       <div class="referral-how-title">How it works</div>
       <div class="referral-how-step">Share your link with a friend</div>
-      <div class="referral-how-step">They sign up via your link</div>
+      <div class="referral-how-step">They sign up — and get 3 bonus analyses</div>
       <div class="referral-how-step">They make their first purchase</div>
       <div class="referral-how-step">You get 10 free analyses — automatically</div>
     </div>
