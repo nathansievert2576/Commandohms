@@ -3678,8 +3678,10 @@ async function doGoogleSignIn() {
 async function doSignUp() {
   const email = document.getElementById('suEmail').value.trim();
   const password = document.getElementById('suPassword').value;
+  const passwordConfirm = document.getElementById('suPasswordConfirm').value;
   const btn = document.getElementById('suBtn');
-  if (!email || !password) { showAuthError('Please fill in both fields.'); return; }
+  if (!email || !password || !passwordConfirm) { showAuthError('Please fill in all fields.'); return; }
+  if (password !== passwordConfirm) { showAuthError('Passwords do not match.'); return; }
   if (password.length < 8) { showAuthError('Password must be at least 8 characters.'); return; }
 
   btn.disabled = true;
@@ -4106,6 +4108,10 @@ document.addEventListener('keydown', function(e) {
         <div class="auth-field">
           <label>Password <span style="font-size:0.6rem;opacity:0.6;">(min 8 characters)</span></label>
           <input type="password" id="suPassword" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="auth-field">
+          <label>Confirm password</label>
+          <input type="password" id="suPasswordConfirm" placeholder="••••••••" autocomplete="new-password">
         </div>
         <button class="auth-btn" id="suBtn" onclick="doSignUp()">Create account — 3 free analyses</button>
         <div style="display:flex;align-items:center;gap:10px;margin:1.1rem 0;">
