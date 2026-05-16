@@ -614,21 +614,7 @@
     .upload-area { padding: 1.25rem 1rem; }
     .upload-icon { font-size: 1.25rem; }
 
-    /* Feedback */
-    .feedback-quadrant-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
-    align-items: start;
-  }
-  @media (max-width: 600px) {
-    .feedback-quadrant-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .feedback-wrap { padding: 1.25rem; }
+    .feedback-wrap { padding: 1.25rem; }
 
     /* Footer */
     .site-footer { padding: 1.5rem 1rem; }
@@ -944,6 +930,18 @@
   .btn-copy.copied { color: #2d7a46; border-color: #2d7a46; }
 
   /* ── FEEDBACK / ESTIMATED MARK ── */
+  .feedback-quadrant-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    align-items: start;
+  }
+  @media (max-width: 600px) {
+    .feedback-quadrant-grid {
+      grid-template-columns: 1fr;
+    }
+  }
   .feedback-wrap {
     margin-top: 1rem;
   }
