@@ -615,7 +615,62 @@
     .upload-icon { font-size: 1.25rem; }
 
     /* Feedback */
-    .feedback-wrap { padding: 1.25rem; }
+    .feedback-quadrant-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    align-items: start;
+  }
+  @media (max-width: 600px) {
+    .feedback-quadrant-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .fb-quad {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+  .fb-quad-bar { height: 5px; width: 100%; }
+  .fb-quad-body { padding: 12px 14px; }
+  .fb-quad-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .fb-quad-bullet {
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: #111;
+    margin-bottom: 6px;
+    padding-left: 14px;
+    position: relative;
+  }
+  .fb-quad-bullet::before { content: "•"; position: absolute; left: 0; color: #333; }
+  /* Strength — green */
+  .fb-quad-strength { background: rgb(241,248,241); }
+  .fb-quad-strength .fb-quad-bar { background: rgb(46,125,50); }
+  .fb-quad-strength .fb-quad-title { color: rgb(46,125,50); }
+  /* Develop — yellow */
+  .fb-quad-develop { background: rgb(255,253,231); }
+  .fb-quad-develop .fb-quad-bar { background: rgb(255,193,7); }
+  .fb-quad-develop .fb-quad-title { color: rgb(122,78,0); }
+  /* Try this — blue */
+  .fb-quad-trythis { background: rgb(232,244,253); }
+  .fb-quad-trythis .fb-quad-bar { background: rgb(21,101,192); }
+  .fb-quad-trythis .fb-quad-title { color: rgb(21,101,192); }
+  /* Projected mark box — gold */
+  .feedback-box.mark-box {
+    background: rgba(200,168,75,0.08);
+    border: 1.5px solid rgba(200,168,75,0.4);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+  }
+  .feedback-wrap { padding: 1.25rem; }
 
     /* Footer */
     .site-footer { padding: 1.5rem 1rem; }
@@ -2737,7 +2792,7 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     ? `<div class="tip-label" style="color:${termHit ? '#2d7a46' : '#8b6c42'}">${termHit ? '✅' : '⚠️'} Marker Feedback — ${cap(primaryTerm)} ${termHit ? 'demonstrated' : 'not yet demonstrated'}</div>`
     : `<div class="tip-label">💡 Marker Feedback</div>`;
 
-  box.className = 'feedback-box has-tip';
+  box.className = 'feedback-box has-tip mark-box';
 
   const QUADRANTS = [
     { key: 'What Went Well',        patterns: ['what went well'] },
@@ -2776,9 +2831,62 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     </div>`;
   }).join('');
 
+  // Map section keys to colour classes
+  const QUAD_CLASS = {
+    'What Went Well':        'fb-quad-strength',
+    'Areas for Improvement': 'fb-quad-develop',
+    'Next Steps':            'fb-quad-trythis',
+  };
+
+  // Command term quadrant — use the detected term colour
+  const termHex = primaryTerm ? (getComputedStyle(document.documentElement).getPropertyValue('--' + primaryTerm).trim() || '#b57cf7') : '#b57cf7';
+  const termBg  = hexToRgba(termHex, 0.12);
+
+  function quadWrap(key, innerHtml) {
+    if (key === 'Command Term Focus') {
+      return `<div class="fb-quad" style="background:${termBg};border:1px solid rgba(0,0,0,0.08);">
+        <div class="fb-quad-bar" style="background:${termHex};"></div>
+        <div class="fb-quad-body">
+          <div class="fb-quad-title" style="color:${termHex};">Command term focus</div>
+          ${innerHtml}
+        </div>
+      </div>`;
+    }
+    const cls = QUAD_CLASS[key] || 'fb-quad-strength';
+    const label = key === 'What Went Well' ? 'What went well'
+                : key === 'Areas for Improvement' ? 'Areas for improvement'
+                : key === 'Next Steps' ? 'Next steps' : key;
+    return `<div class="fb-quad ${cls}">
+      <div class="fb-quad-bar"></div>
+      <div class="fb-quad-body">
+        <div class="fb-quad-title">${label}</div>
+        ${innerHtml}
+      </div>
+    </div>`;
+  }
+
+  // Rebuild quadrantHTML with coloured wrappers
+  let colouredHTML = '';
+  QUADRANTS.forEach(q => {
+    if (!sections[q.key]) return;
+    const bullets = sections[q.key].map(b =>
+      `<div class="fb-quad-bullet">${b}</div>`
+    ).join('');
+    colouredHTML += quadWrap(q.key, bullets);
+  });
+
   box.innerHTML = label +
-    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:start;">${quadrantHTML}</div>`;
+    `<div class="feedback-quadrant-grid">${colouredHTML}</div>`;
   wrap.style.display = 'block';
+}
+
+function hexToRgba(hex, alpha) {
+  hex = hex.replace('#', '').trim();
+  if (hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+  const r = parseInt(hex.substring(0,2), 16);
+  const g = parseInt(hex.substring(2,4), 16);
+  const b = parseInt(hex.substring(4,6), 16);
+  return isNaN(r) ? `rgba(181,124,247,${alpha})` : `rgba(${r},${g},${b},${alpha})`;
 }
 
 function renderHighlighted(text, annotations) {
