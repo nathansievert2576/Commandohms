@@ -931,14 +931,26 @@
 
   /* ── FEEDBACK / ESTIMATED MARK ── */
   .feedback-quadrant-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     margin-top: 10px;
-    align-items: start;
   }
-  @media (max-width: 600px) {
-    .feedback-quadrant-grid {
+  .feedback-three-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .feedback-three-grid > div {
+    display: flex;
+    flex-direction: column;
+  }
+  .feedback-three-grid > div .fb-quad-body-inner {
+    flex: 1;
+  }
+  @media (max-width: 700px) {
+    .feedback-three-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -2789,37 +2801,47 @@ function renderFeedback(feedback, primaryTerm, annotations) {
   QUAD_STYLES['Command Term Focus'].bar        = termColour;
   QUAD_STYLES['Command Term Focus'].titleColor = termColour;
 
-  const quadrantHTML = QUADRANTS.map(q => {
-    const points = sections[q.key] || [];
-    const qs = QUAD_STYLES[q.key] || { bg: 'var(--cream)', bar: 'var(--olive)', titleColor: 'var(--olive)' };
-    // Command term focus uses solid colour — determine if text should be dark or light
-    const isCommand = q.key === 'Command Term Focus';
+
+
+  // Separate command term from the other three
+  const commandHTML  = QUADRANTS.filter(q => q.key === 'Command Term Focus').map(q => {
+    const qs = QUAD_STYLES[q.key];
     const LIGHT_TEXT_TERMS = ['analyse','investigate','discuss','assess','evaluate'];
-    const textColour = isCommand ? (primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? '#fff' : '#0a0a0a') : '#111';
-    const bulletColour = isCommand ? (primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? 'rgba(255,255,255,0.7)' : '#333') : '#555';
-    const titleColour = isCommand ? (primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)') : qs.titleColor;
-
+    const textColour  = primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? '#fff' : '#0a0a0a';
+    const bulletColour = primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? 'rgba(255,255,255,0.7)' : '#333';
+    const titleColour  = primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.55)';
+    const points = sections[q.key] || [];
     const pointsHTML = points.length
-      ? points.map(p =>
-          `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;">
-            <span style="flex-shrink:0;color:${bulletColour}">•</span>
-            <span style="color:${textColour}">${escHtml(p)}</span>
-          </div>`
-        ).join('')
+      ? points.map(p => `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;"><span style="flex-shrink:0;color:${bulletColour}">•</span><span style="color:${textColour}">${escHtml(p)}</span></div>`).join('')
       : `<div style="font-size:0.8rem;color:#888;font-style:italic">—</div>`;
-
-    const bg = isCommand ? qs.bar : qs.bg;
-    return `<div style="background:${bg};border:1px solid rgba(0,0,0,0.08);border-radius:9px;overflow:hidden;">
-      ${isCommand ? '' : `<div style="height:4px;background:${qs.bar};"></div>`}
-      <div style="padding:12px 13px;${isCommand ? 'padding-top:14px;' : ''}">
+    return `<div style="background:${qs.bar};border:1px solid rgba(0,0,0,0.08);border-radius:9px;overflow:hidden;">
+      <div style="padding:12px 13px;padding-top:14px;">
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${titleColour};margin-bottom:8px;">${q.key}</div>
         ${pointsHTML}
       </div>
     </div>`;
   }).join('');
 
+  const threeHTML = QUADRANTS.filter(q => q.key !== 'Command Term Focus').map(q => {
+    const qs = QUAD_STYLES[q.key] || { bg: 'var(--cream)', bar: 'var(--olive)', titleColor: 'var(--olive)' };
+    const points = sections[q.key] || [];
+    const pointsHTML = points.length
+      ? points.map(p => `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;"><span style="flex-shrink:0;color:#555">•</span><span style="color:#111">${escHtml(p)}</span></div>`).join('')
+      : `<div style="font-size:0.8rem;color:#888;font-style:italic">—</div>`;
+    return `<div style="background:${qs.bg};border:1px solid rgba(0,0,0,0.08);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;">
+      <div style="height:4px;background:${qs.bar};flex-shrink:0;"></div>
+      <div style="padding:12px 13px;flex:1;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.key}</div>
+        ${pointsHTML}
+      </div>
+    </div>`;
+  }).join('');
+
   box.innerHTML = label +
-    `<div class="feedback-quadrant-grid">${quadrantHTML}</div>`;
+    `<div class="feedback-quadrant-grid">
+      ${commandHTML}
+      <div class="feedback-three-grid">${threeHTML}</div>
+    </div>`;
   wrap.style.display = 'block';
 }
 
