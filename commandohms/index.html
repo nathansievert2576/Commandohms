@@ -2772,26 +2772,57 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     }
   });
 
+  // Colour config per quadrant
+  const QUAD_STYLES = {
+    'What Went Well':        { bg: 'rgb(241,248,241)', bar: 'rgb(46,125,50)',   titleColor: 'rgb(27,94,32)'   },
+    'Areas for Improvement': { bg: 'rgb(255,253,231)', bar: 'rgb(255,193,7)',   titleColor: 'rgb(122,78,0)'   },
+    'Command Term Focus':    { bg: null,               bar: null,               titleColor: null              }, // set dynamically from term colour
+    'Next Steps':            { bg: 'rgb(232,244,253)', bar: 'rgb(21,101,192)',  titleColor: 'rgb(21,101,192)' },
+  };
+
+  // Get the term colour using the actual hex values (same as PDF)
+  const TERM_HEX = {
+    identify:'#ffd166', outline:'#52d68a', describe:'#5bc8f5', explain:'#f08050',
+    apply:'#84a98c', compare:'#42d4c8', examine:'#a8d848', analyse:'#b57cf7',
+    investigate:'#9b5de5', justify:'#ff9a3c', discuss:'#f76fa8', assess:'#e040fb', evaluate:'#e84545'
+  };
+  const termColour = primaryTerm ? (TERM_HEX[primaryTerm] || '#b57cf7') : '#b57cf7';
+  QUAD_STYLES['Command Term Focus'].bg         = hexToRgbaFb(termColour, 0.15);
+  QUAD_STYLES['Command Term Focus'].bar        = termColour;
+  QUAD_STYLES['Command Term Focus'].titleColor = termColour;
+
   const quadrantHTML = QUADRANTS.map(q => {
     const points = sections[q.key] || [];
+    const qs = QUAD_STYLES[q.key] || { bg: 'var(--cream)', bar: 'var(--olive)', titleColor: 'var(--olive)' };
     const pointsHTML = points.length
       ? points.map(p =>
           `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;">
-            <span style="flex-shrink:0;color:var(--muted)">•</span>
-            <span style="color:var(--ink)">${escHtml(p)}</span>
+            <span style="flex-shrink:0;color:#555">•</span>
+            <span style="color:#111">${escHtml(p)}</span>
           </div>`
         ).join('')
-      : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">—</div>`;
+      : `<div style="font-size:0.8rem;color:#888;font-style:italic">—</div>`;
 
-    return `<div style="background:var(--cream);border:1.5px solid var(--border2);border-radius:9px;padding:12px 13px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--olive);margin-bottom:8px;">${q.key}</div>
-      ${pointsHTML}
+    return `<div style="background:${qs.bg};border:1px solid rgba(0,0,0,0.08);border-radius:9px;overflow:hidden;">
+      <div style="height:4px;background:${qs.bar};"></div>
+      <div style="padding:12px 13px;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.key}</div>
+        ${pointsHTML}
+      </div>
     </div>`;
   }).join('');
 
   box.innerHTML = label +
     `<div class="feedback-quadrant-grid">${quadrantHTML}</div>`;
   wrap.style.display = 'block';
+}
+
+function hexToRgbaFb(hex, alpha) {
+  if (!hex || hex.startsWith('rgb')) return hex || 'rgba(181,124,247,0.12)';
+  hex = hex.replace('#','').trim();
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+  return isNaN(r) ? `rgba(181,124,247,${alpha})` : `rgba(${r},${g},${b},${alpha})`;
 }
 
 function renderHighlighted(text, annotations) {
@@ -3054,6 +3085,7 @@ function renderProjectedMark(raw, markValue) {
   const mark      = markMatch      ? markMatch[1].trim()      : raw.split('\n')[0].trim();
   const rationale = rationaleMatch ? rationaleMatch[1].trim() : '';
   box.className = 'feedback-box has-tip';
+  box.style.cssText = 'background:rgba(200,168,75,0.08);border:1.5px solid rgba(200,168,75,0.4);border-radius:12px;padding:1rem 1.25rem;';
   box.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
       <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:var(--ink);letter-spacing:-0.03em;line-height:1;">${escHtml(mark)}</div>
