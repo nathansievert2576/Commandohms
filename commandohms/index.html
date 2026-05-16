@@ -2794,19 +2794,27 @@ function renderFeedback(feedback, primaryTerm, annotations) {
   const quadrantHTML = QUADRANTS.map(q => {
     const points = sections[q.key] || [];
     const qs = QUAD_STYLES[q.key] || { bg: 'var(--cream)', bar: 'var(--olive)', titleColor: 'var(--olive)' };
+    // Command term focus uses solid colour — determine if text should be dark or light
+    const isCommand = q.key === 'Command Term Focus';
+    const LIGHT_TEXT_TERMS = ['analyse','investigate','discuss','assess','evaluate'];
+    const textColour = isCommand ? (primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? '#fff' : '#0a0a0a') : '#111';
+    const bulletColour = isCommand ? (primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? 'rgba(255,255,255,0.7)' : '#333') : '#555';
+    const titleColour = isCommand ? (primaryTerm && LIGHT_TEXT_TERMS.includes(primaryTerm) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)') : qs.titleColor;
+
     const pointsHTML = points.length
       ? points.map(p =>
           `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;">
-            <span style="flex-shrink:0;color:#555">•</span>
-            <span style="color:#111">${escHtml(p)}</span>
+            <span style="flex-shrink:0;color:${bulletColour}">•</span>
+            <span style="color:${textColour}">${escHtml(p)}</span>
           </div>`
         ).join('')
       : `<div style="font-size:0.8rem;color:#888;font-style:italic">—</div>`;
 
-    return `<div style="background:${qs.bg};border:1px solid rgba(0,0,0,0.08);border-radius:9px;overflow:hidden;">
-      <div style="height:4px;background:${qs.bar};"></div>
-      <div style="padding:12px 13px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.key}</div>
+    const bg = isCommand ? qs.bar : qs.bg;
+    return `<div style="background:${bg};border:1px solid rgba(0,0,0,0.08);border-radius:9px;overflow:hidden;">
+      ${isCommand ? '' : `<div style="height:4px;background:${qs.bar};"></div>`}
+      <div style="padding:12px 13px;${isCommand ? 'padding-top:14px;' : ''}">
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${titleColour};margin-bottom:8px;">${q.key}</div>
         ${pointsHTML}
       </div>
     </div>`;
@@ -3085,13 +3093,11 @@ function renderProjectedMark(raw, markValue) {
   const mark      = markMatch      ? markMatch[1].trim()      : raw.split('\n')[0].trim();
   const rationale = rationaleMatch ? rationaleMatch[1].trim() : '';
   box.className = 'feedback-box has-tip';
-  box.style.cssText = 'background:rgba(200,168,75,0.08);border:1.5px solid rgba(200,168,75,0.4);border-radius:12px;padding:1rem 1.25rem;';
+  box.style.cssText = 'background:#c8a84b;border:2px solid #000;border-radius:12px;padding:1rem 1.25rem;';
   box.innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-      <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:var(--ink);letter-spacing:-0.03em;line-height:1;">${escHtml(mark)}</div>
-    </div>
-    ${rationale ? `<p style="margin-top:10px;font-size:0.85rem;line-height:1.65;color:var(--muted)">${escHtml(rationale)}</p>` : ''}
-    <p style="margin-top:8px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);font-style:italic">AI-estimated projection based on annotated response. Not a guaranteed HSC mark.</p>`;
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(0,0,0,0.55);margin-bottom:6px;">Estimated mark</div>
+    <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:#000;letter-spacing:-0.03em;line-height:1;margin-bottom:8px;">${escHtml(mark)}</div>
+    ${rationale ? `<p style="margin:0;font-size:0.85rem;line-height:1.65;color:#000;font-weight:700;">${escHtml(rationale)}</p>` : ''}`;
   wrap.style.display = 'block';
 }
 
