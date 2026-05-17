@@ -3805,19 +3805,16 @@ async function doSignUp() {
 
   // Trigger handle_new_user creates credits row automatically
 
-  // Register referral if a ref code was stored on the landing page
-  // Also adds 3 bonus analyses to the new user's account if referred
+  // Register referral if a ref code was stored on the landing page.
+  // The register_referral RPC now atomically adds the 3 bonus analyses
+  // server-side, avoiding race conditions with handle_new_user.
   try {
     const refCode = localStorage.getItem('commandoRef');
     if (refCode && data.user) {
-      const { error: refErr } = await sb.rpc('register_referral', {
+      await sb.rpc('register_referral', {
         referred_uid: data.user.id,
         ref_code: refCode
       });
-      if (!refErr) {
-        // Give the new user 3 bonus analyses for signing up via a referral
-        await sb.rpc('add_credits', { uid: data.user.id, amount: 3 });
-      }
       localStorage.removeItem('commandoRef'); // only register once
     }
   } catch(e) {
