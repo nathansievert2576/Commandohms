@@ -3715,11 +3715,27 @@ function switchAuthTab(tab) {
   document.getElementById('tabSignin').classList.toggle('active', tab === 'signin');
   document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
   document.getElementById('authError').classList.remove('visible');
+  // Update button text if referral code is present
+  try {
+    const refCode = localStorage.getItem('commandoRef');
+    const suBtn = document.getElementById('suBtn');
+    if (suBtn) {
+      suBtn.textContent = refCode
+        ? 'Create account — 6 free analyses 🎁'
+        : 'Create account — 3 free analyses';
+    }
+  } catch(e) {}
 }
 
 function showAuthError(msg, type = 'error') {
   const el = document.getElementById('authError');
-  el.textContent = msg;
+  // Ensure msg is always a string — avoid rendering objects like {}
+  let text = '';
+  if (typeof msg === 'string') text = msg;
+  else if (msg && msg.message) text = msg.message;
+  else if (msg) text = String(msg);
+  if (!text || text === '{}' || text === '[object Object]') return;
+  el.textContent = text;
   el.style.color = type === 'success' ? '#2d7a46' : '';
   el.classList.add('visible');
 }
