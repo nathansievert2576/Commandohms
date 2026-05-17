@@ -135,7 +135,7 @@ exports.handler = async (event) => {
   // 4. Sanitise — whitelist fields, enforce model, cap tokens
   const clean = {};
   ['model', 'max_tokens', 'messages', 'system'].forEach(k => { if (payload[k] !== undefined) clean[k] = payload[k]; });
-  clean.model = 'claude-sonnet-4-20250514';
+  clean.model = 'claude-sonnet-4-6';
   if (!clean.max_tokens || clean.max_tokens > 4000) clean.max_tokens = 2000;
 
   // 5. Call Anthropic
