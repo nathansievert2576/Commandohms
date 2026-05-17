@@ -3685,6 +3685,19 @@ async function buyCredits(tier) {
 // SUPABASE AUTH + CREDIT SYSTEM
 // ══════════════════════════════════════════════════════════════
 
+// Capture referral code from URL if present (from landing page redirect)
+// commandohsc.com and app.commandohsc.com have separate localStorage scopes,
+// so the landing page appends ?ref=XXXXXXXX to app links and we pick it up here.
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get('ref');
+    if (ref && /^[A-Z0-9]{6,12}$/.test(ref.toUpperCase())) {
+      localStorage.setItem('commandoRef', ref.toUpperCase());
+    }
+  } catch(e) {}
+})();
+
 const SUPABASE_URL = 'https://lbiqykdvantceukvooiq.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_0zFV3GrvvzaY5XjmRWAyRA_6ExzlHcx';
 
