@@ -3828,15 +3828,12 @@ async function doSignUp() {
   if (error) {
     showAuthError(error.message);
     btn.disabled = false;
-    btn.textContent = 'Create account — 3 free analyses';
+    const refCode2 = localStorage.getItem('commandoRef');
+    btn.textContent = refCode2 ? 'Create account — 6 free analyses 🎁' : 'Create account — 3 free analyses';
     return;
   }
 
-  // Trigger handle_new_user creates credits row automatically
-
-  // Register referral if a ref code was stored on the landing page.
-  // The register_referral RPC now atomically adds the 3 bonus analyses
-  // server-side, avoiding race conditions with handle_new_user.
+  // Register referral if a ref code was stored (RPC handles bonus credits server-side)
   try {
     const refCode = localStorage.getItem('commandoRef');
     if (refCode && data.user) {
@@ -3844,12 +3841,23 @@ async function doSignUp() {
         referred_uid: data.user.id,
         ref_code: refCode
       });
-      localStorage.removeItem('commandoRef'); // only register once
+      localStorage.removeItem('commandoRef');
     }
   } catch(e) {
     console.warn('Referral registration failed:', e);
   }
 
+  // Email confirmation is required — show success message instead of auto-login
+  if (data.user && !data.session) {
+    // User created but not yet confirmed — show confirmation prompt
+    btn.disabled = false;
+    btn.textContent = '✓ Account created!';
+    btn.style.background = '#2d7a46';
+    showAuthError('Check your email and click the confirmation link to activate your account.', 'success');
+    return;
+  }
+
+  // If session exists (email confirmation disabled), log straight in
   hideAuth();
   await refreshUser();
 }
