@@ -1763,46 +1763,18 @@
     <!-- SUBJECT SELECTOR -->
     <div class="subject-selector" role="navigation" aria-label="Subject selector">
       <div class="subject-selector-label">Select your subject</div>
-      <div class="subject-grid">
-        <button class="subject-btn active" onclick="selectSubject(this, 'hms')" aria-pressed="true">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0.85rem;">
+        <button class="subject-btn active" onclick="selectSubject(this, 'hms')" aria-pressed="true" style="display:inline-flex;align-items:center;gap:8px;width:auto;padding:0.75rem 1.75rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
           <span class="subject-name">Health &amp; Movement Science</span>
         </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Ancient History</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Biology</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Business Studies</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Community &amp; Family Studies</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Earth &amp; Environmental Science</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Geography</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Legal Studies</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Modern History</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
-        <button class="subject-btn coming-soon" disabled aria-disabled="true">
-          <span class="subject-name">Studies of Religion</span>
-          <span class="subject-soon-tag">Coming soon</span>
-        </button>
+        <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.65rem 1.1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(245,245,240,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <div>
+            <div style="font-size:0.75rem;font-weight:600;color:rgba(245,245,240,0.6);letter-spacing:0.01em;">More subjects in development</div>
+            <div style="font-size:0.68rem;color:rgba(245,245,240,0.35);margin-top:1px;">Additional subjects coming Term 3, 2025</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1983,8 +1955,8 @@
   <footer class="site-footer">
     <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
     <nav class="footer-links">
-      <a href="#" onclick="showPrivacyModal();return false;">Privacy Policy</a>
-      <a href="#" onclick="showTermsModal();return false;">Terms of Service</a>
+      <a href="https://commandohsc.com/privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
+      <a href="https://commandohsc.com/terms-of-service.html" target="_blank" rel="noopener">Terms of Service</a>
     </nav>
   </footer>
 
