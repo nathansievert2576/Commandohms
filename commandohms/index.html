@@ -4178,6 +4178,7 @@ document.addEventListener('keydown', function(e) {
     } else {
       currentUser = null;
       userCredits = 0;
+      if (event === 'INITIAL_SESSION') showAuth();
     }
     renderNav();
   });
