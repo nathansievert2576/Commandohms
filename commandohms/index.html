@@ -2083,6 +2083,14 @@ function updateTermPill() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('questionText').addEventListener('input', updateTermPill);
 
+  // ── Open auth modal from landing page hash links ───────────────────────────
+  const hash = window.location.hash;
+  if (hash === '#signup' || hash === '#signin') {
+    window.history.replaceState({}, '', window.location.pathname);
+    showAuth();
+    switchAuthTab(hash === '#signup' ? 'signup' : 'signin');
+  }
+
   // ── Detect Stripe redirect back to the app ─────────────────────────────────
   const params = new URLSearchParams(window.location.search);
   const paymentStatus = params.get('payment');
