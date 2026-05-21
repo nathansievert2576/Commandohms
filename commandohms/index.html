@@ -4536,8 +4536,8 @@ document.addEventListener('keydown', function(e) {
   </div>
 
   <!-- BUY CREDITS MODAL -->
-  <div class="buy-overlay hidden" id="buyOverlay">
-    <div class="buy-modal">
+  <div class="buy-overlay hidden" id="buyOverlay" onclick="hideBuy()">
+    <div class="buy-modal" onclick="event.stopPropagation()">
       <h2>Top up your credits</h2>
       <p>Buy once, use anytime. One credit = one full analysis (colour-coding + mark + feedback + PDF).</p>
       <div class="buy-tiers">
@@ -4571,8 +4571,8 @@ document.addEventListener('keydown', function(e) {
   </div>
 
   <!-- NO CREDITS GATE -->
-  <div class="gate-overlay hidden" id="gateOverlay">
-    <div class="gate-modal">
+  <div class="gate-overlay hidden" id="gateOverlay" onclick="hideGate()">
+    <div class="gate-modal" onclick="event.stopPropagation()">
       <div style="font-size:2rem;margin-bottom:0.75rem;">🎯</div>
       <h2>Out of analyses</h2>
       <p>You've used all your free analyses. Top up to keep going — credits never expire.</p>
