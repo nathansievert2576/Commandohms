@@ -1390,6 +1390,41 @@
   }
   .buy-close:hover { border-color: rgba(255,255,255,0.3); color: #f0ece4; }
 
+  /* ── PROMO CODE ── */
+  .promo-section { margin-top: 1.25rem; }
+  .promo-divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 1rem; color: var(--muted); font-size: 0.75rem;
+    font-family: 'DM Mono', monospace; letter-spacing: 0.05em;
+  }
+  .promo-divider::before, .promo-divider::after {
+    content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08);
+  }
+  .promo-row { display: flex; gap: 0.5rem; }
+  .promo-input {
+    flex: 1; background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    color: #f0ece4; font-family: 'DM Mono', monospace;
+    font-size: 0.85rem; padding: 0.6rem 0.875rem; outline: none;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .promo-input:focus { border-color: rgba(200,168,75,0.5); }
+  .promo-apply-btn {
+    background: rgba(200,168,75,0.12); border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 8px; color: #c8a84b; font-size: 0.8rem; font-weight: 700;
+    padding: 0.6rem 1rem; cursor: pointer; white-space: nowrap;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    transition: background 0.15s;
+  }
+  .promo-apply-btn:hover { background: rgba(200,168,75,0.22); }
+  .promo-apply-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .promo-msg {
+    font-size: 0.75rem; margin-top: 0.5rem; min-height: 1.1em;
+    font-family: 'DM Mono', monospace;
+  }
+  .promo-msg.ok  { color: #52d68a; }
+  .promo-msg.err { color: #e84545; }
+
   /* ── NO CREDITS GATE ── */
   .gate-overlay {
     position: fixed; inset: 0; z-index: 999;
@@ -3728,6 +3763,56 @@ function hideGate() {
   document.getElementById('gateOverlay').classList.add('hidden');
 }
 
+// ── Promo code redemption ──
+async function redeemPromo(ctx) {
+  if (!currentUser) { showAuth(); return; }
+  const inputEl = document.getElementById(ctx + 'PromoInput');
+  const msgEl   = document.getElementById(ctx + 'PromoMsg');
+  const btnEl   = document.getElementById(ctx + 'PromoBtn');
+  const code    = (inputEl.value || '').trim().toUpperCase();
+
+  if (!code) {
+    msgEl.textContent = 'Please enter a code.';
+    msgEl.className = 'promo-msg err';
+    return;
+  }
+
+  btnEl.disabled = true;
+  btnEl.textContent = 'Applying…';
+  msgEl.textContent = '';
+  msgEl.className = 'promo-msg';
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Not authenticated');
+
+    const resp = await fetch('/.netlify/functions/redeem-promo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code }),
+    });
+    const result = await resp.json();
+
+    if (!resp.ok || result.error) {
+      msgEl.textContent = result.error || 'Something went wrong. Please try again.';
+      msgEl.className = 'promo-msg err';
+    } else {
+      msgEl.textContent = `✓ ${result.credits_granted} credits added to your account!`;
+      msgEl.className = 'promo-msg ok';
+      inputEl.value = '';
+      userCredits = await fetchCredits(currentUser.id);
+      renderNav();
+    }
+  } catch {
+    msgEl.textContent = 'Something went wrong. Please try again.';
+    msgEl.className = 'promo-msg err';
+  } finally {
+    btnEl.disabled = false;
+    btnEl.textContent = 'Apply';
+  }
+}
+
 // ── Gated upload click — checks auth + credits before opening file picker ──
 async function gatedUploadClick(inputId) {
   if (!currentUser) { showAuth(); return; }
@@ -4474,6 +4559,14 @@ document.addEventListener('keydown', function(e) {
       </div>
       <p style="font-size:0.75rem;color:var(--muted);text-align:center;margin-bottom:1rem;">After payment, refresh this page to see your updated credits.</p>
       <button class="buy-close" onclick="hideBuy()">Cancel</button>
+      <div class="promo-section">
+        <div class="promo-divider">have a promo code?</div>
+        <div class="promo-row">
+          <input type="text" id="buyPromoInput" class="promo-input" placeholder="ENTER CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')redeemPromo('buy')">
+          <button id="buyPromoBtn" class="promo-apply-btn" onclick="redeemPromo('buy')">Apply</button>
+        </div>
+        <div id="buyPromoMsg" class="promo-msg"></div>
+      </div>
     </div>
   </div>
 
@@ -4485,6 +4578,14 @@ document.addEventListener('keydown', function(e) {
       <p>You've used all your free analyses. Top up to keep going — credits never expire.</p>
       <button class="gate-btn" onclick="hideGate(); showBuy()">Buy more credits</button>
       <button class="buy-close" onclick="hideGate()">Not now</button>
+      <div class="promo-section" style="text-align:left;">
+        <div class="promo-divider">have a promo code?</div>
+        <div class="promo-row">
+          <input type="text" id="gatePromoInput" class="promo-input" placeholder="ENTER CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')redeemPromo('gate')">
+          <button id="gatePromoBtn" class="promo-apply-btn" onclick="redeemPromo('gate')">Apply</button>
+        </div>
+        <div id="gatePromoMsg" class="promo-msg"></div>
+      </div>
     </div>
   </div>
 
