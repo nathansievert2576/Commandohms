@@ -1448,6 +1448,25 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     transition: opacity 0.18s; margin-bottom: 0.75rem;
   }
+  /* ── WRONG SUBJECT MODAL ── */
+  .wrong-subject-overlay {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .wrong-subject-overlay.hidden { display: none; }
+  .wrong-subject-modal {
+    background: #181818; border: 1.5px solid rgba(200,168,75,0.35);
+    border-radius: 20px; padding: 2.25rem 2rem; width: 100%; max-width: 400px;
+    text-align: center; box-shadow: 0 0 60px rgba(200,168,75,0.12);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .wrong-subject-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .wrong-subject-modal h2 { font-size: 1.2rem; font-weight: 800; color: #f0ece4; margin-bottom: 0.65rem; }
+  .wrong-subject-modal p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.5rem; }
+  .wrong-subject-modal .confirm-btn { margin-bottom: 0.75rem; }
+
   /* ── CONFIRM ANALYSIS MODAL ── */
   .confirm-overlay {
     position: fixed; inset: 0; z-index: 999;
@@ -4201,6 +4220,69 @@ async function checkGate() {
 // ── Confirm Analysis Modal ──
 let _pendingAnalyse = null;
 
+// ── Wrong Subject Check ──
+const HMS_KEYWORDS = [
+  // cardiovascular
+  'cardiovascular','cardiac','heart rate','stroke volume','cardiac output','blood pressure',
+  'blood flow','vasodilation','vasoconstriction','artery','vein','capillary','haemoglobin',
+  'oxygen','venous return','systolic','diastolic','pulse',
+  // respiratory
+  'respiratory','breathing','ventilation','tidal volume','lung','alveoli','alveolar',
+  'diffusion','oxygen uptake','carbon dioxide','co2','vo2','aerobic capacity',
+  // musculoskeletal
+  'muscle','muscular','skeletal','fibre','fiber','fast twitch','slow twitch','type i','type ii',
+  'motor unit','motor neuron','myofibril','sarcomere','actin','myosin','hypertrophy',
+  'atrophy','tendon','ligament','bone','joint','flexibility','range of motion',
+  // energy systems
+  'atp','energy system','glycolysis','aerobic','anaerobic','lactic acid','lactate',
+  'phosphocreatine','creatine','glycogen','glucose','oxidative','mitochondria','krebs',
+  'electron transport','fatigue','oxygen debt','epoc',
+  // training & fitness
+  'training','exercise','fitness','fitt','overload','specificity','reversibility','progression',
+  'periodisation','interval','continuous','circuit','resistance','strength','endurance',
+  'flexibility','power','speed','agility','coordination','recovery','warm up','cool down',
+  'physical activity','sedentary','performance','athlete','sport',
+  // nutrition & health
+  'nutrition','nutrient','carbohydrate','protein','fat','hydration','dehydration',
+  'electrolyte','vitamin','mineral','energy intake','diet','bmi','body composition',
+  'obesity','overweight','health','wellbeing','disease','chronic disease','risk factor',
+  'hypertension','diabetes','mental health','stress','lifestyle',
+  // movement & biomechanics
+  'movement','biomechanics','force','velocity','acceleration','momentum','lever','gravity',
+  'centre of mass','balance','stability','posture','gait','kinematics','kinetics',
+  // thermoregulation
+  'thermoregulation','heat','sweat','temperature','hyperthermia','hypothermia',
+  // general HMS terms
+  'acute','chronic','response','adaptation','physiological','psychological','hms',
+  'health and movement','movement science','physical education','pe','sport science'
+];
+
+let _wrongSubjectProceedFn = null;
+
+function isQuestionOffTopic(question) {
+  if (!question || question.trim().length < 15) return false; // too short to judge
+  const q = question.toLowerCase();
+  return !HMS_KEYWORDS.some(kw => q.includes(kw));
+}
+
+function showWrongSubjectModal(proceedFn) {
+  _wrongSubjectProceedFn = proceedFn;
+  document.getElementById('wrongSubjectOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideWrongSubjectModal(analyseAnyway) {
+  document.getElementById('wrongSubjectOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (analyseAnyway && _wrongSubjectProceedFn) {
+    const fn = _wrongSubjectProceedFn;
+    _wrongSubjectProceedFn = null;
+    fn();
+  } else {
+    _wrongSubjectProceedFn = null;
+  }
+}
+
 function showConfirm(proceedFn) {
   const remaining = userCredits - 1;
   const line = document.getElementById('confirmCreditLine');
@@ -4222,21 +4304,32 @@ function confirmProceed() {
   if (fn) fn();
 }
 
-// ── analyseText — gate, confirm, spend, run, refund on error ──
+// ── analyseText — gate, subject check, confirm, spend, run, refund on error ──
 async function analyseText() {
   const ok = await checkGate();
   if (!ok) return;
-  showConfirm(async () => {
-    const spent = await spendCredit();
-    if (!spent) { showGate(); return; }
-    try {
-      await _runAnalysis();
-    } catch(e) {
-      await refundCredit();
-      const out = document.getElementById('outputBox');
-      if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
-    }
-  });
+
+  // Subject relevance check — show warning if question looks off-topic
+  const question = (document.getElementById('questionText')?.value || '').trim();
+  const proceedWithConfirm = () => {
+    showConfirm(async () => {
+      const spent = await spendCredit();
+      if (!spent) { showGate(); return; }
+      try {
+        await _runAnalysis();
+      } catch(e) {
+        await refundCredit();
+        const out = document.getElementById('outputBox');
+        if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+      }
+    });
+  };
+
+  if (isQuestionOffTopic(question)) {
+    showWrongSubjectModal(proceedWithConfirm);
+  } else {
+    proceedWithConfirm();
+  }
 }
 
 // ── FAQ Modal ──
@@ -4285,7 +4378,7 @@ function handlePrivacyOverlayClick(e) {
   if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); }
+  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideWrongSubjectModal(false); }
 });
 
 // ── Init on page load ──
@@ -4549,6 +4642,17 @@ document.addEventListener('keydown', function(e) {
         <span class="pm-footer-note">CommandoHSC — HSC Health &amp; Movement Science</span>
         <button class="pm-footer-close" onclick="hideContactModal()">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- WRONG SUBJECT MODAL -->
+  <div class="wrong-subject-overlay hidden" id="wrongSubjectOverlay">
+    <div class="wrong-subject-modal">
+      <div class="wrong-subject-icon">🤔</div>
+      <h2>Double-check your question</h2>
+      <p>That question doesn't look like it relates to <strong style="color:#f0ece4;">Health &amp; Movement Science</strong>. Make sure you've entered the right question for your selected subject.</p>
+      <button class="confirm-btn" onclick="hideWrongSubjectModal()">Go back and fix it</button>
+      <button class="buy-close" onclick="hideWrongSubjectModal(true)">Analyse anyway</button>
     </div>
   </div>
 
