@@ -722,7 +722,7 @@
     box-shadow: 0 0 30px rgba(200,168,75,.06) inset;
   }
 
-  .placeholder { color: var(--muted); font-style: italic; font-size: 0.88rem; opacity: .7; }
+  .placeholder { color: var(--muted); font-style: normal; font-size: 0.88rem; opacity: .7; }
 
   /* ── HIGHLIGHTS ── */
   .hl {
@@ -1033,7 +1033,7 @@
     margin-top: 2.5rem;
   }
   .disclaimer-bar p {
-    font-family: 'DM Mono', monospace;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 0.72rem; line-height: 1.65;
     color: var(--muted); text-align: center;
   }
@@ -1115,8 +1115,13 @@
   }
 
   .subject-btn.coming-soon {
-    opacity: .45;
-    cursor: not-allowed;
+    opacity: .55;
+    cursor: pointer;
+  }
+  .subject-btn.coming-soon:hover {
+    opacity: .8;
+    border-color: rgba(200,168,75,.4);
+    background: #202020;
   }
 
   /* ── SUBJECT MODAL ── */
@@ -1181,6 +1186,57 @@
     border-radius: 3px;
     padding: 1px 5px;
     text-transform: uppercase;
+  }
+
+  /* ── SUBJECT INTEREST MODAL ── */
+  .interest-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .interest-overlay.open { display: flex; }
+  .interest-modal {
+    background: #181818; border: 1.5px solid rgba(200,168,75,0.35);
+    border-radius: 20px; padding: 2.25rem 2rem; width: 100%; max-width: 400px;
+    text-align: center; box-shadow: 0 0 60px rgba(200,168,75,0.12);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  .interest-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .interest-modal h2 {
+    font-size: 1.15rem; font-weight: 800; color: #f0ece4; margin-bottom: 0.4rem;
+  }
+  .interest-subject-name {
+    font-size: 0.82rem; font-weight: 600; color: var(--gold);
+    letter-spacing: 0.02em; margin-bottom: 0.85rem;
+  }
+  .interest-modal p {
+    font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.25rem;
+  }
+  .interest-email-input {
+    width: 100%; background: #222; border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 10px; color: #f0ece4; font-family: inherit;
+    font-size: 0.9rem; padding: 0.75rem 1rem; margin-bottom: 0.85rem;
+    transition: border-color 0.18s;
+  }
+  .interest-email-input:focus {
+    outline: none; border-color: rgba(200,168,75,0.5);
+  }
+  .interest-email-input::placeholder { color: var(--muted); }
+  .interest-submit-btn {
+    display: block; width: 100%; padding: 0.85rem;
+    background: linear-gradient(135deg, var(--gold), #a08830);
+    color: #0d0d0d; font-weight: 700; font-size: 0.95rem;
+    border: none; border-radius: 9px; cursor: pointer;
+    font-family: inherit; transition: opacity 0.18s; margin-bottom: 0.75rem;
+  }
+  .interest-submit-btn:hover { opacity: 0.88; }
+  .interest-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .interest-success {
+    display: none; font-size: 0.875rem; color: #52d68a; margin-bottom: 0.75rem;
+  }
+  .interest-error {
+    display: none; font-size: 0.8rem; color: #e84545; margin-bottom: 0.75rem;
   }
 
   /* ── STIMULUS UPLOAD ── */
@@ -1789,18 +1845,38 @@
     <!-- SUBJECT SELECTOR -->
     <div class="subject-selector" role="navigation" aria-label="Subject selector">
       <div class="subject-selector-label">Select your subject</div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:0.85rem;">
-        <button class="subject-btn active" onclick="selectSubject(this, 'hms')" aria-pressed="true" style="display:inline-flex;align-items:center;gap:8px;width:auto;padding:0.75rem 1.75rem;">
+      <div class="subject-grid">
+        <button class="subject-btn active" onclick="selectSubject(this, 'hms')" aria-pressed="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
           <span class="subject-name">Health &amp; Movement Science</span>
         </button>
-        <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.65rem 1.1rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(245,245,240,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <div>
-            <div style="font-size:0.75rem;font-weight:600;color:rgba(245,245,240,0.6);letter-spacing:0.01em;">More subjects in development</div>
-            <div style="font-size:0.68rem;color:rgba(245,245,240,0.35);margin-top:1px;">Additional subjects coming Term 3, 2026</div>
-          </div>
-        </div>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Ancient History')">
+          Ancient History <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Biology')">
+          Biology <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Business Studies')">
+          Business Studies <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Community & Family Studies')">
+          Community &amp; Family Studies <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Earth & Environmental Science')">
+          Earth &amp; Environmental Science <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Geography')">
+          Geography <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Legal Studies')">
+          Legal Studies <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Modern History')">
+          Modern History <span class="subject-soon-tag">Coming Soon</span>
+        </button>
+        <button class="subject-btn coming-soon" onclick="showInterestModal('Studies of Religion')">
+          Studies of Religion <span class="subject-soon-tag">Coming Soon</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1830,7 +1906,7 @@
     <div class="panel">
       <div class="panel-label">Your Exam Question</div>
       <div style="display:flex;gap:12px;align-items:flex-start">
-        <textarea class="question-input" id="questionText" style="flex:1" placeholder="Type or paste your exam question here e.g. 'Describe the acute responses of the cardiovascular system to exercise. (4 marks)'"></textarea>
+        <textarea class="question-input" id="questionText" style="flex:1" placeholder="Type or paste your exam question here."></textarea>
         <div class="mark-col">
           <div class="panel-label">Mark value</div>
           <input type="number" id="markValue" min="1" max="20" placeholder="e.g. 4">
@@ -1979,11 +2055,13 @@
 
   <!-- FOOTER -->
   <footer class="site-footer">
-    <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
-    <nav class="footer-links">
-      <a href="https://commandohsc.com/privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
-      <a href="https://commandohsc.com/terms-of-service.html" target="_blank" rel="noopener">Terms of Service</a>
-    </nav>
+    <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+      <span class="footer-copy">© 2026 CommandoHSC. All rights reserved.</span>
+      <nav class="footer-links">
+        <a href="https://commandohsc.com/privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
+        <a href="https://commandohsc.com/terms-of-service.html" target="_blank" rel="noopener">Terms of Service</a>
+      </nav>
+    </div>
   </footer>
 
 </div><!-- /page-wrap -->
@@ -2098,6 +2176,62 @@ function selectSubject(btn, subjectKey) {
   btn.classList.add('active');
   btn.setAttribute('aria-pressed', 'true');
   activeSubjectKey = subjectKey;
+}
+
+// ── Subject Interest Registration ──
+let _interestSubject = '';
+
+function showInterestModal(subjectName) {
+  _interestSubject = subjectName;
+  document.getElementById('interestSubjectName').textContent = subjectName;
+  document.getElementById('interestEmail').value = '';
+  document.getElementById('interestSuccess').style.display = 'none';
+  document.getElementById('interestError').style.display = 'none';
+  document.getElementById('interestSubmitBtn').disabled = false;
+  document.getElementById('interestSubmitBtn').textContent = 'Notify me';
+  document.getElementById('interestOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('interestEmail').focus(), 100);
+}
+
+function hideInterestModal() {
+  document.getElementById('interestOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function submitInterest() {
+  const email = document.getElementById('interestEmail').value.trim();
+  const errEl = document.getElementById('interestError');
+  const successEl = document.getElementById('interestSuccess');
+  const btn = document.getElementById('interestSubmitBtn');
+
+  errEl.style.display = 'none';
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const { error } = await sb.from('subject_interest').insert({
+      email: email,
+      subject: _interestSubject
+    });
+    if (error) throw error;
+    successEl.style.display = 'block';
+    btn.style.display = 'none';
+    document.getElementById('interestEmail').style.display = 'none';
+    setTimeout(() => hideInterestModal(), 2500);
+  } catch (e) {
+    errEl.textContent = 'Something went wrong — please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Notify me';
+  }
 }
 
 function closeSubjectModal() {
@@ -4378,7 +4512,7 @@ function handlePrivacyOverlayClick(e) {
   if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideWrongSubjectModal(false); }
+  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideWrongSubjectModal(false); hideInterestModal(); }
 });
 
 // ── Init on page load ──
@@ -4964,6 +5098,21 @@ document.addEventListener('keydown', function(e) {
         <span class="pm-footer-note">© 2026 CommandoHSC</span>
         <button class="pm-footer-close" onclick="hidePrivacyModal()">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- SUBJECT INTEREST MODAL -->
+  <div class="interest-overlay" id="interestOverlay">
+    <div class="interest-modal" onclick="event.stopPropagation()">
+      <div class="interest-icon">🔔</div>
+      <h2>Get notified when it's ready</h2>
+      <div class="interest-subject-name" id="interestSubjectName"></div>
+      <p>Leave your email and we'll let you know as soon as this subject is available.</p>
+      <div class="interest-success" id="interestSuccess">✅ You're on the list — we'll be in touch!</div>
+      <div class="interest-error" id="interestError"></div>
+      <input class="interest-email-input" type="email" id="interestEmail" placeholder="your@email.com">
+      <button class="interest-submit-btn" id="interestSubmitBtn" onclick="submitInterest()">Notify me</button>
+      <button class="buy-close" onclick="hideInterestModal()">Maybe later</button>
     </div>
   </div>
 
