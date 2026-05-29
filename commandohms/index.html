@@ -3271,7 +3271,7 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 }
 function escHtmlGreen(s) {
-  return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<span style="color:#2d7a46;font-weight:600">$1</span>');
+  return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<span style="color:#e8e4de;font-weight:700">$1</span>');
 }
 function sanitizeBullet(s) {
   return s.replace(/[^\u0000-\u024F\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g, '').trim();
@@ -3374,14 +3374,14 @@ async function downloadPDF(event) {
         var lh=7,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,48);
         try{doc.addImage(logo.src,'PNG',ML,3.5,lw,lh);}catch(e){}
       }
-      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(100,100,95);
+      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(255,255,255);
       var sb=document.querySelector('.subject-btn.active');
       var sn=(sb?sb.textContent.trim():'')||'Health and Movement Science';
       doc.text(sn+' \xb7 Response Analysis',PW/2,HDR/2+1,{align:'center'});
       doc.text(new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'}),PW-MR,HDR/2+1,{align:'right'});
       doc.setFillColor(17,17,17);doc.rect(0,PH-FTR,PW,FTR,'F');
-      doc.setFont('helvetica','italic');doc.setFontSize(4.5);doc.setTextColor(120,120,110);
-      doc.text('AI Disclaimer: This report is AI-generated. Feedback and the estimated mark may be inaccurate or misaligned with NESA marking guidelines. Treat as a learning guide only. Always consult your teacher for official marking advice.',PW/2,PH-FTR+4,{align:'center',maxWidth:PW-20});
+      doc.setFont('helvetica','italic');doc.setFontSize(4.5);doc.setTextColor(255,255,255);
+      doc.text('AI Disclaimer: CommandoHSC uses artificial intelligence to analyse student responses. Feedback and estimated marks are a learning guide only — not official assessment. Always consult your teacher.',PW/2,PH-FTR+4,{align:'center',maxWidth:PW-20});
       doc.setFont('helvetica','normal');doc.setFontSize(4.5);doc.setTextColor(200,168,75);
       doc.text('CommandoHSC \xa9 2026',PW/2,PH-2.5,{align:'center'});
     }
