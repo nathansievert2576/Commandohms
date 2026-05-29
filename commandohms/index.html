@@ -1851,6 +1851,65 @@
     text-align: center;
   }
   .referral-close-btn:hover { background: rgba(255,255,255,0.1); }
+
+  /* ── STEP FLOW ── */
+  .step-flow {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.5rem;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 0 1.25rem;
+  }
+  .step-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .step-num {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--gold); color: #0d0d0d;
+    font-size: 1rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(200,168,75,0.25);
+    position: relative; z-index: 1;
+  }
+  .step-connector {
+    flex: 1; width: 1.5px;
+    background: linear-gradient(to bottom, rgba(200,168,75,0.3), rgba(200,168,75,0.08));
+    margin: 6px 0; min-height: 24px;
+  }
+  .step-right { padding-bottom: 2.5rem; }
+  .step:last-child .step-right { padding-bottom: 0; }
+  .step-title {
+    font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem; padding-top: 0.65rem;
+  }
+  .stimulus-toggle-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 4px;
+  }
+  .stimulus-toggle-label { font-size: 0.82rem; color: var(--muted); }
+  .toggle-group { display: flex; gap: 4px; }
+  .toggle-btn {
+    background: #111; border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 6px; color: var(--muted);
+    font-family: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+    padding: 5px 14px; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .toggle-btn:hover { border-color: rgba(200,168,75,0.4); color: var(--ink); }
+  .toggle-btn.active { background: var(--gold); border-color: var(--gold); color: #0d0d0d; }
+  @media (max-width: 540px) {
+    .step { grid-template-columns: 40px 1fr; gap: 0 1rem; }
+    .step-num { width: 34px; height: 34px; font-size: 0.88rem; }
+  }
 </style>
 <link rel="icon" type="image/png" href="favicon.png">
 </head>
@@ -1884,49 +1943,6 @@
 <!-- PAGE BODY -->
 <div class="page-wrap">
 
-  <!-- HEADER -->
-  <div class="page-header">
-
-
-    <!-- SUBJECT SELECTOR -->
-    <div class="subject-selector" role="navigation" aria-label="Subject selector">
-      <div class="subject-selector-label">Select your subject</div>
-      <div class="subject-grid">
-        <button class="subject-btn active" onclick="selectSubject(this, 'hms')" aria-pressed="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
-          <span class="subject-name">Health &amp; Movement Science</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Ancient History')">
-          Ancient History <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Biology')">
-          Biology <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Business Studies')">
-          Business Studies <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Community & Family Studies')">
-          Community &amp; Family Studies <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Earth & Environmental Science')">
-          Earth &amp; Environmental Science <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Geography')">
-          Geography <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Legal Studies')">
-          Legal Studies <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Modern History')">
-          Modern History <span class="subject-soon-tag">Notify Me</span>
-        </button>
-        <button class="subject-btn coming-soon" onclick="showInterestModal('Studies of Religion')">
-          Studies of Religion <span class="subject-soon-tag">Notify Me</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
   <div class="legend-wrap">
     <div class="legend-label">COMMAND TERMS</div>
     <div class="legend">
@@ -1947,125 +1963,203 @@
     </div>
   </div>
 
-  <!-- EXAM QUESTION -->
-  <div class="question-wrap">
-    <div class="panel">
-      <div class="panel-label">Your Exam Question</div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <textarea class="question-input" id="questionText" style="flex:1" placeholder="Type or paste your exam question here."></textarea>
-        <div class="mark-col">
-          <div class="panel-label">Mark value</div>
-          <input type="number" id="markValue" min="1" max="20" placeholder="e.g. 4">
+  <!-- STEP FLOW -->
+  <div class="step-flow">
 
-        </div>
+    <!-- STEP 1: SELECT SUBJECT -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">1</div>
+        <div class="step-connector"></div>
       </div>
-      <div class="detected-term" id="detectedTerm">
-        <span>Command term detected:</span>
-        <span id="termPill" style="color:var(--muted);font-style:italic">none yet — enter your question above</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- STIMULUS UPLOAD -->
-  <div class="stimulus-wrap">
-    <div class="panel">
-      <div class="panel-label">Stimulus Material <span style="font-weight:400;color:var(--muted);font-family:'DM Sans',sans-serif;text-transform:none;letter-spacing:0;font-size:0.75rem;">— optional</span></div>
-      <div style="font-size:0.78rem;color:var(--muted);line-height:1.55;margin-bottom:10px;">If your question included a stimulus (graph, image, table, source, data set or extract), upload it here. The AI will use it to better understand the context of the question — the student response does not need to refer to it directly.</div>
-
-      <input type="file" id="stimulusUpload" accept="image/*,.pdf" style="display:none" onchange="handleStimulusSelect(event)">
-
-      <div class="stimulus-upload-area" id="stimulusUploadArea"
-        onclick="gatedUploadClick('stimulusUpload')"
-        ondragover="event.preventDefault();this.classList.add('dragover')"
-        ondragleave="this.classList.remove('dragover')"
-        ondrop="handleStimulusDrop(event)">
-        <span style="font-size:1.3rem;">🖼️</span>
-        <p><strong>Tap to upload or take a photo</strong><br>Accepts image or PDF — one file only</p>
-      </div>
-
-      <div id="stimulusPreview" style="display:none;margin-top:8px">
-        <div class="stimulus-preview">
-          <div id="stimulusThumb"></div>
-          <div class="stimulus-info">
-            <div class="stimulus-name" id="stimulusName"></div>
-            <div class="stimulus-tag">📎 Stimulus attached</div>
+      <div class="step-right">
+        <div class="step-title">Select Your Subject</div>
+        <div class="step-body">
+          <div class="subject-grid" role="navigation" aria-label="Subject selector">
+            <button class="subject-btn active" onclick="selectSubject(this, 'hms')" aria-pressed="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="subject-name">Health &amp; Movement Science</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Ancient History')">
+              Ancient History <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Biology')">
+              Biology <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Business Studies')">
+              Business Studies <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Community & Family Studies')">
+              Community &amp; Family Studies <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Earth & Environmental Science')">
+              Earth &amp; Environmental Science <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Geography')">
+              Geography <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Legal Studies')">
+              Legal Studies <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Modern History')">
+              Modern History <span class="subject-soon-tag">Notify Me</span>
+            </button>
+            <button class="subject-btn coming-soon" onclick="showInterestModal('Studies of Religion')">
+              Studies of Religion <span class="subject-soon-tag">Notify Me</span>
+            </button>
           </div>
-          <button onclick="clearStimulus()" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:5px;line-height:1;flex-shrink:0;" title="Remove stimulus">✕</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- MAIN PANELS -->
-  <div class="main">
-
-    <!-- INPUT PANEL -->
-    <div class="panel">
-      <div class="panel-label">Your Response</div>
-
-      <div class="tab-row">
-        <button class="tab-btn active" id="tabType" onclick="switchTab('type')">✏️ Type / Paste</button>
-        <button class="tab-btn" id="tabPhoto" onclick="switchTab('photo')">📎 Upload File</button>
+    <!-- STEP 2: EXAM QUESTION + STIMULUS -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">2</div>
+        <div class="step-connector"></div>
       </div>
+      <div class="step-right">
+        <div class="step-title">Enter Your Exam Question</div>
+        <div class="step-body">
+          <div class="panel">
+            <div class="panel-label">Your Exam Question</div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <textarea class="question-input" id="questionText" style="flex:1" placeholder="Type or paste your exam question here."></textarea>
+              <div class="mark-col">
+                <div class="panel-label">Mark value</div>
+                <input type="number" id="markValue" min="1" max="20" placeholder="e.g. 4">
 
-      <!-- Type tab -->
-      <div id="typeSection">
-        <textarea id="inputText" placeholder="Type or paste your response here…"></textarea>
-      </div>
-
-      <!-- Photo tab -->
-      <div id="photoSection" style="display:none">
-        <input type="file" id="fileUpload" accept="image/*,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple style="display:none" onchange="handleFileSelect(event)">
-
-        <div class="upload-area" id="uploadArea"
-          onclick="gatedUploadClick('fileUpload')"
-          ondragover="event.preventDefault();this.classList.add('dragover')"
-          ondragleave="this.classList.remove('dragover')"
-          ondrop="handleDrop(event)">
-          <div class="upload-icon">📎</div>
-          <p><strong>Tap to upload your response</strong><br>
-          Accepts photos, PDF or Word document (.docx) — multiple photos supported</p>
+              </div>
+            </div>
+            <div class="detected-term" id="detectedTerm">
+              <span>Command term detected:</span>
+              <span id="termPill" style="color:var(--muted);font-style:italic">none yet — enter your question above</span>
+            </div>
+            <div style="margin-top:4px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.05)">
+              <div class="stimulus-toggle-row">
+                <span class="stimulus-toggle-label">Any stimulus provided?</span>
+                <div class="toggle-group">
+                  <button class="toggle-btn active" id="stimNo" onclick="toggleStimulusPanel(false)">No</button>
+                  <button class="toggle-btn" id="stimYes" onclick="toggleStimulusPanel(true)">Yes</button>
+                </div>
+              </div>
+              <div id="stimulusPanelWrap" style="display:none;margin-top:10px">
+                <input type="file" id="stimulusUpload" accept="image/*,.pdf" style="display:none" onchange="handleStimulusSelect(event)">
+                <div class="stimulus-upload-area" id="stimulusUploadArea"
+                  onclick="gatedUploadClick('stimulusUpload')"
+                  ondragover="event.preventDefault();this.classList.add('dragover')"
+                  ondragleave="this.classList.remove('dragover')"
+                  ondrop="handleStimulusDrop(event)">
+                  <span style="font-size:1.3rem;">🖼️</span>
+                  <p><strong>Tap to upload or take a photo</strong><br>Accepts image or PDF — one file only</p>
+                </div>
+                <div id="stimulusPreview" style="display:none;margin-top:8px">
+                  <div class="stimulus-preview">
+                    <div id="stimulusThumb"></div>
+                    <div class="stimulus-info">
+                      <div class="stimulus-name" id="stimulusName"></div>
+                      <div class="stimulus-tag">📎 Stimulus attached</div>
+                    </div>
+                    <button onclick="clearStimulus()" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:5px;line-height:1;flex-shrink:0;" title="Remove stimulus">✕</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div id="fileList" style="display:none">
-          <div class="file-grid" id="fileGrid"></div>
-          <button class="add-more-btn" style="margin-top:8px" onclick="gatedUploadClick('fileUpload')">
-            + Add more files
-          </button>
-        </div>
-
-        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-          <button class="extract-btn" id="extractBtn" onclick="extractAll()" style="display:none">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            Read All Files
-          </button>
-          <button class="btn-remove-img" id="clearFilesBtn" onclick="removeAllFiles()" style="display:none;color:var(--muted);font-size:0.78rem;font-weight:600;padding:9px 12px;border:1.5px solid var(--border2);border-radius:9px;background:var(--cream);font-family:'DM Sans',sans-serif;cursor:pointer">✕ Clear all</button>
-        </div>
-
-        <div id="extractStatus" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);min-height:18px;margin-top:6px"></div>
-        <textarea id="extractedText" placeholder="Extracted text will appear here — you can edit it before analysing…" style="display:none;margin-top:8px"></textarea>
-      </div>
-
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-primary" id="analyseBtn" onclick="analyseText()">Analyse My Response</button>
-        <button class="btn-clear" onclick="clearAll()">Clear</button>
       </div>
     </div>
 
-    <!-- OUTPUT PANEL -->
-    <div class="panel">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <div class="panel-label">Colour-Coded Output</div>
-        <button class="btn-copy" id="copyBtn" onclick="copyOutput()" title="Copy with colours" style="display:none">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <span id="copyLabel">Copy</span>
-        </button>
+    <!-- STEP 3: YOUR RESPONSE -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">3</div>
+        <div class="step-connector"></div>
       </div>
-      <div class="output-box" id="outputBox">
-        <span class="placeholder">Your colour-coded response will appear here…</span>
+      <div class="step-right">
+        <div class="step-title">Enter Your Response</div>
+        <div class="step-body">
+          <div class="panel">
+            <div class="panel-label">Your Response</div>
+
+            <div class="tab-row">
+              <button class="tab-btn active" id="tabType" onclick="switchTab('type')">✏️ Type / Paste</button>
+              <button class="tab-btn" id="tabPhoto" onclick="switchTab('photo')">📎 Upload File</button>
+            </div>
+
+            <!-- Type tab -->
+            <div id="typeSection">
+              <textarea id="inputText" placeholder="Type or paste your response here…"></textarea>
+            </div>
+
+            <!-- Photo tab -->
+            <div id="photoSection" style="display:none">
+              <input type="file" id="fileUpload" accept="image/*,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple style="display:none" onchange="handleFileSelect(event)">
+
+              <div class="upload-area" id="uploadArea"
+                onclick="gatedUploadClick('fileUpload')"
+                ondragover="event.preventDefault();this.classList.add('dragover')"
+                ondragleave="this.classList.remove('dragover')"
+                ondrop="handleDrop(event)">
+                <div class="upload-icon">📎</div>
+                <p><strong>Tap to upload your response</strong><br>
+                Accepts photos, PDF or Word document (.docx) — multiple photos supported</p>
+              </div>
+
+              <div id="fileList" style="display:none">
+                <div class="file-grid" id="fileGrid"></div>
+                <button class="add-more-btn" style="margin-top:8px" onclick="gatedUploadClick('fileUpload')">
+                  + Add more files
+                </button>
+              </div>
+
+              <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+                <button class="extract-btn" id="extractBtn" onclick="extractAll()" style="display:none">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  Read All Files
+                </button>
+                <button class="btn-remove-img" id="clearFilesBtn" onclick="removeAllFiles()" style="display:none;color:var(--muted);font-size:0.78rem;font-weight:600;padding:9px 12px;border:1.5px solid var(--border2);border-radius:9px;background:var(--cream);font-family:'DM Sans',sans-serif;cursor:pointer">✕ Clear all</button>
+              </div>
+
+              <div id="extractStatus" style="font-family:'DM Sans','Helvetica Neue',Arial,sans-serif;font-size:0.78rem;color:var(--muted);min-height:18px;margin-top:6px"></div>
+              <textarea id="extractedText" placeholder="Extracted text will appear here — you can edit it before analysing…" style="display:none;margin-top:8px"></textarea>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="stats" id="statsRow"></div>
     </div>
+
+    <!-- STEP 4: ANALYSE -->
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num">4</div>
+      </div>
+      <div class="step-right">
+        <div class="step-title">Analyse My Response</div>
+        <div class="step-body">
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-primary" id="analyseBtn" onclick="analyseText()">Analyse My Response</button>
+            <button class="btn-clear" onclick="clearAll()">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /step-flow -->
+
+  <!-- OUTPUT PANEL -->
+  <div class="panel" style="margin-top:1.5rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div class="panel-label">Colour-Coded Output</div>
+      <button class="btn-copy" id="copyBtn" onclick="copyOutput()" title="Copy with colours" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span id="copyLabel">Copy</span>
+      </button>
+    </div>
+    <div class="output-box" id="outputBox">
+      <span class="placeholder">Your colour-coded response will appear here…</span>
+    </div>
+    <div class="stats" id="statsRow"></div>
   </div>
 
   <!-- FEEDBACK -->
@@ -2119,6 +2213,17 @@
 // Shared state for PDF access
 let lastAnnotations = [];
 let lastText = '';
+
+// Stimulus toggle
+function toggleStimulusPanel(show) {
+  document.getElementById('stimulusPanelWrap').style.display = show ? 'block' : 'none';
+  document.getElementById('stimNo').classList.toggle('active', !show);
+  document.getElementById('stimYes').classList.toggle('active', show);
+  if (!show) {
+    stimulusFile = null;
+    renderStimulusPreview();
+  }
+}
 
 // Stimulus state
 let stimulusFile = null; // { data: base64string, mediaType: string, isPdf: bool, name: string }
