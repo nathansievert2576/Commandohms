@@ -995,7 +995,7 @@
   }
   .feedback-three-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
     align-items: stretch;
   }
@@ -3147,7 +3147,7 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     </div>`;
   }).join('');
 
-  const threeHTML = QUADRANTS.filter(q => q.key !== 'Command Term Focus').map(q => {
+  const renderQuadCard = (q) => {
     const qs = QUAD_STYLES[q.key] || { bg: 'var(--cream)', bar: 'var(--olive)', titleColor: 'var(--olive)' };
     const points = sections[q.key] || [];
     const renderBullet = q.key === 'Next Steps' ? escHtmlGreen : escHtml;
@@ -3157,16 +3157,20 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     return `<div style="background:${qs.bg};border:none;border-radius:9px;overflow:hidden;display:flex;flex-direction:column;">
       <div style="height:4px;background:${qs.bar};flex-shrink:0;"></div>
       <div style="padding:12px 13px;flex:1;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.key}</div>
+        <div style="font-family:'DM Sans','Helvetica Neue',Arial,sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.key}</div>
         ${pointsHTML}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  const twoHTML     = QUADRANTS.filter(q => q.key === 'What Went Well' || q.key === 'Areas for Improvement').map(renderQuadCard).join('');
+  const nextHTML    = QUADRANTS.filter(q => q.key === 'Next Steps').map(renderQuadCard).join('');
 
   box.innerHTML = label +
     `<div class="feedback-quadrant-grid">
       ${commandHTML}
-      <div class="feedback-three-grid">${threeHTML}</div>
+      <div class="feedback-three-grid">${twoHTML}</div>
+      ${nextHTML}
     </div>`;
   wrap.style.display = 'block';
 }
