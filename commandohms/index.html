@@ -3339,7 +3339,7 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     const points = sections[q.key] || [];
     const renderBullet = q.key === 'Next Steps' ? escHtmlGreen : escHtml;
     const pointsHTML = points.length
-      ? points.map(p => `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;"><span style="flex-shrink:0;color:${qs.titleColor}">•</span><span style="color:#e8e4de">${renderBullet(sanitizeBullet(p))}</span></div>`).join('')
+      ? points.map(p => `<div style="display:flex;gap:7px;margin-bottom:5px;font-size:0.82rem;line-height:1.55;"><span style="flex-shrink:0;color:${qs.titleColor}">•</span><span style="color:var(--text)">${renderBullet(sanitizeBullet(p))}</span></div>`).join('')
       : `<div style="font-size:0.8rem;color:#888;font-style:italic">—</div>`;
     return `<div style="background:${qs.bg};border:none;border-radius:9px;overflow:hidden;display:flex;flex-direction:column;">
       <div style="height:4px;background:${qs.bar};flex-shrink:0;"></div>
