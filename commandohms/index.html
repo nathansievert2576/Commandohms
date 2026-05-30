@@ -1688,6 +1688,26 @@
   }
   .confirm-btn:hover { opacity: 0.88; }
 
+  .mark-prompt-input {
+    width: 100%; text-align: center;
+    background: var(--bg-input); border: 1.5px solid var(--border-strong);
+    border-radius: 10px; color: var(--text);
+    font-family: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.4rem; font-weight: 700; padding: 0.65rem 1rem;
+    outline: none; margin: 1rem 0 1.25rem; box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .mark-prompt-input:focus { border-color: var(--olive); box-shadow: 0 0 0 3px var(--olive-dim); }
+  .mark-prompt-input::placeholder { font-size: 1rem; font-weight: 400; color: var(--muted); opacity: 0.6; }
+  .mark-prompt-skip {
+    display: block; width: 100%; padding: 0.65rem;
+    background: none; border: none; color: var(--muted);
+    font-size: 0.85rem; cursor: pointer;
+    font-family: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    transition: color 0.15s;
+  }
+  .mark-prompt-skip:hover { color: var(--ink); }
+
   /* ── PAYMENT SUCCESS MODAL ── */
   .pay-modal-overlay {
     position: fixed; inset: 0; z-index: 9999;
@@ -4763,31 +4783,64 @@ function confirmProceed() {
   if (fn) fn();
 }
 
-// ── analyseText — gate, subject check, confirm, spend, run, refund on error ──
+// ── Mark value prompt modal ──
+let _markPromptCallback = null;
+
+function showMarkPrompt(cb) {
+  _markPromptCallback = cb;
+  document.getElementById('markPromptInput').value = '';
+  document.getElementById('markPromptOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('markPromptInput').focus(), 80);
+}
+function hideMarkPrompt() {
+  document.getElementById('markPromptOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  _markPromptCallback = null;
+}
+function markPromptContinue() {
+  const val = document.getElementById('markPromptInput').value.trim();
+  if (val) document.getElementById('markValue').value = val;
+  hideMarkPrompt();
+  if (_markPromptCallback) _markPromptCallback();
+}
+function markPromptSkip() {
+  hideMarkPrompt();
+  if (_markPromptCallback) _markPromptCallback();
+}
+
+// ── analyseText — gate, mark prompt, subject check, confirm, spend, run, refund on error ──
 async function analyseText() {
   const ok = await checkGate();
   if (!ok) return;
 
-  // Subject relevance check — show warning if question looks off-topic
-  const question = (document.getElementById('questionText')?.value || '').trim();
-  const proceedWithConfirm = () => {
-    showConfirm(async () => {
-      const spent = await spendCredit();
-      if (!spent) { showGate(); return; }
-      try {
-        await _runAnalysis();
-      } catch(e) {
-        await refundCredit();
-        const out = document.getElementById('outputBox');
-        if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
-      }
-    });
+  const continueAnalysis = () => {
+    const question = (document.getElementById('questionText')?.value || '').trim();
+    const proceedWithConfirm = () => {
+      showConfirm(async () => {
+        const spent = await spendCredit();
+        if (!spent) { showGate(); return; }
+        try {
+          await _runAnalysis();
+        } catch(e) {
+          await refundCredit();
+          const out = document.getElementById('outputBox');
+          if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+        }
+      });
+    };
+    if (isQuestionOffTopic(question)) {
+      showWrongSubjectModal(proceedWithConfirm);
+    } else {
+      proceedWithConfirm();
+    }
   };
 
-  if (isQuestionOffTopic(question)) {
-    showWrongSubjectModal(proceedWithConfirm);
+  const markVal = document.getElementById('markValue').value.trim();
+  if (!markVal) {
+    showMarkPrompt(continueAnalysis);
   } else {
-    proceedWithConfirm();
+    continueAnalysis();
   }
 }
 
@@ -4837,7 +4890,7 @@ function handlePrivacyOverlayClick(e) {
   if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideWrongSubjectModal(false); hideInterestModal(); }
+  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideMarkPrompt(); hideWrongSubjectModal(false); hideInterestModal(); }
 });
 
 // ── Init on page load ──
@@ -5125,6 +5178,19 @@ document.addEventListener('keydown', function(e) {
   </div>
 
   <!-- CONFIRM ANALYSIS MODAL -->
+  <!-- MARK VALUE PROMPT MODAL -->
+  <div class="confirm-overlay hidden" id="markPromptOverlay">
+    <div class="confirm-modal">
+      <div class="confirm-icon">📊</div>
+      <h2>Enter a mark value?</h2>
+      <p>Adding a mark value gives you a more accurate estimated mark and tailored marking feedback.</p>
+      <input class="mark-prompt-input" type="number" id="markPromptInput" min="1" max="20" placeholder="e.g. 4"
+        onkeydown="if(event.key==='Enter') markPromptContinue()">
+      <button class="confirm-btn" onclick="markPromptContinue()">Continue with mark value</button>
+      <button class="mark-prompt-skip" onclick="markPromptSkip()">Continue without mark value</button>
+    </div>
+  </div>
+
   <div class="confirm-overlay hidden" id="confirmOverlay">
     <div class="confirm-modal">
       <div class="confirm-icon">🎯</div>
