@@ -3274,10 +3274,10 @@ function renderFeedback(feedback, primaryTerm, annotations) {
   box.className = 'feedback-box has-tip';
 
   const QUADRANTS = [
-    { key: 'What Went Well',        patterns: ['what went well'] },
-    { key: 'Areas for Improvement', patterns: ['areas for improvement'] },
-    { key: 'Command Term Focus',    patterns: ['command term focus'] },
-    { key: 'Next Steps',            patterns: ['next steps'] },
+    { key: 'What Went Well',        label: 'STRENGTH', patterns: ['what went well'] },
+    { key: 'Areas for Improvement', label: 'DEVELOP',  patterns: ['areas for improvement'] },
+    { key: 'Command Term Focus',                       patterns: ['command term focus'] },
+    { key: 'Next Steps',            label: 'TRY THIS', patterns: ['next steps'] },
   ];
 
   const sections = {};
@@ -3328,7 +3328,7 @@ function renderFeedback(feedback, primaryTerm, annotations) {
       : `<div style="font-size:0.8rem;color:#888;font-style:italic">—</div>`;
     return `<div style="background:${qs.bar};border:none;border-radius:9px;overflow:hidden;">
       <div style="padding:12px 13px;padding-top:14px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${titleColour};margin-bottom:8px;">${q.key}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${titleColour};margin-bottom:8px;">${q.label || q.key}</div>
         ${pointsHTML}
       </div>
     </div>`;
@@ -3344,7 +3344,7 @@ function renderFeedback(feedback, primaryTerm, annotations) {
     return `<div style="background:${qs.bg};border:none;border-radius:9px;overflow:hidden;display:flex;flex-direction:column;">
       <div style="height:4px;background:${qs.bar};flex-shrink:0;"></div>
       <div style="padding:12px 13px;flex:1;">
-        <div style="font-family:'DM Sans','Helvetica Neue',Arial,sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.key}</div>
+        <div style="font-family:'DM Sans','Helvetica Neue',Arial,sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${qs.titleColor};margin-bottom:8px;">${q.label || q.key}</div>
         ${pointsHTML}
       </div>
     </div>`;
@@ -3588,7 +3588,7 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 }
 function escHtmlGreen(s) {
-  return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<span style="color:#e8e4de;font-weight:700">$1</span>');
+  return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<span style="color:var(--text);font-weight:700">$1</span>');
 }
 function sanitizeBullet(s) {
   return s.replace(/[^\u0000-\u024F\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g, '').trim();
