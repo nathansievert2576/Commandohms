@@ -720,9 +720,10 @@
     .footer-links { gap: 1rem; }
 
     /* Auth modal */
-    .auth-modal { padding: 0; border-radius: 16px; }
-    .auth-logo { padding: 1.5rem 1.25rem 1.25rem; }
-    .auth-form-body { padding: 1.25rem 1.25rem 1.75rem; }
+    .auth-overlay { align-items: flex-start; overflow-y: auto; padding: 1rem; }
+    .auth-modal { padding: 0; border-radius: 16px; margin: auto; }
+    .auth-logo { padding: 1.25rem 1.25rem 1rem; }
+    .auth-form-body { padding: 1.25rem 1.25rem 1.5rem; }
     .auth-tab { font-size: 0.78rem; padding: 0.5rem 0.5rem; }
     .auth-btn { font-size: 0.875rem; padding: 0.75rem; }
     .auth-btn-google { font-size: 0.875rem; padding: 0.75rem; }
@@ -4233,6 +4234,7 @@ async function buyCredits(tier) {
     var ref = params.get('ref');
     if (ref && /^[A-Z0-9]{6,12}$/.test(ref.toUpperCase())) {
       localStorage.setItem('commandoRef', ref.toUpperCase());
+      localStorage.setItem('commandoRefTs', Date.now().toString());
     }
   } catch(e) {}
 })();
@@ -4246,6 +4248,21 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 let userCredits = 0;
 
+// ── Referral code helper — returns code if present and < 7 days old ──
+function getValidRefCode() {
+  try {
+    const code = localStorage.getItem('commandoRef');
+    if (!code) return null;
+    const ts = parseInt(localStorage.getItem('commandoRefTs') || '0', 10);
+    if (Date.now() - ts > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('commandoRef');
+      localStorage.removeItem('commandoRefTs');
+      return null;
+    }
+    return code;
+  } catch(e) { return null; }
+}
+
 // ── Auth tab switching ──
 function switchAuthTab(tab) {
   document.getElementById('formSignin').style.display = tab === 'signin' ? '' : 'none';
@@ -4255,15 +4272,13 @@ function switchAuthTab(tab) {
   document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
   document.getElementById('authError').classList.remove('visible');
   // Update button text if referral code is present
-  try {
-    const refCode = localStorage.getItem('commandoRef');
-    const suBtn = document.getElementById('suBtn');
-    if (suBtn) {
-      suBtn.textContent = refCode
-        ? 'Create account — 6 free analyses 🎁'
-        : 'Create account — 3 free analyses';
-    }
-  } catch(e) {}
+  const refCode = getValidRefCode();
+  const suBtn = document.getElementById('suBtn');
+  if (suBtn) {
+    suBtn.textContent = refCode
+      ? 'Create account — 6 free analyses 🎁'
+      : 'Create account — 3 free analyses';
+  }
 }
 
 function showAuthError(msg, type = 'error') {
@@ -4417,14 +4432,13 @@ async function doSignUp() {
   if (error) {
     showAuthError(error.message);
     btn.disabled = false;
-    const refCode2 = localStorage.getItem('commandoRef');
-    btn.textContent = refCode2 ? 'Create account — 6 free analyses 🎁' : 'Create account — 3 free analyses';
+    btn.textContent = getValidRefCode() ? 'Create account — 6 free analyses 🎁' : 'Create account — 3 free analyses';
     return;
   }
 
   // Register referral if a ref code was stored (RPC handles bonus credits server-side)
   try {
-    const refCode = localStorage.getItem('commandoRef');
+    const refCode = getValidRefCode();
     if (refCode && data.user) {
       await sb.rpc('register_referral', {
         referred_uid: data.user.id,
@@ -4435,6 +4449,7 @@ async function doSignUp() {
     console.warn('Referral registration failed:', e);
   } finally {
     localStorage.removeItem('commandoRef');
+    localStorage.removeItem('commandoRefTs');
   }
 
   // Email confirmation is required — show success message instead of auto-login
@@ -4972,7 +4987,7 @@ document.addEventListener('keydown', function(e) {
   <div class="auth-overlay hidden" id="authOverlay" onclick="if(event.target===this)hideAuth();">
     <div class="auth-modal">
       <div class="auth-logo">
-        <img src="https://commandohsc.com/logo.png" alt="CommandoHSC" style="height:36px;width:auto;display:block;margin:0 auto 1rem;" onerror="this.style.display='none'">
+        <img src="logo-dark.png" alt="CommandoHSC" style="height:36px;width:auto;display:block;margin:0 auto 0.75rem;">
         <p style="margin:0;font-size:0.95rem;font-weight:900;font-style:italic;letter-spacing:-0.01em;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:linear-gradient(90deg,#F7941D 0%,#E84B23 20%,#CC2255 40%,#C2185B 56%,#9C27B0 75%,#4A148C 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;">Colour your thinking. Raise your mark.</p>
       </div>
       <div class="auth-form-body">
