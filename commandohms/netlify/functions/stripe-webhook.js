@@ -142,7 +142,7 @@ exports.handler = async (event) => {
       await payReferralReward(userUid, serviceKey, supabaseHost);
     }
 
-    return { statusCode: 200, body: JSON.stringify({ received: true, result, email, credits }) };
+    return { statusCode: 200, body: JSON.stringify({ received: true, result }) };
   }
 
   return { statusCode: 200, body: JSON.stringify({ received: true }) };

@@ -3382,7 +3382,8 @@ function renderHighlighted(text, annotations) {
     if (r.start > cursor) html += escHtml(text.slice(cursor, r.start)).replace(/\n/g, '<br>');
     const spanText = text.slice(r.start, r.end);
     const isForExample = /^(for example|e\.g\.|eg\.?)[,\s]/i.test(spanText.trim());
-    html += `<span class="hl ${r.term}${isForExample ? ' for-example' : ''}">${escHtml(spanText)}<span class="tooltip">${DEFINITIONS[r.term] || r.term}</span></span>`;
+    if (!(r.term in DEFINITIONS)) continue;
+    html += `<span class="hl ${r.term}${isForExample ? ' for-example' : ''}">${escHtml(spanText)}<span class="tooltip">${DEFINITIONS[r.term]}</span></span>`;
     cursor = r.end;
   }
   if (cursor < text.length) html += escHtml(text.slice(cursor)).replace(/\n/g, '<br>');
@@ -3442,9 +3443,9 @@ function renderStats(annotations, primaryTerm) {
   const terms = [...new Set(annotations.filter(a => a.term !== 'example').map(a => a.term))];
   const hasExamples = annotations.some(a => a.term === 'example');
 
-  let html = terms.map(term => {
+  let html = terms.filter(term => term in DEFINITIONS).map(term => {
     const req = term === primaryTerm ? ' <span style="font-size:.62rem;opacity:.75">★ required</span>' : '';
-    return `<span class="stat-chip ${term}">${cap(term)}${req}</span>`;
+    return `<span class="stat-chip ${term}">${escHtml(cap(term))}${req}</span>`;
   }).join('');
 
   if (hasExamples) html += `<span class="stat-chip" style="background:rgba(139,108,66,.15);color:var(--bark);border:1px solid rgba(139,108,66,.25);text-decoration:underline;text-decoration-color:var(--bark);text-decoration-thickness:2px;text-underline-offset:2px;">Examples</span>`;
@@ -4567,7 +4568,7 @@ function renderNav() {
           </svg>
         </span>
         <div class="avatar-dropdown" id="avatarDropdown">
-          <div class="avatar-dropdown-email">${currentUser.email}</div>
+          <div class="avatar-dropdown-email">${escHtml(currentUser.email)}</div>
           <button class="avatar-dropdown-btn" onclick="showBuy(); closeAvatarMenu()">
             🎯 Buy more credits
           </button>
