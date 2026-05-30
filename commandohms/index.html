@@ -697,6 +697,12 @@
     textarea#inputText, textarea#extractedText { min-height: 180px; font-size: 0.875rem; }
     .question-input { min-height: 60px; font-size: 0.875rem; }
 
+    /* Question + mark row: stack vertically on mobile */
+    .question-mark-row { flex-direction: column; }
+    .question-mark-row .mark-col { flex-direction: row; align-items: center; width: 100%; gap: 10px; }
+    .question-mark-row .mark-col .panel-label { margin: 0; white-space: nowrap; }
+    .question-mark-row .mark-col input[type="number"] { width: 70px; flex: none; }
+
     /* Tabs */
     .tab-btn { font-size: 0.78rem; padding: 0.45rem 0.75rem; }
 
@@ -2146,7 +2152,7 @@
         <div class="step-body">
           <div class="panel">
             <div class="panel-label">Your Exam Question</div>
-            <div style="display:flex;gap:12px;align-items:flex-start">
+            <div class="question-mark-row" style="display:flex;gap:12px;align-items:flex-start">
               <textarea class="question-input" id="questionText" style="flex:1" placeholder="Type or paste your exam question here."></textarea>
               <div class="mark-col">
                 <div class="panel-label">Mark value</div>
@@ -3678,10 +3684,10 @@ async function downloadPDF(event) {
     function drawPageFurniture(){
       doc.setFillColor(13,13,13);doc.rect(0,0,PW,HDR,'F');
       doc.setFillColor(200,168,75);doc.rect(0,HDR-1,PW,1,'F');
-      var logo=document.querySelector('.nav-logo img');
-      if(logo&&logo.src&&logo.src.startsWith('data:')){
+      var logo=document.querySelector('.nav-logo .logo-dark');
+      if(logo&&logo.complete&&logo.naturalWidth>0){
         var lh=7,lw=Math.min(lh*logo.naturalWidth/logo.naturalHeight,48);
-        try{doc.addImage(logo.src,'PNG',ML,3.5,lw,lh);}catch(e){}
+        try{doc.addImage(logo,'JPEG',ML,3.5,lw,lh);}catch(e){}
       }
       doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(255,255,255);
       var sb=document.querySelector('.subject-btn.active');
