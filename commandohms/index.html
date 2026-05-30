@@ -3987,12 +3987,20 @@ async function downloadPDF(event) {
     // ── Parse feedback ────────────────────────────────────────────────────
     function parseFB(){
       var box=document.getElementById('feedbackBox');if(!box)return{};
-      var HEADS=['What Went Well','Areas for Improvement','Command Term Focus','Next Steps'];
+      var HEADS=[
+        {label:'What Went Well',        aliases:['strength']},
+        {label:'Areas for Improvement', aliases:['develop']},
+        {label:'Command Term Focus',    aliases:['command term focus']},
+        {label:'Next Steps',            aliases:['try this']},
+      ];
       var out={},cur=null;
       box.innerText.split('\n').forEach(function(line){
         var t=line.trim(),lo=t.toLowerCase().replace(/[:\-\*#]/g,'').trim();
-        var h=HEADS.find(function(h){return lo===h.toLowerCase()||lo.startsWith(h.toLowerCase());});
-        if(h){cur=h;out[cur]=out[cur]||[];}
+        var h=HEADS.find(function(h){
+          var terms=[h.label.toLowerCase()].concat(h.aliases);
+          return terms.some(function(a){return lo===a||lo.startsWith(a);});
+        });
+        if(h){cur=h.label;out[cur]=out[cur]||[];}
         else if(cur&&t){var cl=t.replace(/^[•\-\*\d\.]?\s*/,'').trim();if(cl)out[cur].push(cl);}
       });
       return out;
