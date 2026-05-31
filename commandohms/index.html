@@ -4756,7 +4756,31 @@ async function analyseText() {
         }
       });
     };
+
+    // Show loading bar while relevance check runs
+    const btn = document.getElementById('analyseBtn');
+    let bar = null;
+    if (btn) {
+      btn.disabled = true;
+      bar = document.createElement('div');
+      bar.style.cssText = 'position:relative;height:3px;border-radius:2px;overflow:hidden;margin-top:8px;background:var(--border-color,#333);';
+      const fill = document.createElement('div');
+      fill.style.cssText = 'position:absolute;height:100%;width:40%;background:var(--gold,#c9a84c);border-radius:2px;animation:_chk-slide 1s ease-in-out infinite;';
+      if (!document.getElementById('_chkStyle')) {
+        const s = document.createElement('style');
+        s.id = '_chkStyle';
+        s.textContent = '@keyframes _chk-slide{0%{left:-40%}100%{left:100%}}';
+        document.head.appendChild(s);
+      }
+      bar.appendChild(fill);
+      btn.parentNode.insertBefore(bar, btn.nextSibling);
+    }
+
     const relevant = await checkQuestionRelevance(question);
+
+    if (btn) btn.disabled = false;
+    if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+
     if (!relevant) {
       showWrongSubjectModal(proceedWithConfirm);
     } else {
