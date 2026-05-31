@@ -265,13 +265,7 @@ exports.handler = async (event) => {
     return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'Unauthorised: invalid or expired session. Please log in again.' }) };
   }
 
-  // 3. Deduct credit before calling Anthropic
-  const credited = await spendCredit(user.id);
-  if (!credited) {
-    return { statusCode: 402, headers: cors, body: JSON.stringify({ error: 'No credits remaining. Please purchase more to continue.' }) };
-  }
-
-  // 4. Parse body
+  // 3. Parse body
   let payload;
   try { payload = JSON.parse(event.body || '{}'); }
   catch (e) { return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
