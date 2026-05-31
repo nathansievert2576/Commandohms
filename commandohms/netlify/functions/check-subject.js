@@ -122,9 +122,11 @@ exports.handler = async (event) => {
   }
 
   try {
-    const result = await callHaiku(SUBJECT_SYSTEM_PROMPTS[subject], question.trim().slice(0, 500));
+    const userMessage = `HSC exam question: ${question.trim().slice(0, 500)}`;
+    const result = await callHaiku(SUBJECT_SYSTEM_PROMPTS[subject], userMessage);
+    // Only block if Haiku explicitly says "false" — any other response allows through
     const text = (result?.content?.[0]?.text || '').trim().toLowerCase();
-    const relevant = text.startsWith('true');
+    const relevant = !text.startsWith('false');
     return {
       statusCode: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
@@ -132,7 +134,6 @@ exports.handler = async (event) => {
     };
   } catch (err) {
     console.error('check-subject error:', err.message);
-    // On any error, allow the question through — don't block the user
     return {
       statusCode: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
