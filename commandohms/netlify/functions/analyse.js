@@ -2,6 +2,8 @@
 // Proxies requests to the Anthropic Claude API.
 // JWT VALIDATION: verifies the caller holds a valid Supabase session
 // before forwarding to Claude. Unauthenticated calls are rejected with 401.
+// PROMPTS: built server-side from subject-specific prompt modules — never
+// exposed to the client.
 
 const https = require('https');
 
@@ -88,26 +90,55 @@ async function spendCredit(userId) {
   }
 }
 
+// ── Subject prompt loader ─────────────────────────────────────────────────────
+const ALLOWED_SUBJECTS = new Set(['hms']);
+
+function loadSubjectPrompts(subject) {
+  if (!ALLOWED_SUBJECTS.has(subject)) return null;
+  try {
+    return require(`./prompts/${subject}`);
+  } catch (e) {
+    console.error(`Failed to load prompts for subject "${subject}":`, e.message);
+    return null;
+  }
+}
+
 // ── Payload validation ────────────────────────────────────────────────────────
-const MAX_TEXT_CHARS  = 60_000; // system + all text content combined
+const MAX_TEXT_CHARS  = 60_000;
 const MAX_IMAGE_BYTES = 5_242_880; // 5 MB per image (base64 decoded)
 const VALID_CONTENT_TYPES = new Set(['text', 'image']);
 const VALID_MEDIA_TYPES   = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const ALLOWED_CALL_TYPES  = new Set(['annotation', 'examples', 'projectedMark', 'feedback', 'ocr']);
 
 function validatePayload(payload) {
-  const { messages, system } = payload;
+  const { callType, subject, promptData, messages } = payload;
 
-  // system must be a string if present
-  if (system !== undefined && typeof system !== 'string') {
-    return 'Invalid system field';
+  if (!callType || !ALLOWED_CALL_TYPES.has(callType)) {
+    return `Invalid callType: must be one of ${[...ALLOWED_CALL_TYPES].join(', ')}`;
   }
 
-  // messages must be a non-empty array
+  if (!subject || !ALLOWED_SUBJECTS.has(subject)) {
+    return `Invalid subject: must be one of ${[...ALLOWED_SUBJECTS].join(', ')}`;
+  }
+
+  if (!promptData || typeof promptData !== 'object') {
+    return 'promptData must be an object';
+  }
+
+  // Validate promptData fields by type — strings only, no executable content
+  for (const [key, val] of Object.entries(promptData)) {
+    if (val !== null && val !== undefined && typeof val !== 'string' && typeof val !== 'number' && typeof val !== 'boolean') {
+      return `promptData.${key} must be a string, number, or boolean`;
+    }
+    if (typeof val === 'string' && val.length > 50_000) {
+      return `promptData.${key} exceeds maximum length`;
+    }
+  }
+
   if (!Array.isArray(messages) || messages.length === 0) {
     return 'messages must be a non-empty array';
   }
 
-  // Only allow a single user message (matches legitimate client usage)
   if (messages.length > 1) {
     return 'Only one message is permitted per request';
   }
@@ -117,14 +148,13 @@ function validatePayload(payload) {
     return 'Message must have role "user"';
   }
 
-  // Normalise content to array form
   const content = Array.isArray(msg.content)
     ? msg.content
     : (typeof msg.content === 'string' ? [{ type: 'text', text: msg.content }] : null);
 
   if (!content) return 'Invalid message content';
 
-  let totalTextChars = typeof system === 'string' ? system.length : 0;
+  let totalTextChars = 0;
 
   for (const item of content) {
     if (!item || !VALID_CONTENT_TYPES.has(item.type)) {
@@ -141,7 +171,6 @@ function validatePayload(payload) {
       if (!src || src.type !== 'base64') return 'Image source must be base64';
       if (!VALID_MEDIA_TYPES.has(src.media_type)) return `Unsupported image type: ${src.media_type}`;
       if (typeof src.data !== 'string') return 'Image data must be a string';
-      // base64 encodes ~4/3 bytes — check decoded size
       const decodedBytes = Math.floor(src.data.length * 0.75);
       if (decodedBytes > MAX_IMAGE_BYTES) return 'Image exceeds 5 MB limit';
     }
@@ -152,6 +181,26 @@ function validatePayload(payload) {
   }
 
   return null; // valid
+}
+
+// ── Build system prompt ───────────────────────────────────────────────────────
+function buildSystemPrompt(callType, promptData, subjectPrompts) {
+  const { buildAnnotationPrompt, buildExamplePrompt, buildProjectedMarkPrompt, buildFeedbackPrompt } = subjectPrompts;
+
+  switch (callType) {
+    case 'annotation':
+      return buildAnnotationPrompt(promptData);
+    case 'examples':
+      return buildExamplePrompt(promptData);
+    case 'projectedMark':
+      return buildProjectedMarkPrompt(promptData);
+    case 'feedback':
+      return buildFeedbackPrompt(promptData);
+    case 'ocr':
+      return null; // no system prompt for transcription
+    default:
+      return null;
+  }
 }
 
 // ── Call Anthropic ────────────────────────────────────────────────────────────
@@ -209,13 +258,13 @@ exports.handler = async (event) => {
     return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'Unauthorised: no session token. Please log in.' }) };
   }
 
-  // 2. Validate JWT — returns user object or null
+  // 2. Validate JWT
   const user = await validateToken(token);
   if (!user) {
     return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'Unauthorised: invalid or expired session. Please log in again.' }) };
   }
 
-  // 3. Server-side credit check — deduct before calling Anthropic
+  // 3. Deduct credit before calling Anthropic
   const credited = await spendCredit(user.id);
   if (!credited) {
     return { statusCode: 402, headers: cors, body: JSON.stringify({ error: 'No credits remaining. Please purchase more to continue.' }) };
@@ -226,20 +275,30 @@ exports.handler = async (event) => {
   try { payload = JSON.parse(event.body || '{}'); }
   catch (e) { return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
 
-  // 5. Validate and sanitise payload
+  // 5. Validate payload
   const validationError = validatePayload(payload);
   if (validationError) {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: validationError }) };
   }
 
+  // 6. Load subject prompts
+  const subjectPrompts = loadSubjectPrompts(payload.subject);
+  if (!subjectPrompts) {
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ error: `Unknown subject: ${payload.subject}` }) };
+  }
+
+  // 7. Build system prompt server-side
+  const systemPrompt = buildSystemPrompt(payload.callType, payload.promptData, subjectPrompts);
+
+  // 8. Assemble Anthropic request — model and max_tokens set server-side
   const clean = {
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    messages: payload.messages,
-    ...(payload.system ? { system: payload.system } : {}),
+    model:      'claude-sonnet-4-6',
+    max_tokens: subjectPrompts.MAX_TOKENS[payload.callType],
+    messages:   payload.messages,
+    ...(systemPrompt ? { system: systemPrompt } : {}),
   };
 
-  // 6. Call Anthropic
+  // 9. Call Anthropic
   try {
     const { status, body } = await callAnthropic(clean);
     return { statusCode: status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
