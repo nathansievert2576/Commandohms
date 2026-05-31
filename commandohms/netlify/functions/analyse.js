@@ -96,7 +96,8 @@ const ALLOWED_SUBJECTS = new Set(['hms']);
 function loadSubjectPrompts(subject) {
   if (!ALLOWED_SUBJECTS.has(subject)) return null;
   try {
-    return require(`./prompts/${subject}`);
+    if (subject === 'hms') return require('./prompts/hms');
+    return null;
   } catch (e) {
     console.error(`Failed to load prompts for subject "${subject}":`, e.message);
     return null;
