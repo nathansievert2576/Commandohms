@@ -4676,10 +4676,12 @@ async function checkQuestionRelevance(question) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ question: question.trim(), subject: 'hms' }),
     });
-    if (!resp.ok) return true;
+    if (!resp.ok) { alert('check-subject HTTP ' + resp.status); return true; }
     const data = await resp.json();
+    alert('check-subject response: ' + JSON.stringify(data));
     return data.relevant !== false;
   } catch (e) {
+    alert('check-subject error: ' + e.message);
     return true;
   }
 }
