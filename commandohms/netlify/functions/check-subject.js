@@ -126,7 +126,8 @@ exports.handler = async (event) => {
     const result = await callHaiku(SUBJECT_SYSTEM_PROMPTS[subject], userMessage);
     // Only block if Haiku explicitly says "false" — any other response allows through
     const text = (result?.content?.[0]?.text || '').trim().toLowerCase();
-    const relevant = !text.startsWith('false');
+    // Only block if the response is exactly "false" — any other response allows through
+    const relevant = text !== 'false';
     return {
       statusCode: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
