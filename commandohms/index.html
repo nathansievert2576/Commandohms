@@ -3067,19 +3067,6 @@ async function _runAnalysis() {
       projBox.innerHTML = '';
       projWrap.style.display = 'block';
 
-  const m = markValue;
-  const bas_hi  = Math.max(1, Math.floor(m * 0.25));
-  const snd_hi  = Math.max(bas_hi + 1, Math.floor(m * 0.50));
-  const thor_hi = Math.max(snd_hi + 1, Math.floor(m * 0.75));
-  const ext_hi  = m;
-  const bas_lo  = 1;
-  const snd_lo  = bas_hi + 1;
-  const thor_lo = snd_hi + 1;
-  const ext_lo  = thor_hi + 1;
-  const fmt = (lo, hi) => { if (lo > hi) return `${hi}`; return lo === hi ? `${lo}` : `${lo}–${hi}`; };
-  const logicNote = m >= 9 ? ' Sustained, logical and cohesive response that directly engages with the question.' : m >= 8 ? ' Logical and cohesive sequencing of ideas matters at this mark value.' : m >= 5 ? ' Structure and flow will differentiate responses at the top of this range.' : '';
-  return `• EXTENSIVE (${fmt(ext_lo, ext_hi)} out of ${m}): Comprehensive and detailed knowledge and understanding. All key relationships between concepts clearly evident. Specific examples well integrated and directly linked to the question. Command term sustained throughout the response.${logicNote}\n• THOROUGH (${fmt(thor_lo, thor_hi)} out of ${m}): Detailed knowledge and understanding. Most relationships between concepts evident. Relevant specific examples provided. Command term demonstrated consistently.\n• SOUND (${fmt(snd_lo, snd_hi)} out of ${m}): Some knowledge and understanding demonstrated. Some relationships between concepts identified. Some relevant examples provided. Command term partially demonstrated.\n• BASIC (${fmt(bas_lo, bas_hi)} out of ${m}): Limited knowledge and understanding. Minimal relationships between concepts. Few or no examples. Command term rarely or not demonstrated.`;
-})()}\n\nUse ONLY these four NESA descriptors — extensive, thorough, sound, basic — when writing the rationale.\n\nBased on the tagged sentences, examples used, whether the command term was demonstrated, and the NESA Common Grade Scale above:\n1. Provide an estimated mark RANGE: X–Y out of ${markValue} (span of 1–2 marks, e.g. \"2–3 out of 4\")\n2. A rationale of 1–2 sentences using NESA Common Grade Scale language — use the exact descriptor (extensive, thorough, sound, or basic) that matches the estimated mark range, and reference what was or wasn't demonstrated\n\nIMPORTANT:\n- Grammar, spelling and punctuation errors must NOT affect the estimated mark — assess content knowledge only\n- If the command term was NOT detected, this should significantly lower the estimated mark\n- Use ONLY the four NESA descriptors in your rationale: extensive, thorough, sound, basic\n- Do NOT use \"logical and cohesive\" as a criterion for questions under 8 marks\n- Be honest and calibrated — base it strictly on what was tagged\n- OVER-DEMONSTRATION RULE: If the response demonstrates a HIGHER cognitive level than required (e.g. explains when asked to outline, or analyses when asked to describe), do NOT penalise the mark. The response has still demonstrated everything required and more. Reward the content knowledge shown. Do NOT mention over-demonstration in the rationale — do not say the response went beyond what was required. Never write 'the student' — always write 'the response'.\n- LOW-ORDER QUESTIONS RULE: For 1–2 mark identify and outline questions, real-world examples are NOT required for full marks. The response can achieve full marks through clear, accurate content alone. Do not reduce the mark estimate because examples are absent on 1–2 mark questions. For 3+ mark questions at any cognitive level, examples remain expected and their absence should factor into the mark estimate.\n\nReturn ONLY this exact format with no other text:\nESTIMATED MARK: X–Y out of ${markValue}\nRATIONALE: [1–2 sentences written in second person — address the response directly, e.g. 'The response demonstrates...' — no technical marking terms, no rule names, no mention of cognitive demand]`;
 
       try {
         const resp2 = await fetch('/.netlify/functions/analyse', {
@@ -4676,12 +4663,10 @@ async function checkQuestionRelevance(question) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ question: question.trim(), subject: 'hms' }),
     });
-    if (!resp.ok) { alert('check-subject HTTP ' + resp.status); return true; }
+    if (!resp.ok) return true;
     const data = await resp.json();
-    alert('check-subject response: ' + JSON.stringify(data));
     return data.relevant !== false;
   } catch (e) {
-    alert('check-subject error: ' + e.message);
     return true;
   }
 }
