@@ -71,6 +71,16 @@ async function validateToken(token) {
   }
 }
 
+// Refunds a credit (no-op if pending_refund is false — safe to call defensively).
+async function refundCredit(userId) {
+  const { supabaseUrl, supabaseKey } = getSupabaseConfig();
+  try {
+    await supabaseRequest({ supabaseUrl, supabaseKey, path: '/rest/v1/rpc/refund_credit', method: 'POST', body: { uid: userId } });
+  } catch (err) {
+    console.error('refundCredit error:', err.message);
+  }
+}
+
 // Returns true if a credit was successfully spent, false if user has none.
 async function spendCredit(userId) {
   const { supabaseUrl, supabaseKey } = getSupabaseConfig();
@@ -270,6 +280,14 @@ exports.handler = async (event) => {
   try { payload = JSON.parse(event.body || '{}'); }
   catch (e) { return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
 
+  // 4. Spend a credit server-side for annotation calls (prevents bypass via direct API calls)
+  if (payload.callType === 'annotation') {
+    const credited = await spendCredit(user.id);
+    if (!credited) {
+      return { statusCode: 402, headers: cors, body: JSON.stringify({ error: 'No credits remaining. Please purchase more to continue.' }) };
+    }
+  }
+
   // 5. Validate payload
   const validationError = validatePayload(payload);
   if (validationError) {
@@ -297,8 +315,8 @@ exports.handler = async (event) => {
   try {
     const { status, body } = await callAnthropic(clean);
 
-    // Clear pending_refund so refund_credit cannot be called after a successful analysis
-    if (status === 200) {
+    // Clear pending_refund after the final step so refund_credit cannot be called after a successful analysis
+    if (status === 200 && payload.callType === 'feedback') {
       const { supabaseUrl, supabaseKey } = getSupabaseConfig();
       supabaseRequest({ supabaseUrl, supabaseKey, path: `/rest/v1/user_credits?user_id=eq.${user.id}`, method: 'PATCH', body: { pending_refund: false } }).catch(() => {});
     }
@@ -306,6 +324,7 @@ exports.handler = async (event) => {
     return { statusCode: status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
   } catch (err) {
     console.error('Anthropic error:', err.message);
+    if (payload.callType === 'annotation') await refundCredit(user.id);
     return { statusCode: 502, headers: cors, body: JSON.stringify({ error: 'Upstream API error', detail: err.message }) };
   }
 };
