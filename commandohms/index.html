@@ -4747,6 +4747,8 @@ async function analyseText() {
       showConfirm(async () => {
         try {
           await _runAnalysis();
+          userCredits = await fetchCredits(currentUser.id);
+          renderNav();
         } catch(e) {
           if (e.message && e.message.includes('Server error 402')) {
             showGate();
