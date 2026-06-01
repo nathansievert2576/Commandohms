@@ -15,7 +15,7 @@ const https = require('https');
 
 // ── CORS headers ──────────────────────────────────────────────────────────────
 const corsHeaders = {
-  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Origin':  'https://app.commandohsc.com',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
