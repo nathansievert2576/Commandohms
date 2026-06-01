@@ -4745,14 +4745,16 @@ async function analyseText() {
     const question = (document.getElementById('questionText')?.value || '').trim();
     const proceedWithConfirm = () => {
       showConfirm(async () => {
-        const spent = await spendCredit();
-        if (!spent) { showGate(); return; }
         try {
           await _runAnalysis();
         } catch(e) {
-          await refundCredit();
-          const out = document.getElementById('outputBox');
-          if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+          if (e.message && e.message.includes('Server error 402')) {
+            showGate();
+          } else {
+            await refundCredit();
+            const out = document.getElementById('outputBox');
+            if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+          }
         }
       });
     };
@@ -5230,7 +5232,7 @@ document.addEventListener('keydown', function(e) {
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">02</span><span class="pm-h2">Eligibility and accounts</span></div>
-          <p class="pm-p">You must be at least 13 years of age to use the Service. Users under 18 should obtain parental or guardian consent before registering an account or making a purchase.</p>
+          <p class="pm-p">You must be at least 13 years of age to use the Service. Users under 18 must obtain parental or guardian consent before registering an account or making a purchase.</p>
           <p class="pm-p">You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must notify us immediately at <a class="pm-link" href="mailto:hello@commandohsc.com">hello@commandohsc.com</a> if you suspect unauthorised access to your account.</p>
           <p class="pm-p">You may only hold one account. We reserve the right to suspend or terminate accounts that violate these Terms.</p>
         </div>
@@ -5422,7 +5424,7 @@ document.addEventListener('keydown', function(e) {
 
         <div class="pm-section">
           <div class="pm-section-header"><span class="pm-num">08</span><span class="pm-h2">Children's privacy</span></div>
-          <p class="pm-p">CommandoHSC is designed for HSC students (typically 16–18). Users under 18 should have parental consent before registering or purchasing. We don't knowingly collect data from children under 13 — if you believe this has happened, contact us immediately and we'll delete the account. We'll update our practices when the OAIC's Children's Online Privacy Code comes into force (December 2026).</p>
+          <p class="pm-p">CommandoHSC is designed for HSC students (typically 16–18). Users under 18 must have parental consent before registering or purchasing. We don't knowingly collect data from children under 13 — if you believe this has happened, contact us immediately and we'll delete the account. We'll update our practices when the OAIC's Children's Online Privacy Code comes into force (December 2026).</p>
         </div>
 
         <div class="pm-section">
