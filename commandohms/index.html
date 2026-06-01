@@ -4479,16 +4479,6 @@ async function fetchCredits(userId) {
   return data?.credits ?? 0;
 }
 
-// ── Decrement credit via secure Supabase RPC (SECURITY DEFINER — not bypassable from client) ──
-async function spendCredit() {
-  if (!currentUser) return false;
-  const { data, error } = await sb.rpc('spend_credit', { uid: currentUser.id });
-  if (error || !data) return false;
-  userCredits = await fetchCredits(currentUser.id);
-  renderNav();
-  return true;
-}
-
 // ── Refresh user state ──
 async function refreshUser() {
   const { data: { session } } = await sb.auth.getSession();
