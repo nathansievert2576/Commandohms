@@ -112,7 +112,24 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'No code provided' }) };
   }
 
-  // 3. Redeem via atomic Supabase RPC
+  // 3. Check attempt limit (5 per 24 hours)
+  let attemptCheck;
+  try {
+    attemptCheck = await callRpc('check_promo_attempt', { p_user_id: user.id });
+  } catch (err) {
+    console.error('[redeem-promo] attempt check error:', err.message);
+    return { statusCode: 502, headers: cors, body: JSON.stringify({ error: 'Server error — please try again' }) };
+  }
+
+  if (attemptCheck.status !== 200) {
+    return { statusCode: 502, headers: cors, body: JSON.stringify({ error: 'Server error — please try again' }) };
+  }
+
+  if (!attemptCheck.data?.allowed) {
+    return { statusCode: 429, headers: cors, body: JSON.stringify({ error: 'Too many attempts. Please try again in 24 hours.' }) };
+  }
+
+  // 4. Redeem via atomic Supabase RPC
   let result;
   try {
     result = await callRpc('redeem_promo_code', { p_code: code, p_user_id: user.id });
@@ -130,6 +147,9 @@ exports.handler = async (event) => {
   if (rpcResult?.error) {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: rpcResult.error }) };
   }
+
+  // Reset attempt counter on successful redemption
+  callRpc('reset_promo_attempts', { p_user_id: user.id }).catch(() => {});
 
   return {
     statusCode: 200,
