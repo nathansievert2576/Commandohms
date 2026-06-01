@@ -326,10 +326,21 @@ exports.handler = async (event) => {
   try {
     const { status, body } = await callAnthropic(clean);
 
-    // Clear pending_refund after the final step so refund_credit cannot be called after a successful analysis
-    if (status === 200 && payload.callType === 'feedback') {
+    if (status === 200) {
       const { supabaseUrl, supabaseKey } = getSupabaseConfig();
-      supabaseRequest({ supabaseUrl, supabaseKey, path: `/rest/v1/user_credits?user_id=eq.${user.id}`, method: 'PATCH', body: { pending_refund: false } }).catch(() => {});
+
+      // Clear pending_refund after the final step
+      if (payload.callType === 'feedback') {
+        supabaseRequest({ supabaseUrl, supabaseKey, path: `/rest/v1/user_credits?user_id=eq.${user.id}`, method: 'PATCH', body: { pending_refund: false } }).catch(() => {});
+      }
+
+      // Log token usage server-side — Claude Sonnet 4.6: $3.00 input / $15.00 output per million tokens
+      if (body.usage) {
+        const inp = body.usage.input_tokens  || 0;
+        const out = body.usage.output_tokens || 0;
+        const cost = parseFloat((((inp / 1_000_000) * 3.00) + ((out / 1_000_000) * 15.00)).toFixed(6));
+        supabaseRequest({ supabaseUrl, supabaseKey, path: '/rest/v1/api_usage', method: 'POST', body: { user_id: user.id, input_tokens: inp, output_tokens: out, api_cost_usd: cost } }).catch(err => console.error('api_usage log error:', err.message));
+      }
     }
 
     return { statusCode: status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
