@@ -1689,6 +1689,25 @@
   }
   .confirm-btn:hover { opacity: 0.88; }
 
+  .error-modal {
+    background: #181818; border: 1.5px solid rgba(220,80,80,0.35);
+    border-radius: 20px; padding: 2.25rem 2rem; width: 100%; max-width: 380px;
+    text-align: center; box-shadow: 0 0 60px rgba(220,80,80,0.12);
+    font-family: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+  }
+  .error-modal-icon { margin-bottom: 1.1rem; }
+  .error-modal h2 { font-size: 1.2rem; font-weight: 800; color: #f0ece4; margin-bottom: 0.5rem; }
+  .error-modal p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.5rem; }
+  .error-modal a { color: #c8a84b; text-decoration: underline; }
+  .error-modal-btn {
+    background: transparent; border: 1.5px solid rgba(220,80,80,0.5);
+    color: #e05c5c; border-radius: 10px; padding: 0.65rem 1.75rem;
+    font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; font-family: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    transition: background 0.2s;
+  }
+  .error-modal-btn:hover { background: rgba(220,80,80,0.1); }
+
   .mark-prompt-input {
     width: 100%; text-align: center;
     background: var(--bg-input); border: 1.5px solid var(--border-strong);
@@ -3156,9 +3175,9 @@ async function _runAnalysis() {
 
 
   } catch (e) {
-    out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — ${escHtml(e.message)}<br><small>Check your connection and try again.</small></div>`;
+    out.innerHTML = '';
     document.getElementById('feedbackWrap').style.display = 'none';
-    throw e; // propagate so analyseText can refund the credit
+    throw e; // propagate so analyseText can refund the credit and show error modal
   } finally {
     btn.disabled = false;
     hideAnalysisLoading();
@@ -4668,6 +4687,13 @@ function showConfirm(proceedFn) {
   document.getElementById('confirmOverlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
+function showErrorModal() {
+  document.getElementById('errorModalOverlay').classList.remove('hidden');
+}
+function hideErrorModal() {
+  document.getElementById('errorModalOverlay').classList.add('hidden');
+}
+
 function hideConfirm() {
   document.getElementById('confirmOverlay').classList.add('hidden');
   document.body.style.overflow = '';
@@ -4723,8 +4749,7 @@ async function analyseText() {
             showGate();
           } else {
             await refundCredit();
-            const out = document.getElementById('outputBox');
-            if (out) out.innerHTML = `<div class="error-msg">⚠️ Analysis failed — your credit has been returned.<br><small>${escHtml(e.message)}</small></div>`;
+            showErrorModal();
           }
         }
       });
@@ -4815,7 +4840,7 @@ function handlePrivacyOverlayClick(e) {
   if (e.target === document.getElementById('privacyOverlay')) hidePrivacyModal();
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideMarkPrompt(); hideWrongSubjectModal(false); hideInterestModal(); }
+  if (e.key === 'Escape') { hidePrivacyModal(); hideTermsModal(); hideConfirm(); hideMarkPrompt(); hideWrongSubjectModal(false); hideInterestModal(); hideErrorModal(); }
 });
 
 // ── Init on page load ──
@@ -5113,6 +5138,25 @@ document.addEventListener('keydown', function(e) {
         onkeydown="if(event.key==='Enter') markPromptContinue()">
       <button class="confirm-btn" onclick="markPromptContinue()">Continue with mark value</button>
       <button class="mark-prompt-skip" onclick="markPromptSkip()">Continue without mark value</button>
+    </div>
+  </div>
+
+  <!-- ANALYSIS ERROR MODAL -->
+  <div class="confirm-overlay hidden" id="errorModalOverlay">
+    <div class="error-modal">
+      <div class="error-modal-icon">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="26" fill="rgba(220,80,80,0.12)" stroke="#e05c5c" stroke-width="2.5"/>
+          <circle cx="23" cy="27" r="3" fill="#e05c5c"/>
+          <circle cx="41" cy="27" r="3" fill="#e05c5c"/>
+          <path d="M22 43 Q32 35 42 43" stroke="#e05c5c" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="52" cy="14" r="4" fill="rgba(220,80,80,0.4)" stroke="#e05c5c" stroke-width="1.5"/>
+          <circle cx="58" cy="24" r="2.5" fill="rgba(220,80,80,0.3)" stroke="#e05c5c" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h2>Something went wrong</h2>
+      <p>We couldn't complete your analysis. Your credit has been returned — please try again. If the problem continues, contact us at <a href="mailto:hello@commandohsc.com">hello@commandohsc.com</a></p>
+      <button class="error-modal-btn" onclick="hideErrorModal()">Try again</button>
     </div>
   </div>
 
