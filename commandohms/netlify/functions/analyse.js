@@ -296,6 +296,13 @@ exports.handler = async (event) => {
   // 9. Call Anthropic
   try {
     const { status, body } = await callAnthropic(clean);
+
+    // Clear pending_refund so refund_credit cannot be called after a successful analysis
+    if (status === 200) {
+      const { supabaseUrl, supabaseKey } = getSupabaseConfig();
+      supabaseRequest({ supabaseUrl, supabaseKey, path: `/rest/v1/user_credits?user_id=eq.${user.id}`, method: 'PATCH', body: { pending_refund: false } }).catch(() => {});
+    }
+
     return { statusCode: status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
   } catch (err) {
     console.error('Anthropic error:', err.message);
