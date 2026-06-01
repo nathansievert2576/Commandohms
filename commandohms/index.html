@@ -3153,27 +3153,6 @@ async function _runAnalysis() {
 
     document.getElementById('downloadWrap').style.display = 'block';
 
-    // ── Log API token usage and cost (no student data stored) ──────────
-    try {
-      const totalInputTokens  = (data1?.usage?.input_tokens  || 0) +
-                                (data2?.usage?.input_tokens  || 0) +
-                                (data3?.usage?.input_tokens  || 0);
-      const totalOutputTokens = (data1?.usage?.output_tokens || 0) +
-                                (data2?.usage?.output_tokens || 0) +
-                                (data3?.usage?.output_tokens || 0);
-      // Claude Sonnet 4.6 pricing: $3.00 input / $15.00 output per million tokens (USD)
-      const apiCostUsd = ((totalInputTokens / 1_000_000) * 3.00) +
-                         ((totalOutputTokens / 1_000_000) * 15.00);
-
-      await sb.from('api_usage').insert({
-        user_id:       currentUser.id,
-        input_tokens:  totalInputTokens,
-        output_tokens: totalOutputTokens,
-        api_cost_usd:  parseFloat(apiCostUsd.toFixed(6))
-      });
-    } catch(logErr) {
-      console.warn('API usage logging failed:', logErr);
-    }
 
 
   } catch (e) {
