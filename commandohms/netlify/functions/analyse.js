@@ -280,11 +280,22 @@ exports.handler = async (event) => {
   try { payload = JSON.parse(event.body || '{}'); }
   catch (e) { return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
 
-  // 4. Spend a credit server-side for annotation calls (prevents bypass via direct API calls)
+  // 4. Credit enforcement — annotation spends a credit; OCR requires at least one but doesn't spend it
   if (payload.callType === 'annotation') {
     const credited = await spendCredit(user.id);
     if (!credited) {
       return { statusCode: 402, headers: cors, body: JSON.stringify({ error: 'No credits remaining. Please purchase more to continue.' }) };
+    }
+  } else if (payload.callType === 'ocr') {
+    const { supabaseUrl, supabaseKey } = getSupabaseConfig();
+    try {
+      const { status, body } = await supabaseRequest({ supabaseUrl, supabaseKey, path: `/rest/v1/user_credits?user_id=eq.${user.id}&select=credits`, method: 'GET' });
+      const credits = status === 200 && Array.isArray(body) ? (body[0]?.credits ?? 0) : 1;
+      if (credits <= 0) {
+        return { statusCode: 402, headers: cors, body: JSON.stringify({ error: 'No credits remaining. Please purchase more to continue.' }) };
+      }
+    } catch (err) {
+      console.error('OCR credit check error:', err.message);
     }
   }
 
