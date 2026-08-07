@@ -163,7 +163,7 @@ function buildProjectedMarkPrompt({ question, primaryTerm, markValue, termHitByA
     : '';
 
   const markBands = `• EXTENSIVE (${fmt(ext_lo, ext_hi)} out of ${m}): Comprehensive and detailed knowledge and understanding. Most key relationships between concepts clearly evident. Specific examples well integrated and directly linked to the question. Command term sustained throughout the response.${logicNote}
-• THOROUGH (${fmt(thor_lo, thor_hi)} out of ${m}): Detailed knowledge and understanding. Most relationships between concepts evident. Relevant specific examples provided. Command term demonstrated consistently.
+• THOROUGH (${fmt(thor_lo, thor_hi)} out of ${m}): Detailed knowledge and understanding. Most relationships between concepts evident. Some relevant examples or application to context evident. Command term demonstrated in the response.
 • SOUND (${fmt(snd_lo, snd_hi)} out of ${m}): Some knowledge and understanding demonstrated. Some relationships between concepts identified. Some relevant examples provided. Command term partially demonstrated.
 • BASIC (${fmt(bas_lo, bas_hi)} out of ${m}): Limited knowledge and understanding. Minimal relationships between concepts. Few or no examples. Command term rarely or not demonstrated.`;
 
@@ -198,6 +198,7 @@ IMPORTANT:
 - Use ONLY the four NESA descriptors in your rationale: extensive, thorough, sound, basic
 - Do NOT use "logical and cohesive" as a criterion for questions under 8 marks
 - Be honest and calibrated — use what was tagged as your primary evidence, and lean toward the upper end of a band when the response is borderline
+- HIGH-MARK QUESTIONS RULE: For questions worth 8–10 marks, a response that demonstrates detailed knowledge across most content areas should be placed in the THOROUGH band as a minimum. Only place a response in SOUND if the knowledge demonstrated is genuinely limited or superficial. Do not require perfect examples or fully sustained command term to reach THOROUGH on high-mark questions.
 - OVER-DEMONSTRATION RULE: If the response demonstrates a HIGHER cognitive level than required (e.g. explains when asked to outline, or analyses when asked to describe), do NOT penalise the mark. The response has still demonstrated everything required and more. Reward the content knowledge shown. Do NOT mention over-demonstration in the rationale — do not say the response went beyond what was required. Never write 'the student' — always write 'the response'.
 - LOW-ORDER QUESTIONS RULE: For 1–2 mark identify and outline questions, real-world examples are NOT required for full marks. The response can achieve full marks through clear, accurate content alone. Do not reduce the mark estimate because examples are absent on 1–2 mark questions. For 3+ mark questions at any cognitive level, examples remain expected and their absence should factor into the mark estimate.
 
